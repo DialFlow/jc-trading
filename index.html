@@ -1112,8 +1112,8 @@ select { cursor: pointer; }
     <div class="ticker-chip"><div class="ticker-sym">ES</div><div class="ticker-price mono" id="tk-es">–</div><div class="ticker-delta up" id="tk-es-d">–</div></div>
     <div class="ticker-chip"><div class="ticker-sym">NQ</div><div class="ticker-price mono" id="tk-nq">–</div><div class="ticker-delta up" id="tk-nq-d">–</div></div>
     <div class="ticker-chip"><div class="ticker-sym">VIX</div><div class="ticker-price mono" id="tk-vix">–</div><div class="ticker-delta" id="tk-vix-d">–</div></div>
-    <div class="ticker-chip"><div class="ticker-sym">DXY</div><div class="ticker-price mono">104.2</div><div class="ticker-delta dn">-0.12%</div></div>
-    <div class="ticker-chip"><div class="ticker-sym">GOLD</div><div class="ticker-price mono">2634</div><div class="ticker-delta up">+0.34%</div></div>
+    <div class="ticker-chip"><div class="ticker-sym">DXY</div><div class="ticker-price mono" id="tk-dxy">–</div><div class="ticker-delta" id="tk-dxy-d">–</div></div>
+    <div class="ticker-chip"><div class="ticker-sym">GOLD</div><div class="ticker-price mono" id="tk-gold">–</div><div class="ticker-delta" id="tk-gold-d">–</div></div>
   </div>
 
   <!-- Session Bar -->
@@ -1191,22 +1191,23 @@ select { cursor: pointer; }
 <!-- ===== TAB 2: CHARTS ===== -->
 <div class="tab-page" id="page-charts">
 
-  <iframe src="https://www.tradingview.com/embed-widget/ticker-tape/?locale=en#%7B%22symbols%22%3A%5B%7B%22proName%22%3A%22CME_MINI%3AES1%21%22%2C%22title%22%3A%22ES%22%7D%2C%7B%22proName%22%3A%22CME_MINI%3ANQ1%21%22%2C%22title%22%3A%22NQ%22%7D%2C%7B%22proName%22%3A%22CBOE%3AVIX%22%2C%22title%22%3A%22VIX%22%7D%2C%7B%22proName%22%3A%22AMEX%3ASPY%22%2C%22title%22%3A%22SPY%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3AQQQ%22%2C%22title%22%3A%22QQQ%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ANVDA%22%2C%22title%22%3A%22NVDA%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ATSLA%22%2C%22title%22%3A%22TSLA%22%7D%2C%7B%22proName%22%3A%22COMEX%3AGC1%21%22%2C%22title%22%3A%22Gold%22%7D%2C%7B%22proName%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22title%22%3A%22BTC%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%2C%22colorTheme%22%3A%22dark%22%2C%22locale%22%3A%22en%22%7D" style="width:100%;height:46px;border:none;border-radius:12px;margin-top:4px;" loading="lazy" title="TradingView ticker tape"></iframe>
-  <div class="section-label">Futures Charts · 5-Minute</div>
+  <iframe src="https://www.tradingview.com/embed-widget/ticker-tape/?locale=en#%7B%22symbols%22%3A%5B%7B%22proName%22%3A%22OANDA%3ASPX500USD%22%2C%22title%22%3A%22ES%20proxy%22%7D%2C%7B%22proName%22%3A%22OANDA%3ANAS100USD%22%2C%22title%22%3A%22NQ%20proxy%22%7D%2C%7B%22proName%22%3A%22CAPITALCOM%3AVIX%22%2C%22title%22%3A%22VIX%20proxy%22%7D%2C%7B%22proName%22%3A%22AMEX%3ASPY%22%2C%22title%22%3A%22SPY%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3AQQQ%22%2C%22title%22%3A%22QQQ%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ANVDA%22%2C%22title%22%3A%22NVDA%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ATSLA%22%2C%22title%22%3A%22TSLA%22%7D%2C%7B%22proName%22%3A%22OANDA%3AXAUUSD%22%2C%22title%22%3A%22Gold%22%7D%2C%7B%22proName%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22title%22%3A%22BTC%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%2C%22colorTheme%22%3A%22dark%22%2C%22locale%22%3A%22en%22%7D" style="width:100%;height:46px;border:none;border-radius:12px;margin-top:4px;" loading="lazy" title="TradingView ticker tape"></iframe>
+  <div class="section-label">Index Charts · 5-Minute</div>
+  <div class="fs-12 text-2 mb-sm">CME futures (ES1!/NQ1!) and VIX are blocked in free TradingView embeds, so these use CFD proxies (OANDA SPX500/NAS100, Capital.com VIX). They move with ES/NQ but the price level differs by a few points. Use your TradingView account for exact futures prices.</div>
   <div class="grid-2 mb-md">
     <div>
-      <div class="fs-13 fw-600 text-2 mb-sm">ES · S&P 500 Futures</div>
+      <div class="fs-13 fw-600 text-2 mb-sm">ES proxy · S&P 500 CFD (OANDA)</div>
       <iframe
-        src="https://s.tradingview.com/widgetembed/?symbol=CME_MINI%3AES1%21&amp;interval=5&amp;theme=dark&amp;style=1&amp;timezone=America%2FNew_York&amp;hidesidetoolbar=0&amp;withdateranges=1&amp;allow_symbol_change=1&amp;locale=en"
+        src="https://s.tradingview.com/widgetembed/?symbol=OANDA%3ASPX500USD&amp;interval=5&amp;theme=dark&amp;style=1&amp;timezone=America%2FNew_York&amp;hidesidetoolbar=0&amp;withdateranges=1&amp;allow_symbol_change=1&amp;locale=en"
         style="width:100%;height:480px;border:none;border-radius:12px;background:#1c1c1e;"
         allowfullscreen
         loading="lazy">
       </iframe>
     </div>
     <div>
-      <div class="fs-13 fw-600 text-2 mb-sm">NQ · Nasdaq Futures</div>
+      <div class="fs-13 fw-600 text-2 mb-sm">NQ proxy · Nasdaq 100 CFD (OANDA)</div>
       <iframe
-        src="https://s.tradingview.com/widgetembed/?symbol=CME_MINI%3ANQ1%21&amp;interval=5&amp;theme=dark&amp;style=1&amp;timezone=America%2FNew_York&amp;hidesidetoolbar=0&amp;withdateranges=1&amp;allow_symbol_change=1&amp;locale=en"
+        src="https://s.tradingview.com/widgetembed/?symbol=OANDA%3ANAS100USD&amp;interval=5&amp;theme=dark&amp;style=1&amp;timezone=America%2FNew_York&amp;hidesidetoolbar=0&amp;withdateranges=1&amp;allow_symbol_change=1&amp;locale=en"
         style="width:100%;height:480px;border:none;border-radius:12px;background:#1c1c1e;"
         allowfullscreen
         loading="lazy">
@@ -1214,17 +1215,17 @@ select { cursor: pointer; }
     </div>
   </div>
 
-  <div class="section-label">Technical Analysis · ES 5m</div>
+  <div class="section-label">Technical Analysis · ES proxy 5m</div>
   <iframe
-    src="https://www.tradingview.com/embed-widget/technical-analysis/?locale=en#%7B%22interval%22%3A%225m%22%2C%22width%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22height%22%3A%22450%22%2C%22symbol%22%3A%22CME_MINI%3AES1%21%22%2C%22showIntervalTabs%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%7D"
+    src="https://www.tradingview.com/embed-widget/technical-analysis/?locale=en#%7B%22interval%22%3A%225m%22%2C%22width%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22height%22%3A%22450%22%2C%22symbol%22%3A%22OANDA%3ASPX500USD%22%2C%22showIntervalTabs%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%7D"
     style="width:100%;height:450px;border:none;border-radius:12px;background:#1c1c1e;"
     loading="lazy"
     class="mb-md">
   </iframe>
 
-  <div class="section-label">Technical Analysis · NQ 5m</div>
+  <div class="section-label">Technical Analysis · NQ proxy 5m</div>
   <iframe
-    src="https://www.tradingview.com/embed-widget/technical-analysis/?locale=en#%7B%22interval%22%3A%225m%22%2C%22width%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22height%22%3A%22450%22%2C%22symbol%22%3A%22CME_MINI%3ANQ1%21%22%2C%22showIntervalTabs%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%7D"
+    src="https://www.tradingview.com/embed-widget/technical-analysis/?locale=en#%7B%22interval%22%3A%225m%22%2C%22width%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22height%22%3A%22450%22%2C%22symbol%22%3A%22OANDA%3ANAS100USD%22%2C%22showIntervalTabs%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%7D"
     style="width:100%;height:450px;border:none;border-radius:12px;background:#1c1c1e;"
     loading="lazy"
     class="mb-md">
@@ -1916,7 +1917,7 @@ const YAHOO_MAP = {
   'NBIS':'NBIS','TEM':'TEM','AAOI':'AAOI',
   'HOOD':'HOOD','NKE':'NKE','LLY':'LLY','MAGS':'MAGS','DELL':'DELL',
   'MRNA':'MRNA','OXY':'OXY','SPCX':'SPCX',
-  'GOLD':'GC=F','SILVER':'SI=F','BTC':'BTC-USD',
+  'GOLD':'GC=F','SILVER':'SI=F','BTC':'BTC-USD','DXY':'DX-Y.NYB',
   'MSTR':'MSTR','MSTU':'MSTU','IBIT':'IBIT','COIN':'COIN'
 };
 const ALL_JOURNAL_SYMS = [
@@ -1930,29 +1931,41 @@ const ALL_JOURNAL_SYMS = [
 ];
 
 const PriceCache = {}; // sym -> {price, prev, change, changePct, time}
-let lastPriceFetch = null;
-const CORS_PROXY = 'https://corsproxy.io/?url=';
+let lastPriceFetch = null; // time of the price snapshot (not of our download)
+// Delayed Yahoo quotes, refreshed every ~5 min by .github/workflows/prices.yml
+const PRICES_URL = 'https://raw.githubusercontent.com/DialFlow/jc-trading/data/prices.json';
+let pricesSnap = null, pricesLoadedAt = 0, pricesLoading = null;
+
+async function loadPrices() {
+  if (pricesSnap && Date.now() - pricesLoadedAt < 60000) return pricesSnap;
+  if (!pricesLoading) {
+    pricesLoading = (async () => {
+      try {
+        const res = await fetch(PRICES_URL + '?t=' + Math.floor(Date.now() / 60000), { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          pricesSnap = await res.json();
+          pricesLoadedAt = Date.now();
+          lastPriceFetch = new Date(pricesSnap.updated * 1000);
+        }
+      } catch(e) {}
+      pricesLoading = null;
+      return pricesSnap;
+    })();
+  }
+  return pricesLoading;
+}
 
 async function fetchYahoo(sym) {
-  const ySym = YAHOO_MAP[sym] || sym;
-  try {
-    const url = CORS_PROXY + encodeURIComponent(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySym)}?interval=1m&range=1d`
-    );
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const meta = data?.chart?.result?.[0]?.meta;
-    if (!meta) return null;
-    const price = meta.regularMarketPrice ?? meta.previousClose ?? 0;
-    const prev = meta.previousClose ?? price;
-    return {
-      price, prev,
-      change: price - prev,
-      changePct: prev ? ((price - prev) / prev * 100) : 0,
-      time: new Date((meta.regularMarketTime || Date.now()/1000) * 1000)
-    };
-  } catch(e) { return null; }
+  const snap = await loadPrices();
+  const q = snap?.quotes?.[YAHOO_MAP[sym] || sym];
+  if (!q) return null;
+  const { price, prev } = q;
+  return {
+    price, prev,
+    change: price - prev,
+    changePct: prev ? ((price - prev) / prev * 100) : 0,
+    time: new Date(q.time * 1000)
+  };
 }
 
 async function fetchPriceBatch(syms) {
@@ -1960,7 +1973,6 @@ async function fetchPriceBatch(syms) {
   results.forEach((r, i) => {
     if (r.status === 'fulfilled' && r.value) PriceCache[syms[i]] = r.value;
   });
-  lastPriceFetch = new Date();
   return PriceCache;
 }
 
@@ -1973,23 +1985,24 @@ function updateFreshnessPill() {
   const lbl = document.getElementById('fresh-label');
   if (!dot || !lbl) return;
   if (!lastPriceFetch) { dot.className='fresh-dot'; lbl.textContent='Fetching…'; return; }
-  const ago = Math.floor((Date.now() - lastPriceFetch) / 1000);
-  if (ago < 60) {
+  // Snapshots arrive every ~5 min and Yahoo itself lags, so this is "delayed", never "live"
+  const mins = Math.floor((Date.now() - lastPriceFetch) / 60000);
+  if (mins < 15) {
     dot.className = 'fresh-dot live';
-    lbl.textContent = `Live · ${ago}s ago`;
-  } else if (ago < 300) {
+    lbl.textContent = `Delayed · ${mins}m ago`;
+  } else if (mins < 60) {
     dot.className = 'fresh-dot stale';
-    lbl.textContent = `Stale · ${Math.floor(ago/60)}m ago`;
+    lbl.textContent = `Stale · ${mins}m ago`;
   } else {
     dot.className = 'fresh-dot error';
-    lbl.textContent = 'Offline';
+    lbl.textContent = `Stale · ${Math.floor(mins/60)}h ago`;
   }
 }
 setInterval(updateFreshnessPill, 1000);
 
 // Auto-fetch ES/NQ/VIX every 15s
 async function autoFetchHeader() {
-  const cache = await fetchPriceBatch(['ES1!', 'NQ1!', 'VIX']);
+  const cache = await fetchPriceBatch(['ES1!', 'NQ1!', 'VIX', 'DXY', 'GOLD']);
   const es = cache['ES1!'], nq = cache['NQ1!'], vix = cache['VIX'];
   const fmt = (n, d=2) => n != null ? n.toFixed(d) : '–';
   const pct = (n) => n != null ? ((n>=0?'+':'')+n.toFixed(2)+'%') : '–';
@@ -2022,6 +2035,9 @@ async function autoFetchHeader() {
     const svEl = document.getElementById('stat-vix');
     if (svEl) svEl.className='stat-value mono '+(vix.price>20?'bear':vix.price<15?'bull':'');
   }
+  const dxy = cache['DXY'], gold = cache['GOLD'];
+  if (dxy) { setEl('tk-dxy', fmt(dxy.price)); setDelta('tk-dxy-d', dxy.change, dxy.changePct.toFixed(2)); }
+  if (gold) { setEl('tk-gold', fmt(gold.price, 0)); setDelta('tk-gold-d', gold.change, gold.changePct.toFixed(2)); }
 }
 autoFetchHeader();
 setInterval(autoFetchHeader, 15000);

@@ -42,14 +42,18 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - Fixed SSL/BSL in `computeAISignal()`: SSL sweep → bull points, BSL sweep → bear points. Verified by calling the function headless.
 - `SESSIONS` now holds the TJR windows (plus NY AM 10:10–12, NY PM 1:30–4); `ALL_PHASES` is derived from it. Checked minute-by-minute against `getCurrentSession()`: 0 mismatches. 12:00–1:30 and 4–6pm show "Market Closed", same as getCurrentSession.
 - Wrote `jc_tjr_backtest_v5.pine`. Not yet run in TradingView.
-- Set up git (`main`) and GitHub Pages files. Deploy steps are in the session transcript; once live, put the Pages URL here.
+- Deployed: https://dialflow.github.io/jc-trading/ (repo github.com/DialFlow/jc-trading, Pages from `main` / root). Push from Jacob's own terminal; Claude Code's shell can't do the GitHub sign-in.
 - Headless check: Playwright with `channel: 'msedge'` (Edge is preinstalled; Chromium download was slow).
 
+## Data feeds (how prices work now)
+- **Charts:** free TradingView embeds can't show CME futures (ES1!/NQ1!, GC1!) or CBOE VIX ("only available on TradingView"). The Charts tab uses CFD proxies, labelled as such: `OANDA:SPX500USD`, `OANDA:NAS100USD`, `CAPITALCOM:VIX`, `OANDA:XAUUSD`. Also embeddable: `CAPITALCOM:DXY`.
+- **Prices in the page JS:** corsproxy.io now returns 401 without an API key, and free keyless proxies (allorigins, codetabs, thingproxy, cors.lol) all failed. So `.github/workflows/prices.yml` runs `scripts/fetch-prices.mjs` every 5 min Sun–Fri. It batch-fetches Yahoo `/v8/finance/spark` (max 20 symbols per call) for every value in `YAHOO_MAP` and force-pushes `prices.json` to the `data` branch. The page reads `raw.githubusercontent.com/DialFlow/jc-trading/data/prices.json` via `loadPrices()`/`fetchYahoo()`. Prices are delayed ~5–15 min; the freshness pill says "Delayed", never "Live".
+- To add a symbol: add it to `YAHOO_MAP` (and `ALL_JOURNAL_SYMS` for the journal); the workflow picks it up automatically.
+
 ## Known bugs / open items (priority order)
-1. Verify on GitHub Pages that TradingView embeds and the Yahoo/corsproxy feed actually load (blocked in the claude.ai artifact by its CSP; file:// shows 3 console 401s).
-2. TradingView widgets can't feed numbers to the page's JS. Journal auto-fill and signals still need a data API (Yahoo via proxy now; Polygon or Databento for reliable real-time futures).
-3. Yahoo fetches: 47 symbols one by one through corsproxy.io gets rate-limited. Batch via `/v7/finance/quote?symbols=…`.
-4. Dashboard ticker chips for DXY and GOLD are hardcoded static numbers.
+1. Prices are delayed, not real-time. For live futures numbers in the page you'd need a paid feed (Polygon/Databento) or a Cloudflare Worker proxy (free, but needs Jacob's account).
+2. GitHub disables scheduled workflows after 60 days with no repo activity. If prices go stale, re-enable it under Actions → Update prices.
+3. The economic-calendar rows on the Dashboard (e.g. "Fed Speak — Waller 11:00") look hardcoded; check before trusting them.
 
 ## Next backtest ideas (v5)
 - Wider stop (20–25 pts) or stop under the second sweep.

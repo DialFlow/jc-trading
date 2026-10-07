@@ -1,0 +1,33 @@
+name: Update prices
+
+# Every 5 minutes Sun–Fri (GitHub may delay scheduled runs by a few minutes).
+# Writes prices.json to the `data` branch; the site reads it from raw.githubusercontent.com.
+# Pages deploys from `main`, so these updates don't trigger a site rebuild.
+on:
+  schedule:
+    - cron: '*/5 * * * 0-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prices
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch quotes
+        run: node scripts/fetch-prices.mjs > "$RUNNER_TEMP/prices.json"
+      - name: Publish to data branch
+        run: |
+          cd "$RUNNER_TEMP"
+          mkdir out && cp prices.json out/ && cd out
+          git init -q -b data
+          git add prices.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "prices $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" data
