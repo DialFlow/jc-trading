@@ -1,0 +1,269 @@
+//@version=6
+strategy("JC TJR Backtest v5", overlay=true, initial_capital=50000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=5, margin_short=5, commission_type=strategy.commission.cash_per_contract, commission_value=2.5, slippage=1, process_orders_on_close=false)
+
+// ---- Inputs ----
+// To reproduce v4: Stop mode = Sweep wick, Max stop = 15, Sweep level = Any, Displacement off.
+tz         = input.string("America/New_York", "Timezone")
+rrFallback = input.float(2.0, "Fallback target (R) if no liquidity target")
+
+grpStop    = "Stop"
+stopMode   = input.string("Sweep wick", "Stop mode", options=["Sweep wick", "Fixed points", "Second sweep"], group=grpStop, tooltip="Sweep wick: 1 tick past the sweep extreme (v4).\nFixed points: entry -/+ the fixed size below.\nSecond sweep: 1 tick past the extreme of the second sweep of the level; falls back to the sweep wick if the level was only swept once.")
+fixedStop  = input.float(20.0, "Fixed stop size (points)", minval=0.25, group=grpStop)
+maxRiskPts = input.float(25.0, "Max stop size (points)", minval=0.25, group=grpStop, tooltip="Orders whose stop is farther than this are skipped. v4 used 15.")
+
+grpSweep   = "Sweep"
+sweepLvl   = input.string("Any", "Sweep level", options=["Any", "London H/L", "Asian H/L", "PDH/PDL"], group=grpSweep, tooltip="Only the chosen level counts as a sweep and as a liquidity target. Any = nearest of Asian, London and prior-day (v4).")
+
+grpDisp    = "Displacement"
+useDisp    = input.bool(false, "Require displacement candle for BOS", group=grpDisp)
+dispMult   = input.float(1.5, "Body > X × average body", minval=0.1, step=0.1, group=grpDisp)
+dispLen    = input.int(20, "Average body length (bars)", minval=1, group=grpDisp)
+
+// ---- Session windows (ET) ----
+inSess(s) => not na(time(timeframe.period, s, tz))
+asian   = inSess("1800-0300")
+london  = inSess("0300-0830")
+manip   = inSess("0930-0950")
+macro   = inSess("0950-1010")
+watch   = inSess("0930-1010")
+flatT   = inSess("1200-1201")
+
+// ---- Track Asian / London / prior-day ranges ----
+var float aH = na
+var float aL = na
+var float lH = na
+var float lL = na
+var float pdH = na
+var float pdL = na
+var float dH = na
+var float dL = na
+newDay = ta.change(time("D", "", tz)) != 0
+if newDay
+    pdH := dH
+    pdL := dL
+    dH := high
+    dL := low
+else
+    dH := math.max(nz(dH, high), high)
+    dL := math.min(nz(dL, low), low)
+if asian and not asian[1]
+    aH := high
+    aL := low
+else if asian
+    aH := math.max(aH, high)
+    aL := math.min(aL, low)
+if london and not london[1]
+    lH := high
+    lL := low
+else if london
+    lH := math.max(lH, high)
+    lL := math.min(lL, low)
+
+// Liquidity levels allowed by the "Sweep level" input
+f_levels(isHigh) =>
+    arr = array.new_float()
+    if sweepLvl == "Any" or sweepLvl == "Asian H/L"
+        array.push(arr, isHigh ? aH : aL)
+    if sweepLvl == "Any" or sweepLvl == "London H/L"
+        array.push(arr, isHigh ? lH : lL)
+    if sweepLvl == "Any" or sweepLvl == "PDH/PDL"
+        array.push(arr, isHigh ? pdH : pdL)
+    arr
+// nearest level (max of lows / min of highs)
+f_nearest(arr, isHigh) =>
+    float v = na
+    for x in arr
+        if not na(x)
+            v := na(v) ? x : (isHigh ? math.min(v, x) : math.max(v, x))
+    v
+// first level beyond `edge` (above for longs, below for shorts)
+f_target(arr, isHigh, edge) =>
+    float v = na
+    for x in arr
+        if not na(x) and (isHigh ? x >= edge : x <= edge)
+            v := na(v) ? x : (isHigh ? math.min(v, x) : math.max(v, x))
+    v
+
+// ---- Step 1: Potential — liquidity sweep after the open ----
+var bool sslSwept = false
+var bool bslSwept = false
+var float sweepLow = na
+var float sweepHigh = na
+var bool tradedToday = false
+// sweep counting for "Second sweep" stops: a new sweep starts when price re-enters beyond the level
+var int sslCount = 0
+var int bslCount = 0
+var bool wasBelow = false
+var bool wasAbove = false
+var float ssl2Low = na
+var float bsl2High = na
+startWatch = watch and not watch[1]
+if startWatch
+    sslSwept := false
+    bslSwept := false
+    tradedToday := false
+    sweepLow := low
+    sweepHigh := high
+    sslCount := 0
+    bslCount := 0
+    wasBelow := false
+    wasAbove := false
+    ssl2Low := na
+    bsl2High := na
+lowArr  = f_levels(false)
+highArr = f_levels(true)
+lowLiq  = f_nearest(lowArr, false)
+highLiq = f_nearest(highArr, true)
+if watch
+    belowNow = not na(lowLiq) and low < lowLiq
+    aboveNow = not na(highLiq) and high > highLiq
+    if belowNow
+        sslSwept := true
+        sweepLow := na(sweepLow) ? low : math.min(sweepLow, low)
+        if not wasBelow
+            sslCount += 1
+        if sslCount >= 2
+            ssl2Low := na(ssl2Low) ? low : math.min(ssl2Low, low)
+    if aboveNow
+        bslSwept := true
+        sweepHigh := na(sweepHigh) ? high : math.max(sweepHigh, high)
+        if not wasAbove
+            bslCount += 1
+        if bslCount >= 2
+            bsl2High := na(bsl2High) ? high : math.max(bsl2High, high)
+    wasBelow := belowNow
+    wasAbove := aboveNow
+
+// ---- Step 2: Confirmation — BOS after the sweep, then a fresh FVG ----
+body    = math.abs(close - open)
+avgBody = ta.sma(body, dispLen)
+dispUp  = close > open and body > dispMult * avgBody
+dispDn  = close < open and body > dispMult * avgBody
+bullFVG = low > high[2]
+bearFVG = high < low[2]
+bullBOS = close > ta.highest(high, 5)[1] and (not useDisp or dispUp)
+bearBOS = close < ta.lowest(low, 5)[1] and (not useDisp or dispDn)
+var bool bosUp = false
+var bool bosDn = false
+var float fvgMidL = na
+var float fvgMidS = na
+if startWatch
+    bosUp := false
+    bosDn := false
+    fvgMidL := na
+    fvgMidS := na
+if watch
+    if sslSwept and bullBOS
+        bosUp := true
+    if bslSwept and bearBOS
+        bosDn := true
+    if bosUp and bullFVG
+        fvgMidL := (low + high[2]) / 2
+    if bosDn and bearFVG
+        fvgMidS := (high + low[2]) / 2
+
+// ---- Diagnostics: how many days reach each step ----
+var int dSweep = 0
+var int dBos = 0
+var int dFvg = 0
+var int dRiskOk = 0
+var bool cSweep = false
+var bool cBos = false
+var bool cFvg = false
+var bool cRisk = false
+if startWatch
+    cSweep := false
+    cBos := false
+    cFvg := false
+    cRisk := false
+if watch and (sslSwept or bslSwept) and not cSweep
+    cSweep := true
+    dSweep += 1
+if watch and (bosUp or bosDn) and not cBos
+    cBos := true
+    dBos += 1
+if watch and (not na(fvgMidL) or not na(fvgMidS)) and not cFvg
+    cFvg := true
+    dFvg += 1
+
+// ---- Stop placement per "Stop mode" ----
+f_stop(isLong, entry) =>
+    float s = na
+    if stopMode == "Fixed points"
+        s := isLong ? entry - fixedStop : entry + fixedStop
+    else if stopMode == "Second sweep" and (isLong ? sslCount >= 2 : bslCount >= 2)
+        s := isLong ? ssl2Low - syminfo.mintick : bsl2High + syminfo.mintick
+    else
+        s := isLong ? sweepLow - syminfo.mintick : sweepHigh + syminfo.mintick
+    s
+
+// ---- Step 3: Continuation — limit at FVG equilibrium, entries only in the 9:50-10:10 macro ----
+canTrade = macro and not tradedToday and strategy.position_size == 0
+if canTrade and not na(fvgMidL)
+    entry = fvgMidL
+    stop  = f_stop(true, entry)
+    risk  = entry - stop
+    if risk > 0 and risk <= maxRiskPts
+        lt = f_target(highArr, true, entry + risk)
+        tgt = na(lt) ? entry + risk * rrFallback : lt
+        strategy.entry("L", strategy.long, limit=entry)
+        strategy.exit("L-x", "L", stop=stop, limit=tgt)
+        tradedToday := true
+        if not cRisk
+            cRisk := true
+            dRiskOk += 1
+if canTrade and not tradedToday and not na(fvgMidS)
+    entry = fvgMidS
+    stop  = f_stop(false, entry)
+    risk  = stop - entry
+    if risk > 0 and risk <= maxRiskPts
+        st = f_target(lowArr, false, entry - risk)
+        tgt = na(st) ? entry - risk * rrFallback : st
+        strategy.entry("S", strategy.short, limit=entry)
+        strategy.exit("S-x", "S", stop=stop, limit=tgt)
+        tradedToday := true
+        if not cRisk
+            cRisk := true
+            dRiskOk += 1
+
+var int dDays = 0
+if startWatch
+    dDays += 1
+var table t = table.new(position.top_right, 2, 9, bgcolor=color.new(color.black, 20), border_width=1)
+if barstate.islast
+    table.cell(t, 0, 0, "Sessions tested", text_color=color.white)
+    table.cell(t, 1, 0, str.tostring(dDays), text_color=color.white)
+    table.cell(t, 0, 1, "1 Sweep", text_color=color.white)
+    table.cell(t, 1, 1, str.tostring(dSweep), text_color=color.white)
+    table.cell(t, 0, 2, "2 BOS", text_color=color.white)
+    table.cell(t, 1, 2, str.tostring(dBos), text_color=color.white)
+    table.cell(t, 0, 3, "3 FVG", text_color=color.white)
+    table.cell(t, 1, 3, str.tostring(dFvg), text_color=color.white)
+    table.cell(t, 0, 4, "Orders (risk ok)", text_color=color.white)
+    table.cell(t, 1, 4, str.tostring(dRiskOk), text_color=color.white)
+    table.cell(t, 0, 5, "Max stop pts", text_color=color.white)
+    table.cell(t, 1, 5, str.tostring(maxRiskPts), text_color=color.white)
+    table.cell(t, 0, 6, "Stop mode", text_color=color.white)
+    table.cell(t, 1, 6, stopMode == "Fixed points" ? "Fixed " + str.tostring(fixedStop) + " pts" : stopMode, text_color=color.white)
+    table.cell(t, 0, 7, "Sweep level", text_color=color.white)
+    table.cell(t, 1, 7, sweepLvl, text_color=color.white)
+    table.cell(t, 0, 8, "Displacement", text_color=color.white)
+    table.cell(t, 1, 8, useDisp ? "On, body > " + str.tostring(dispMult) + "× avg(" + str.tostring(dispLen) + ")" : "Off", text_color=color.white)
+
+// Orders are placed only in the 9:50-10:10 macro; unfilled limits rest until 11:00. Step 4 exit: flat by 12:00 ET
+restWin = inSess("0950-1100")
+if not restWin and strategy.position_size == 0
+    strategy.cancel("L")
+    strategy.cancel("S")
+if flatT
+    strategy.close_all("12:00 flat")
+
+// ---- Visuals ----
+bgcolor(manip ? color.new(color.red, 88) : na, title="Manipulation 9:30-9:50")
+bgcolor(macro ? color.new(color.green, 88) : na, title="Entry macro 9:50-10:10")
+plot(aH, "Asian H", color.new(color.purple, 40), style=plot.style_linebr)
+plot(aL, "Asian L", color.new(color.purple, 40), style=plot.style_linebr)
+plot(lH, "London H", color.new(color.teal, 40), style=plot.style_linebr)
+plot(lL, "London L", color.new(color.teal, 40), style=plot.style_linebr)
+plot(pdH, "Prior-day H", color.new(color.orange, 40), style=plot.style_linebr)
+plot(pdL, "Prior-day L", color.new(color.orange, 40), style=plot.style_linebr)
