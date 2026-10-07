@@ -46,7 +46,7 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - Headless check: Playwright with `channel: 'msedge'` (Edge is preinstalled; Chromium download was slow).
 
 ## Data feeds (how prices work now)
-- **Charts:** free TradingView embeds can't show CME futures (ES1!/NQ1!, GC1!) or CBOE VIX ("only available on TradingView"). The Charts tab uses CFD proxies, labelled as such: `OANDA:SPX500USD`, `OANDA:NAS100USD`, `CAPITALCOM:VIX`, `OANDA:XAUUSD`. Also embeddable: `CAPITALCOM:DXY`.
+- **Charts:** free TradingView embeds can't show CME futures (ES1!/NQ1!, GC1!) or CBOE VIX ("only available on TradingView"). The Charts tab uses CFD proxies, labelled as such: `OANDA:SPX500USD`, `OANDA:NAS100USD`, `CAPITALCOM:VIX`, `OANDA:XAUUSD`. Also embeddable: `CAPITALCOM:DXY`. The Technical Analysis widget has no data for any CFD, so it uses `AMEX:SPY` / `NASDAQ:QQQ`.
 - **Prices in the page JS:** corsproxy.io now returns 401 without an API key, and free keyless proxies (allorigins, codetabs, thingproxy, cors.lol) all failed. So `.github/workflows/prices.yml` runs `scripts/fetch-prices.mjs` every 5 min Sun–Fri. It batch-fetches Yahoo `/v8/finance/spark` (max 20 symbols per call) for every value in `YAHOO_MAP` and force-pushes `prices.json` to the `data` branch. The page reads `raw.githubusercontent.com/DialFlow/jc-trading/data/prices.json` via `loadPrices()`/`fetchYahoo()`. Prices are delayed ~5–15 min; the freshness pill says "Delayed", never "Live".
 - To add a symbol: add it to `YAHOO_MAP` (and `ALL_JOURNAL_SYMS` for the journal); the workflow picks it up automatically.
 
