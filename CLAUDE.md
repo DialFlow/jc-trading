@@ -83,6 +83,13 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - Results Jul 30–Oct 8 (49 sessions): ES1! 0/24 variations profitable (best −$970; v4 −$1,657.50 on 9 trades). NQ1! 24/24 profitable (+$1,570 to +$11,362.50; v4 −$2,650 because the 60-pt cap skipped setups). 4–21 trades per run, so suggestive only. NQ stops run up to 100 pts = $2,000/contract and the worst DD is ~$5K: check the MFF drawdown limit (MNQ = 1/10).
 - The Backtesting tab renders this: symbol + setting pickers, stat tiles, equity curve, funnel, every trade, a comparison table, and a verdict. The follow-up chat context is built from backtest.json; the old chat was cleared once via `jct_bt_ver`.
 
+## Lab tab (simulations, Oct 8): was "Backtesting with AI"; page id still `backtest`
+- **One engine:** `scripts/tjr-engine.mjs` (ES module) is the only implementation of the strategy. `backtest.mjs` imports it in Node, and the page imports it with `<script type="module">` (exposed as `window.TJR`, with a `tjr-ready` event). This is a deliberate exception to "single index.html", so live, replay and backtest can never disagree. `--validate` checks TradingView parity, and that replay seeding equals the full run for every session × setting.
+- **Robust** = profitable overall + both halves (split at mid-session date) + stress test (fill only after trading 2 ticks through, 3 ticks slippage on stops/market). Oct 8: ES 0/25, NQ 11/25. The Lab's default setting per symbol is the robust one whose weaker half is strongest (ES falls back to v4). The selector marks ✔/✗.
+- **Live setup:** runs the engine on bars.json 5m (600 bars = ≥2 sessions for PDH/PDL) and shows the step list, an order ticket with $ risk per full/micro contract, and historical edge (Wilson 90% win-rate band, halves, stress). The banner refuses to show an order when data is >15 min old during 9:00–12:00. The Dashboard has a compact `#live-mini` card; refreshes every 60 s and on Refresh.
+- **Account sim:** Monte Carlo, 5,000 paths. Each day trades with probability trades/sessions, bootstrapping real trade pts. EOD trailing drawdown (optionally locks at the starting balance), profit target, optional daily loss limit; full vs micro ($0.75/side). Fan chart plus a size ladder (1/2/3/5 micro, 1/2 full). The MFF defaults ($3,000 target, $2,000 trailing) are editable; confirm them against Jacob's plan.
+- **Replay:** `replay.json` holds, per session, the levels at 07:25, 20 lookback candles and 07:30–12:30 candles. The slider re-runs the engine up to the chosen candle ("hide the future" on by default).
+
 ## Next backtest ideas (v5)
 - Wider stop (20–25 pts) or stop under the second sweep.
 - Count a sweep only at one chosen level (e.g. London H/L or PDH/PDL), not any level.

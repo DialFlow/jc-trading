@@ -72,7 +72,7 @@ async function prices(url, ctx) {
 // Candles for the multi-timeframe FVG scan (same shape as bars.json from GitHub Actions)
 const BAR_SPECS = [
   { tf: '1m',  interval: '1m',  range: '2d',  keep: 300 },
-  { tf: '5m',  interval: '5m',  range: '5d',  keep: 300 },
+  { tf: '5m',  interval: '5m',  range: '5d',  keep: 600 }, // ≥2 sessions: the Lab's live tracker needs the prior day for PDH/PDL
   { tf: '15m', interval: '15m', range: '10d', keep: 300 },
   { tf: '30m', interval: '30m', range: '1mo', keep: 300 },
   { tf: '1h',  interval: '60m', range: '3mo', keep: 1300 }, // 4h is built from these in the page

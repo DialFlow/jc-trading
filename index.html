@@ -232,6 +232,30 @@ body {
 .fc-head .btn { white-space: nowrap; text-decoration: none; }
 .fc-segs { margin-bottom: 8px; flex-wrap: wrap; }
 
+/* Lab */
+.lab-view[hidden] { display: none !important; }
+.lab-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.lab-pick { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lab-pick select { width: auto; max-width: 100%; font-size: 12px; padding: 6px 8px; }
+.live-banner { border-radius: 12px; padding: 12px 14px; font-size: 14px; font-weight: 600; margin-bottom: 12px; background: var(--fill); }
+.live-banner .sub { display: block; font-size: 12px; font-weight: 400; color: var(--text2); margin-top: 3px; }
+.live-banner.go { background: rgba(52,199,89,0.14); color: var(--bull); }
+.live-banner.short { background: rgba(255,59,48,0.12); color: var(--bear); }
+.live-banner.wait { background: rgba(255,149,0,0.14); color: var(--warn); }
+.live-banner.stale { background: rgba(255,59,48,0.12); color: var(--bear); }
+.step { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.step:first-child { border-top: 0; }
+.step .ic { font-weight: 700; text-align: center; }
+.step .ok { color: var(--bull); } .step .no { color: var(--text3); } .step .bad { color: var(--bear); }
+.step .d { font-size: 12px; color: var(--text2); }
+.tkt { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tkt td { padding: 5px 0; border-bottom: 1px solid var(--border); }
+.tkt td:last-child { text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.sim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px 12px; font-size: 12px; color: var(--text2); }
+.sim-grid label { display: flex; flex-direction: column; gap: 4px; }
+.sim-grid .sim-check { flex-direction: row; align-items: center; gap: 6px; }
+.sim-grid input[type=number], .sim-grid select { font-size: 13px; padding: 6px 8px; }
+
 /* TJR confluence checklist */
 .cf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .cf-table th { text-align: left; font-weight: 500; padding: 5px 6px 5px 0; }
@@ -1102,7 +1126,7 @@ select { cursor: pointer; }
   <button class="tab-btn" onclick="showPage('strategy')">🧠 Strategy</button>
   <button class="tab-btn" onclick="showPage('tradelog')">📒 Trade Log</button>
   <button class="tab-btn" onclick="showPage('edge')">⚡ Edge</button>
-  <button class="tab-btn" onclick="showPage('backtest')">🤖 Backtesting with AI</button>
+  <button class="tab-btn" onclick="showPage('backtest')">🧪 Lab</button>
 </nav>
 
 <!-- ============================================================
@@ -1112,6 +1136,7 @@ select { cursor: pointer; }
 
 <!-- ===== TAB 1: DASHBOARD ===== -->
 <div class="tab-page active" id="page-dashboard">
+  <div id="live-mini" class="mb-md"></div>
 
   <!-- ===== AI TRADE SIGNAL ===== -->
   <div class="ai-signal-card" id="ai-signal-card">
@@ -1770,7 +1795,76 @@ select { cursor: pointer; }
 
 <!-- ===== TAB 9: BACKTESTING WITH AI ===== -->
 <div class="tab-page" id="page-backtest">
-  <div class="bt-wrap">
+  <div class="lab-nav">
+    <div class="mtf-segs" id="lab-nav">
+      <button class="mtf-seg on" data-v="live" onclick="labView('live')">Live setup</button>
+      <button class="mtf-seg" data-v="bt" onclick="labView('bt')">Backtest</button>
+      <button class="mtf-seg" data-v="sim" onclick="labView('sim')">Account sim</button>
+      <button class="mtf-seg" data-v="replay" onclick="labView('replay')">Replay</button>
+    </div>
+    <div class="lab-pick">
+      <div class="mtf-segs" id="lab-sym"></div>
+      <select id="lab-cfg" onchange="labSetCfg(this.value)" aria-label="Strategy settings"></select>
+    </div>
+  </div>
+
+  <!-- LIVE -->
+  <div class="lab-view" id="lab-live">
+    <div id="live-banner" class="live-banner">Loading today's candles…</div>
+    <div class="grid-2 mb-md" style="align-items:start">
+      <div class="card"><div class="card-body">
+        <div class="fs-12 fw-600 text-2 mb-sm">THE RULES, STEP BY STEP · TODAY</div>
+        <div id="live-steps"></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div class="fs-12 fw-600 text-2 mb-sm">ORDER TICKET (WHAT THE RULES SAY)</div>
+        <div id="live-ticket"></div>
+        <div class="fs-12 fw-600 text-2" style="margin:14px 0 6px">HISTORICAL EDGE · THESE SETTINGS</div>
+        <div id="live-edge"></div>
+      </div></div>
+    </div>
+    <div class="card mb-md"><div class="card-body"><div id="live-chart"></div><div id="live-events" class="fs-12 text-2" style="margin-top:8px"></div></div></div>
+  </div>
+
+  <!-- ACCOUNT SIM -->
+  <div class="lab-view" id="lab-sim" hidden>
+    <div class="card mb-md"><div class="card-body">
+      <div class="fs-13" style="margin-bottom:10px">Monte Carlo: each simulated day takes a trade with the same probability as in the backtest, drawing a real trade at random from the selected settings' history. The account rules decide pass or fail. Edit the rules to match your MyFundedFutures plan.</div>
+      <div class="sim-grid">
+        <label>Contract <select id="sim-kind"><option value="micro">Micro (MES/MNQ)</option><option value="full">Full (ES/NQ)</option></select></label>
+        <label>Contracts <input id="sim-n" type="number" min="1" max="20" value="1"></label>
+        <label>Profit target $ <input id="sim-target" type="number" value="3000" step="100"></label>
+        <label>Trailing drawdown $ <input id="sim-dd" type="number" value="2000" step="100"></label>
+        <label>Daily loss limit $ (0 = none) <input id="sim-dll" type="number" value="0" step="100"></label>
+        <label>Trading days <input id="sim-days" type="number" value="30" min="5" max="120"></label>
+        <label class="sim-check"><input id="sim-lock" type="checkbox" checked> Drawdown stops trailing at starting balance</label>
+        <label class="sim-check"><input id="sim-stress" type="checkbox" checked> Use stress-test trades (worse fills)</label>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="simRun()">Run 5,000 simulations</button>
+    </div></div>
+    <div id="sim-out"></div>
+  </div>
+
+  <!-- REPLAY -->
+  <div class="lab-view" id="lab-replay" hidden>
+    <div class="card mb-md"><div class="card-body">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <select id="rp-day" onchange="rpLoad()" aria-label="Session"></select>
+        <button class="btn btn-secondary btn-sm" onclick="rpStep(-1)" aria-label="Back one candle">◀</button>
+        <button class="btn btn-secondary btn-sm" onclick="rpStep(1)" aria-label="Forward one candle">▶</button>
+        <button class="btn btn-secondary btn-sm" id="rp-play" onclick="rpPlay()">Play</button>
+        <button class="btn btn-secondary btn-sm" onclick="rpJump(570)">9:30</button>
+        <button class="btn btn-secondary btn-sm" onclick="rpJump(590)">9:50</button>
+        <label class="fs-12 text-2" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="rp-hide" checked onchange="rpDraw()"> Hide the future</label>
+      </div>
+      <input type="range" id="rp-slider" min="0" max="0" value="0" oninput="rpAt(+this.value)" style="width:100%" aria-label="Replay position">
+      <div id="rp-banner" class="live-banner" style="margin-top:8px"></div>
+      <div id="rp-chart"></div>
+      <div id="rp-events" class="fs-12 text-2" style="margin-top:8px"></div>
+    </div></div>
+  </div>
+
+  <div class="bt-wrap lab-view" id="lab-bt" hidden>
     <div class="flex items-center justify-between flex-wrap gap-sm">
       <div>
         <div class="section-label" style="padding-top:4px;padding-bottom:2px;">Backtesting · real ES1! / NQ1! data</div>
@@ -1811,6 +1905,13 @@ select { cursor: pointer; }
 </div>
 
 </main>
+
+<script type="module">
+// Shared strategy engine (same file the backtest runs in Node) — see scripts/tjr-engine.mjs
+import * as TJR from './scripts/tjr-engine.mjs';
+window.TJR = TJR;
+window.dispatchEvent(new Event('tjr-ready'));
+</script>
 
 <script>
 // ============================================================
@@ -2122,7 +2223,7 @@ async function loadMTF(force) {
     for (const [sym] of MTF_SYMS) {
       const src = raw.bars?.[sym]; if (!src) continue;
       const toB = rows => (rows || []).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
-      const tfBars = { '1m': toB(src['1m']), '5m': toB(src['5m']), '15m': toB(src['15m']), '30m': toB(src['30m']),
+      const tfBars = { '1m': toB(src['1m']), '5m': toB(src['5m']).slice(-300), '15m': toB(src['15m']), '30m': toB(src['30m']),
         '1h': toB(src['1h']).slice(-300), '4h': to4h(toB(src['1h'])).slice(-300), '1d': toB(src['1d']) };
       const tfs = {}; let num = 0, den = 0;
       for (const tf of Object.keys(tfBars)) {
@@ -3418,7 +3519,7 @@ async function refreshAll() {
   const btn = document.getElementById('ai-refresh-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
   pricesLoadedAt = 0; // bypass the price cache
-  try { await Promise.all([autoFetchHeader(), loadAnalysis(), loadMTF(true)]); } catch(e) {}
+  try { await Promise.all([autoFetchHeader(), loadAnalysis(), loadMTF(true), liveRefresh(false)]); } catch(e) {}
   refreshAISignal();
   if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
   const asOf = lastPriceFetch ? lastPriceFetch.toLocaleTimeString('en-US', { timeZone:'America/New_York', hour:'numeric', minute:'2-digit' }) + ' ET' : 'unavailable';
@@ -3514,6 +3615,7 @@ async function loadBacktest() {
     <p style="margin-top:6px;" class="text-2">NQ1! uses stops scaled 4× (fixed 80 pts, max 100; v4 max 60) because NQ moves about 4× ES in points. Point values: ES $50, NQ $20.</p>`;
   btRenderSym(); btPickV4();
   btRenderGrid(); btRenderVerdict();
+  labInit();
 }
 function btRenderSym() {
   document.getElementById('bt-sym').innerHTML = [['ES=F', 'ES1!'], ['NQ=F', 'NQ1!']].map(([s, n]) =>
@@ -3565,10 +3667,11 @@ function btDrawEquity(r) {
 }
 function btRenderGrid() {
   const runs = BT.runs.filter(r => r.sym === btSym).sort((p, q) => q.stats.net - p.stats.net);
-  document.getElementById('bt-grid').innerHTML = `<tr><th>Settings (tap to view)</th><th>Trades</th><th>Wins</th><th>PF</th><th>Max DD</th><th>Net</th></tr>` +
-    runs.map(r => `<tr class="bt-row${btCurrent && btCurrent.id === r.id && btCurrent.sym === r.sym ? ' on' : ''}" onclick="btPickId('${r.sym}','${r.id}')"><td>${esc(btLabel(r))}</td><td>${r.stats.trades}</td><td>${r.stats.wins}</td><td>${r.stats.pf == null ? '∞' : r.stats.pf}</td><td class="mono">${r.stats.maxDD.toLocaleString('en-US')}</td><td class="mono ${btCls(r.stats.net)}">${btMoney(r.stats.net)}</td></tr>`).join('');
+  document.getElementById('bt-grid').innerHTML = `<tr><th>Robust</th><th>Settings (tap to view)</th><th>Trades</th><th>Wins</th><th>PF</th><th>1st half</th><th>2nd half</th><th>Stress</th><th>Max DD</th><th>Net</th></tr>` +
+    runs.map(r => `<tr class="bt-row${btCurrent && btCurrent.id === r.id && btCurrent.sym === r.sym ? ' on' : ''}" onclick="btPickId('${r.sym}','${r.id}')"><td>${isRobust(r) ? '<span class="cf-b">✔</span>' : '<span class="cf-n">✗</span>'}</td><td>${esc(btLabel(r))}</td><td>${r.stats.trades}</td><td>${r.stats.wins}</td><td>${r.stats.pf == null ? '∞' : r.stats.pf}</td><td class="mono ${btCls(r.halves[0].net)}">${btMoney(r.halves[0].net)}</td><td class="mono ${btCls(r.halves[1].net)}">${btMoney(r.halves[1].net)}</td><td class="mono ${btCls(r.stress.stats.net)}">${btMoney(r.stress.stats.net)}</td><td class="mono">${r.stats.maxDD.toLocaleString('en-US')}</td><td class="mono ${btCls(r.stats.net)}">${btMoney(r.stats.net)}</td></tr>`).join('');
 }
 function btRenderVerdict() {
+  const rob = sym => BT.runs.filter(r => r.sym === sym && isRobust(r)).length;
   const sum = sym => { const rs = BT.runs.filter(r => r.sym === sym && r.id !== 'v4'); const pos = rs.filter(r => r.stats.net > 0);
     const nets = rs.map(r => r.stats.net), tr = rs.map(r => r.stats.trades);
     return { n: rs.length, pos: pos.length, best: Math.max(...nets), worst: Math.min(...nets), minT: Math.min(...tr), maxT: Math.max(...tr), maxDD: Math.max(...rs.map(r => r.stats.maxDD)) }; };
@@ -3577,6 +3680,7 @@ function btRenderVerdict() {
   document.getElementById('bt-verdict').innerHTML = `
     <p><strong>ES1!:</strong> lost money with every setting: ${e.pos} of ${e.n} variations were profitable (best ${btMoney(e.best)}, worst ${btMoney(e.worst)}). v4 settings: ${btMoney(v4e.net)} on ${v4e.trades} trades.</p>
     <p><strong>NQ1!:</strong> made money with ${q.pos} of ${q.n} variations (${btMoney(q.worst)} to ${btMoney(q.best)}). The v4 settings lost ${btMoney(v4q.net)} because its 60-pt stop cap skipped most setups.</p>
+    <p style="margin-top:8px;"><strong>Robustness checks</strong> (profitable overall, in both halves of the period, and under a stress test with worse fills and 3-tick slippage): ES1! ${rob('ES=F')} of 25 settings pass, NQ1! ${rob('NQ=F')} of 25.</p>
     <div class="bt-verdict" style="margin-top:8px;"><p><strong>How much to trust it:</strong> each run has only ${Math.min(e.minT, q.minT)}–${Math.max(e.maxT, q.maxT)} trades over about 10 weeks in one market regime, and the best row is the best of 24 tries, which flatters it. That's enough to rank ideas, not to prove an edge. The NQ result is worth re-testing on more history, in TradingView or with a paid data feed.</p></div>
     <p style="margin-top:8px;"><strong>Account fit:</strong> NQ1! stops here run up to 100 pts = $2,000 per contract, and the worst NQ drawdown was −$${q.maxDD.toLocaleString('en-US')}. Check that against your MyFundedFutures drawdown limit; one full NQ contract may be too large for a $50K account. Micros (MNQ, $2/pt) scale everything to 1/10.</p>
     <p class="text-2" style="margin-top:8px;">Rules-based test of your strategy, not a trade recommendation.</p>`;
@@ -3597,6 +3701,310 @@ function btRenderHistory() {
   btHistory.forEach(m => btBubble(m.role, btEscape(m.content)));
 }
 function btSave() { try { localStorage.setItem('jct_bt_chat', JSON.stringify(btHistory.slice(-30))); } catch(e) {} }
+
+// ============================================================
+// LAB — live setup tracker, account Monte Carlo, session replay
+// All three run scripts/tjr-engine.mjs, the engine validated against TradingView.
+// ============================================================
+let labSym = 'NQ=F', labCfgId = null, labRaw = null, labLoadedAt = 0, rpData = null, rpIdx = 0, rpTimer = null;
+const whenTJR = cb => window.TJR ? cb() : window.addEventListener('tjr-ready', cb, { once: true });
+const fx2 = v => (v == null || Number.isNaN(v)) ? '–' : v.toFixed(2);
+const usd = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+function labView(v) {
+  document.querySelectorAll('#lab-nav .mtf-seg').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  for (const id of ['live', 'bt', 'sim', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  try { localStorage.setItem('jct_lab_view', v); } catch(e) {}
+  if (v === 'live') liveRefresh();
+  if (v === 'replay') rpInit();
+  if (v === 'sim' && !document.getElementById('sim-out').innerHTML) simRun();
+}
+function labRuns() { return BT ? BT.runs.filter(r => r.sym === labSym) : []; }
+// Robust = profitable overall, in both halves of the period, and under the execution stress test
+const isRobust = r => r.stats.net > 0 && r.halves[0].net > 0 && r.halves[1].net > 0 && r.stress.stats.net > 0;
+// Default pick: the robust setting whose weaker half is strongest (a rule, not the best total)
+function labDefaultCfg() {
+  const rob = labRuns().filter(isRobust).sort((a, b) => Math.min(b.halves[0].net, b.halves[1].net) - Math.min(a.halves[0].net, a.halves[1].net));
+  return (rob[0] || labRuns().find(r => r.id === 'v4')).id;
+}
+function labCfg() { return labRuns().find(r => r.id === labCfgId) || labRuns()[0]; }
+function labRenderPick() {
+  document.getElementById('lab-sym').innerHTML = [['ES=F', 'ES1!'], ['NQ=F', 'NQ1!']].map(([s, n]) =>
+    `<button class="mtf-seg${s === labSym ? ' on' : ''}" onclick="labSetSym('${s}')">${n}</button>`).join('');
+  const runs = labRuns().slice().sort((a, b) => (isRobust(b) - isRobust(a)) || (b.stats.net - a.stats.net));
+  document.getElementById('lab-cfg').innerHTML = runs.map(r => `<option value="${r.id}"${r.id === labCfgId ? ' selected' : ''}>${isRobust(r) ? '✔ ' : '✗ '}${esc(btLabel(r))}</option>`).join('');
+}
+function labSetSym(s) { labSym = s; labCfgId = labDefaultCfg(); labRenderPick(); labRerender(); }
+function labSetCfg(id) { labCfgId = id; labRenderPick(); labRerender(); }
+function labRerender() {
+  const v = document.querySelector('#lab-nav .mtf-seg.on')?.dataset.v || 'live';
+  if (v === 'live') liveRefresh(true);
+  if (v === 'sim') simRun();
+  if (v === 'replay') rpLoad();
+}
+function labInit() {
+  if (!BT) return;
+  labCfgId = labDefaultCfg(); labRenderPick();
+  let v = 'live'; try { v = localStorage.getItem('jct_lab_view') || 'live'; } catch(e) {}
+  labView(['live', 'bt', 'sim', 'replay'].includes(v) ? v : 'live');
+}
+
+// ---------- shared setup chart: candles, session levels, order lines, fills ----------
+function drawSetupChart(el, bars, state, events, opts = {}) {
+  if (!el) return;
+  if (!bars.length) { el.innerHTML = '<div class="fs-12 text-2">No candles for this session yet.</div>'; return; }
+  const W = 600, H = opts.h || 300, PR = 62, PT = 8, PB = 20;
+  const lv = state ? state.levels : {};
+  const lines = [['PDH', lv.pdH], ['PDL', lv.pdL], ['Asia H', lv.asianH], ['Asia L', lv.asianL], ['Ldn H', lv.londonH], ['Ldn L', lv.londonL]].filter(x => x[1] != null && !Number.isNaN(x[1]));
+  const ord = state && (state.pending || state.pos);
+  let lo = Math.min(...bars.map(b => b.l)), hi = Math.max(...bars.map(b => b.h));
+  for (const [, p] of lines) if (Math.abs(p - (lo + hi) / 2) < (hi - lo) * 1.2) { lo = Math.min(lo, p); hi = Math.max(hi, p); }
+  if (ord) for (const p of [ord.stop, ord.target, ord.limit ?? ord.entry]) if (p != null) { lo = Math.min(lo, p); hi = Math.max(hi, p); }
+  const pad = (hi - lo) * 0.05; lo -= pad; hi += pad;
+  const n = opts.slots || bars.length, cw = (W - PR) / n, right = W - PR;
+  const x = i => i * cw + cw / 2, y = p => PT + (hi - p) / (hi - lo) * (H - PT - PB);
+  let svg = '';
+  // shade the manipulation (9:30–9:50) and entry (9:50–10:10) windows
+  const band = (a, b, col) => { const i0 = bars.findIndex(k => k.m >= a), i1 = bars.findIndex(k => k.m >= b);
+    if (i0 >= 0) svg += `<rect x="${x(i0) - cw / 2}" y="${PT}" width="${((i1 < 0 ? bars.length : i1) - i0) * cw}" height="${H - PT - PB}" fill="${col}" opacity="0.08"/>`; };
+  band(570, 590, 'var(--bear)'); band(590, 610, 'var(--bull)');
+  for (const [nm, p] of lines) if (p >= lo && p <= hi)
+    svg += `<line x1="0" x2="${right}" y1="${y(p)}" y2="${y(p)}" stroke="var(--warn)" stroke-width="0.8" stroke-dasharray="5 3" opacity="0.8"/><text x="4" y="${y(p) - 3}" class="mtf-ax" style="fill:var(--warn)">${nm} ${p.toFixed(2)}</text>`;
+  bars.forEach((b, i) => {
+    const col = b.c >= b.o ? 'var(--bull)' : 'var(--bear)', bw = Math.max(1, cw * 0.62);
+    svg += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(b.h)}" y2="${y(b.l)}" stroke="${col}"/><rect x="${x(i) - bw / 2}" y="${y(Math.max(b.o, b.c))}" width="${bw}" height="${Math.max(0.8, Math.abs(y(b.o) - y(b.c)))}" fill="${col}"/>`;
+  });
+  if (ord) {
+    const ent = ord.limit ?? ord.entry;
+    for (const [nm, p, col] of [['Entry', ent, 'var(--blue)'], ['Stop', ord.stop, 'var(--bear)'], ['Target', ord.target, 'var(--bull)']])
+      svg += `<line x1="0" x2="${right}" y1="${y(p)}" y2="${y(p)}" stroke="${col}" stroke-width="1.2"/><rect x="${right + 1}" y="${y(p) - 8}" width="${PR - 2}" height="16" rx="3" fill="${col}"/><text x="${right + 4}" y="${y(p) + 4}" class="mtf-ax" style="fill:#fff">${nm} ${p.toFixed(0)}</text>`;
+  }
+  for (const e of events || []) {
+    if (e.type !== 'fill' && e.type !== 'exit') continue;
+    const i = bars.findIndex(b => b.t === e.t); if (i < 0) continue;
+    const px = parseFloat((e.text.match(/at ([\d.]+)/) || [])[1]); if (!px) continue;
+    svg += `<circle cx="${x(i)}" cy="${y(px)}" r="4.5" fill="${e.type === 'fill' ? 'var(--blue)' : 'var(--text)'}" stroke="var(--bg)" stroke-width="1.5"/>`;
+  }
+  const last = bars[bars.length - 1];
+  svg += `<line x1="0" x2="${right}" y1="${y(last.c)}" y2="${y(last.c)}" stroke="var(--text2)" stroke-dasharray="2 2" stroke-width="0.6"/>`;
+  for (let k = 0; k <= 3; k++) { const p = lo + (hi - lo) * k / 3; svg += `<text x="${right + 4}" y="${y(p) + 3}" class="mtf-ax">${p.toFixed(0)}</text>`; }
+  const tl = [bars[0], bars.find(b => b.m === 570), bars.find(b => b.m === 660), last].filter(Boolean);
+  for (const b of [...new Set(tl)]) { const i = bars.indexOf(b); svg += `<text x="${Math.min(right - 30, Math.max(0, x(i) - 14))}" y="${H - 5}" class="mtf-ax">${b.hm}</text>`; }
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="Setup chart">${svg}</svg>`;
+}
+
+// ---------- step list shared by live + replay ----------
+function stepsHtml(st, evs, nowM) {
+  const has = t => evs.some(e => e.type === t);
+  const evText = t => (evs.filter(e => e.type === t).slice(-1)[0] || {});
+  const row = (cls, ic, title, d) => `<div class="step"><span class="ic ${cls}">${ic}</span><div>${title}${d ? `<div class="d">${d}</div>` : ''}</div></div>`;
+  const lv = st.levels;
+  const out = [];
+  out.push(row('ok', '✓', 'Levels set', `PDH ${fx2(lv.pdH)} · PDL ${fx2(lv.pdL)} · Asia ${fx2(lv.asianH)}/${fx2(lv.asianL)} · London ${fx2(lv.londonH)}/${fx2(lv.londonL)}`));
+  const sw = evs.filter(e => e.type === 'sweep');
+  out.push(sw.length ? row('ok', '✓', '1 · Potential: liquidity swept after 9:30', sw.map(e => `${e.hm} ${e.text}`).join('<br>'))
+    : row('no', '○', '1 · Potential: no sweep yet', nowM < 570 ? 'Watching starts at 9:30' : nowM >= 610 ? 'No sweep in the 9:30–10:10 window' : 'Waiting for price to take a level'));
+  const bos = evText('bos'), fvg = evText('fvg');
+  out.push(has('bos') ? row('ok', '✓', '2 · Confirmation: break of structure', `${bos.hm} ${bos.text}`) : row('no', '○', '2 · Confirmation: no BOS yet', sw.length ? 'Needs a close beyond the last 5 candles, against the sweep' : ''));
+  out.push(has('fvg') ? row('ok', '✓', '3 · Continuation: FVG formed', `${fvg.hm} ${fvg.text}`) : row('no', '○', '3 · Continuation: no FVG yet', ''));
+  const o = evText('order'), fl = evText('fill'), ex = evText('exit'), cn = evText('cancel');
+  if (has('order')) out.push(row('ok', '✓', 'Order placed (9:50–10:10 only)', `${o.hm} ${o.text}`));
+  else if (st.rejected) out.push(row('bad', '✗', 'Setup skipped', st.rejected));
+  else out.push(row('no', '○', 'Order', nowM < 590 ? 'Orders only go in from 9:50 to 10:10' : nowM >= 610 ? 'No order today' : 'Waiting for all three steps'));
+  if (has('fill')) out.push(row('ok', '✓', '4 · Filled', `${fl.hm} ${fl.text}`));
+  if (has('exit')) out.push(row(/Target/.test(ex.text) ? 'ok' : 'bad', /Target/.test(ex.text) ? '✓' : '✗', '4 · Exit', `${ex.hm} ${ex.text}`));
+  if (has('cancel')) out.push(row('no', '○', 'Order expired', `${cn.hm} ${cn.text}`));
+  return out.join('');
+}
+function bannerFor(st, evs, nowM, ageMin) {
+  if (ageMin != null && ageMin > 15 && nowM >= 540 && nowM < 720) return ['stale', `Data is ${Math.round(ageMin)} min old — don't act on this`, 'Check the live chart in TradingView. Real-time data arrives with the Cloudflare setup.'];
+  if (st.skipped) return ['wait', 'No trading today (contract roll / data gap)', ''];
+  if (st.pos) { const p = st.pos; return [p.dir === 'long' ? 'go' : 'short', `In a ${p.dir} per the rules: entry ${fx2(p.entry)}`, `Stop ${fx2(p.stop)} · target ${fx2(p.target)} · flat by 12:00`]; }
+  if (st.pending) { const p = st.pending; return [p.dir === 'long' ? 'go' : 'short', `${p.dir === 'long' ? 'BUY' : 'SELL'} LIMIT ${fx2(p.limit)} — rules say the order is working`, `Stop ${fx2(p.stop)} · target ${fx2(p.target)} (${p.targetName}) · cancels at 11:00 if unfilled`]; }
+  const ex = evs.filter(e => e.type === 'exit').slice(-1)[0];
+  if (ex) return ['wait', 'Done for today', ex.text];
+  const cn = evs.find(e => e.type === 'cancel'), od = evs.find(e => e.type === 'order');
+  if (cn) return ['wait', 'Order expired unfilled: no trade today', od ? `${od.hm} ${od.text}; price never came back to the entry before 11:00.` : ''];
+  if (st.rejected) return ['wait', 'Setup skipped: stop too wide', st.rejected];
+  if (nowM < 570) return ['wait', 'Pre-market: levels are set', 'The rules start watching for a sweep at 9:30.'];
+  if (nowM < 590) return ['wait', 'Manipulation window (9:30–9:50): no entries', evs.some(e => e.type === 'sweep') ? 'A sweep has happened; watching for a BOS and FVG.' : 'Watching for a sweep.'];
+  if (nowM < 610) return ['wait', 'Entry window open (9:50–10:10)', evs.some(e => e.type === 'fvg') ? 'Setup complete: order goes in on this candle close.' : 'No complete setup yet.'];
+  return ['wait', 'No trade today under these rules', 'The setup did not complete before 10:10.'];
+}
+function edgeHtml(r) {
+  const s = r.stats, h = r.halves, x = r.stress.stats, rob = isRobust(r);
+  return `<table class="tkt">
+    <tr><td>Trades (${BT.instruments[r.sym].nySessions} sessions)</td><td>${s.trades}</td></tr>
+    <tr><td>Win rate (90% range)</td><td>${Math.round(s.winRate * 100)}% (${Math.round(s.winRateLo * 100)}–${Math.round(s.winRateHi * 100)}%)</td></tr>
+    <tr><td>Expectancy per trade</td><td class="${btCls(s.expectancy)}">${btMoney(s.expectancy)} · ${s.avgR >= 0 ? '+' : ''}${s.avgR}R</td></tr>
+    <tr><td>First half / second half</td><td><span class="${btCls(h[0].net)}">${btMoney(h[0].net)}</span> / <span class="${btCls(h[1].net)}">${btMoney(h[1].net)}</span></td></tr>
+    <tr><td>Stress test (worse fills)</td><td class="${btCls(x.net)}">${btMoney(x.net)}</td></tr>
+    <tr><td>Max drawdown (1 contract)</td><td class="bear">−$${s.maxDD.toLocaleString('en-US')}</td></tr>
+  </table>
+  <div class="fs-12" style="margin-top:8px">${rob ? '<span class="cf-b">✔ Robust:</span> profitable overall, in both halves and under stress. Weak evidence: only ' + s.trades + ' trades.' : '<span class="cf-s">✗ Not robust:</span> fails at least one check (overall, either half, or stress). The rules can fire, but history doesn\'t back them.'}</div>`;
+}
+function ticketHtml(st, r) {
+  const I = window.TJR.INSTR[r.sym], o = st.pending || st.pos;
+  if (!o) return '<div class="fs-13 text-2">No order right now. When the rules place one, the price, stop, target and dollar risk appear here.</div>';
+  const ent = o.limit ?? o.entry, risk = Math.abs(ent - o.stop), rew = Math.abs(o.target - ent);
+  const full = risk * I.pointValue + 5, micro = risk * I.pointValue / 10 + 1.5;
+  return `<table class="tkt">
+    <tr><td>Side</td><td class="${o.dir === 'long' ? 'bull' : 'bear'}">${o.dir === 'long' ? 'Buy limit' : 'Sell limit'}</td></tr>
+    <tr><td>Entry</td><td>${fx2(ent)}</td></tr><tr><td>Stop</td><td>${fx2(o.stop)}</td></tr><tr><td>Target</td><td>${fx2(o.target)}</td></tr>
+    <tr><td>Risk / reward</td><td>${risk.toFixed(2)} / ${rew.toFixed(2)} pts (${(rew / risk).toFixed(2)}R)</td></tr>
+    <tr><td>Risk per ${I.name.replace('1!', '')} contract</td><td>${usd(full)}</td></tr>
+    <tr><td>Risk per ${I.micro} contract</td><td>${usd(micro)}</td></tr>
+  </table><div class="fs-12 text-2" style="margin-top:6px">Includes commissions. Compare with your remaining drawdown in Account sim.</div>`;
+}
+
+// ---------- LIVE ----------
+async function liveRefresh(useCache) {
+  if (!BT) return;
+  whenTJR(async () => {
+    const E = window.TJR, r = labCfg();
+    if (!useCache || !labRaw || Date.now() - labLoadedAt > 60000) {
+      try {
+        const url = JC_API ? JC_API + '/bars' : BARS_URL + '?t=' + Math.floor(Date.now() / 60000);
+        const res = await fetch(url, { signal: AbortSignal.timeout(10000) }); if (res.ok) { labRaw = await res.json(); labLoadedAt = Date.now(); }
+      } catch(e) {}
+    }
+    const rows = labRaw?.bars?.[labSym]?.['5m'];
+    if (!rows || rows.length < 100) { document.getElementById('live-banner').textContent = 'Today\'s candles are not available yet.'; return; }
+    const bars = E.toBars(rows);
+    const res = E.run(bars, labSym, { ...E.BASE, ...r }, { keepOpen: true });
+    const st = res.state, td = st.td, evs = res.events.filter(e => e.td === td);
+    const now = getCurrentETTime(), nowM = now.getHours() * 60 + now.getMinutes();
+    const lastBar = bars[bars.length - 1], ageMin = (Date.now() / 1000 - lastBar.t - 300) / 60;
+    const sameDay = E.et(Date.now() / 1000).td === td;
+    const effM = sameDay ? nowM : 1439;
+    const [cls, title, sub] = bannerFor(st, evs, effM, sameDay ? ageMin : null);
+    document.getElementById('live-banner').className = 'live-banner ' + cls;
+    document.getElementById('live-banner').innerHTML = `${esc(title)}<span class="sub">${esc(sub)}${sub ? ' · ' : ''}${esc(r.name)} · ${esc(btLabel(r))} · session ${td} · last candle ${lastBar.hm} ET${sameDay ? '' : ' (market closed: showing the last session)'}</span>`;
+    document.getElementById('live-steps').innerHTML = stepsHtml(st, evs, effM);
+    document.getElementById('live-ticket').innerHTML = ticketHtml(st, r);
+    document.getElementById('live-edge').innerHTML = edgeHtml(r);
+    const dayBars = bars.filter(b => b.td === td && b.m >= 450 && b.m <= 750);
+    drawSetupChart(document.getElementById('live-chart'), dayBars, st, evs, { slots: 61 });
+    document.getElementById('live-events').innerHTML = evs.length ? evs.map(e => `${e.hm} · ${esc(e.text)}`).join('<br>') : 'No strategy events yet this session.';
+    liveMini(st, evs, effM, sameDay ? ageMin : null, r, title);
+  });
+}
+// compact card on the Dashboard
+function liveMini(st, evs, nowM, ageMin, r, title) {
+  const el = document.getElementById('live-mini'); if (!el) return;
+  const [cls] = bannerFor(st, evs, nowM, ageMin);
+  el.innerHTML = `<div class="live-banner ${cls}" style="margin:0;cursor:pointer" onclick="showPage('backtest');labView('live')">${esc(title)}<span class="sub">Live setup · ${esc(r.name)} · ${isRobust(r) ? '✔ robust settings' : '✗ settings not robust'} · tap for the full ticket</span></div>`;
+}
+
+// ---------- ACCOUNT SIM (Monte Carlo) ----------
+const pctS = v => v > 0 && v < 0.005 ? '<1%' : Math.round(v * 100) + '%';
+function simRun() {
+  if (!BT) return;
+  const r = labCfg(), I = { 'ES=F': { pv: 50 }, 'NQ=F': { pv: 20 } }[r.sym];
+  const kind = document.getElementById('sim-kind').value, n = Math.max(1, +document.getElementById('sim-n').value || 1);
+  const target = +document.getElementById('sim-target').value, ddLim = +document.getElementById('sim-dd').value, dll = +document.getElementById('sim-dll').value;
+  const days = Math.max(5, +document.getElementById('sim-days').value || 30), lock = document.getElementById('sim-lock').checked, stress = document.getElementById('sim-stress').checked;
+  const src = stress ? r.stress.trades : r.trades;
+  const sessions = BT.instruments[r.sym].nySessions, pTrade = src.length / sessions;
+  const out = document.getElementById('sim-out');
+  if (!src.length) { out.innerHTML = '<div class="card"><div class="card-body fs-13">These settings produced no trades, so there is nothing to simulate.</div></div>'; return; }
+  const pnlOf = (t, k, cnt) => cnt * (k === 'micro' ? t.pts * I.pv / 10 - 2 * 0.75 : t.pts * I.pv - 2 * 2.5);
+  function sim(k, cnt, paths, keepPaths) {
+    let pass = 0, fail = 0, daysToPass = [], endPnl = [], curves = keepPaths ? [] : null;
+    for (let p = 0; p < paths; p++) {
+      let bal = 0, peak = 0, done = 0, curve = keepPaths ? [0] : null;
+      for (let d = 0; d < days && !done; d++) {
+        if (Math.random() < pTrade) {
+          let x = pnlOf(src[(Math.random() * src.length) | 0], k, cnt);
+          if (dll > 0 && x < -dll) x = -dll; // the daily loss limit flattens you
+          bal += x;
+        }
+        const floor = lock ? Math.min(peak - ddLim, 0) : peak - ddLim;
+        if (bal <= floor) { fail++; done = 1; }
+        else if (bal >= target) { pass++; done = 1; daysToPass.push(d + 1); }
+        peak = Math.max(peak, bal);
+        if (curve) curve.push(bal);
+      }
+      endPnl.push(bal);
+      if (curve) { while (curve.length <= days) curve.push(bal); curves.push(curve); }
+    }
+    daysToPass.sort((a, b) => a - b); endPnl.sort((a, b) => a - b);
+    return { pass: pass / paths, fail: fail / paths, open: 1 - (pass + fail) / paths, medDays: daysToPass.length ? daysToPass[daysToPass.length >> 1] : null,
+      mean: endPnl.reduce((a, v) => a + v, 0) / paths, curves };
+  }
+  const main = sim(kind, n, 5000, true);
+  // percentile fan of the account balance by day
+  const pct = q => Array.from({ length: days + 1 }, (_, d) => { const col = main.curves.map(c => c[d]).sort((a, b) => a - b); return col[Math.floor(q * (col.length - 1))]; });
+  const p10 = pct(0.1), p50 = pct(0.5), p90 = pct(0.9);
+  const W = 600, H = 200, lo = Math.min(-ddLim, ...p10), hi = Math.max(target, ...p90), X = d => 34 + d * (W - 44) / days, Y = v => 8 + (hi - v) / (hi - lo) * (H - 28);
+  const path = a => a.map((v, d) => `${X(d)},${Y(v)}`).join(' ');
+  const fan = `<svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="Simulated account balance range">
+    <polygon points="${path(p90)} ${p10.map((v, d) => `${X(d)},${Y(v)}`).reverse().join(' ')}" fill="var(--blue)" opacity="0.15"/>
+    <polyline points="${path(p50)}" fill="none" stroke="var(--blue)" stroke-width="2"/>
+    <line x1="34" x2="${W - 10}" y1="${Y(target)}" y2="${Y(target)}" stroke="var(--bull)" stroke-dasharray="4 3"/><text x="38" y="${Y(target) - 3}" class="mtf-ax" style="fill:var(--bull)">target +${usd(target)}</text>
+    <line x1="34" x2="${W - 10}" y1="${Y(-ddLim)}" y2="${Y(-ddLim)}" stroke="var(--bear)" stroke-dasharray="4 3"/><text x="38" y="${Y(-ddLim) + 11}" class="mtf-ax" style="fill:var(--bear)">drawdown limit −${usd(ddLim)}</text>
+    <line x1="34" x2="${W - 10}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--border)"/>
+    <text x="34" y="${H - 4}" class="mtf-ax">day 0</text><text x="${W - 50}" y="${H - 4}" class="mtf-ax">day ${days}</text></svg>`;
+  // size ladder: same rules, different sizes
+  const sizes = [['micro', 1], ['micro', 2], ['micro', 3], ['micro', 5], ['full', 1], ['full', 2]];
+  const ladder = sizes.map(([k, c]) => ({ k, c, ...sim(k, c, 2000, false) }));
+  const bestFail = ladder.filter(z => z.fail <= 0.2).sort((a, b) => b.pass - a.pass)[0];
+  const nm = BT.instruments[r.sym].name.replace('1!', ''), mic = r.sym === 'ES=F' ? 'MES' : 'MNQ';
+  out.innerHTML = `
+    <div class="bt-summary">
+      <div class="stat-tile"><div class="stat-eyebrow">Pass (hit target)</div><div class="stat-value bull">${pctS(main.pass)}</div><div class="stat-sub">${main.medDays ? 'median ' + main.medDays + ' trading days' : 'never in ' + days + ' days'}</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Fail (drawdown hit)</div><div class="stat-value bear">${pctS(main.fail)}</div><div class="stat-sub">within ${days} trading days</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Still open</div><div class="stat-value">${pctS(main.open)}</div><div class="stat-sub">neither after ${days} days</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Avg P&amp;L at the end</div><div class="stat-value mono ${btCls(main.mean)}">${btMoney(Math.round(main.mean))}</div><div class="stat-sub">${n} × ${kind === 'micro' ? mic : nm}, ${(pTrade * 100).toFixed(0)}% of days trade</div></div>
+    </div>
+    <div class="card mb-md" style="margin-top:12px"><div class="card-body"><div class="fs-12 fw-600 mb-sm">Account P&amp;L range across 5,000 simulations (middle 80% shaded, median line)</div>${fan}</div></div>
+    <div class="card mb-md"><div class="card-body"><div class="fs-12 fw-600 mb-sm">Same rules at different sizes (2,000 simulations each)</div>
+      <table class="bt-table"><tr><th>Size</th><th>Pass</th><th>Fail</th><th>Still open</th><th>Median days to pass</th></tr>
+      ${ladder.map(z => `<tr${z === bestFail ? ' class="bt-row on"' : ''}><td>${z.c} × ${z.k === 'micro' ? mic : nm}</td><td class="bull">${pctS(z.pass)}</td><td class="bear">${pctS(z.fail)}</td><td>${pctS(z.open)}</td><td>${z.medDays ?? '–'}</td></tr>`).join('')}</table>
+      <div class="fs-12 text-2" style="margin-top:8px">${bestFail ? `Highlighted: highest pass rate with a fail rate of 20% or less (${bestFail.c} × ${bestFail.k === 'micro' ? mic : nm}).` : 'No size keeps the fail rate at or under 20% with these settings.'}</div></div></div>
+    <div class="fs-12 text-2">Assumes future trades look like this ${sessions}-session sample (${src.length} trades, ${stress ? 'stress-test fills' : 'normal fills'}): the real spread of outcomes is wider. Micro commission assumed $0.75/side. Uses ${esc(btLabel(r))} on ${esc(r.name)}. Rules-based simulation, not a recommendation.</div>`;
+}
+
+// ---------- REPLAY ----------
+async function rpInit() {
+  if (!rpData) { try { const res = await fetch('replay.json', { cache: 'no-store' }); if (res.ok) rpData = await res.json(); } catch(e) {} }
+  if (!rpData) { document.getElementById('rp-banner').textContent = 'Replay data not available here (open the hosted site).'; return; }
+  const days = Object.keys(rpData.days[labSym] || {}).sort().reverse(), sel = document.getElementById('rp-day'), cur = sel.value;
+  sel.innerHTML = days.map(d => `<option value="${d}">${new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${(labCfg().trades.some(t => t.td === d)) ? ' · trade' : ''}</option>`).join('');
+  if (days.includes(cur)) sel.value = cur;
+  rpLoad();
+}
+let rpBars = [], rpPre = [], rpSeed = null;
+function rpLoad() {
+  whenTJR(() => {
+    if (!rpData) return rpInit();
+    const d = rpData.days[labSym]?.[document.getElementById('rp-day').value]; if (!d) return;
+    rpPre = window.TJR.toBars(d.pre); rpBars = window.TJR.toBars(d.bars); rpSeed = d.seed;
+    const sl = document.getElementById('rp-slider'); sl.max = rpBars.length - 1;
+    rpAt(Math.max(0, rpBars.findIndex(b => b.m >= 570) - 1));
+  });
+}
+function rpAt(k) { rpIdx = Math.max(0, Math.min(rpBars.length - 1, k)); document.getElementById('rp-slider').value = rpIdx; rpDraw(); }
+function rpStep(dk) { rpAt(rpIdx + dk); }
+function rpJump(m) { const i = rpBars.findIndex(b => b.m >= m); if (i >= 0) rpAt(i); }
+function rpPlay() {
+  const btn = document.getElementById('rp-play');
+  if (rpTimer) { clearInterval(rpTimer); rpTimer = null; btn.textContent = 'Play'; return; }
+  btn.textContent = 'Pause';
+  rpTimer = setInterval(() => { if (rpIdx >= rpBars.length - 1 || document.getElementById('lab-replay').hidden) { rpPlay(); return; } rpStep(1); }, 450);
+}
+function rpDraw() {
+  if (!rpBars.length || !window.TJR) return;
+  const E = window.TJR, r = labCfg(), upto = rpBars.slice(0, rpIdx + 1);
+  const res = E.run([...rpPre, ...upto], labSym, { ...E.BASE, ...r }, { seed: rpSeed, seedFrom: rpPre.length, keepOpen: true });
+  const st = res.state, evs = res.events, b = upto[upto.length - 1];
+  const [cls, title, sub] = bannerFor(st, evs, b.m, null);
+  const ban = document.getElementById('rp-banner');
+  ban.className = 'live-banner ' + cls; ban.innerHTML = `${b.hm} ET · ${esc(title)}<span class="sub">${esc(sub)}</span>`;
+  const hide = document.getElementById('rp-hide').checked;
+  drawSetupChart(document.getElementById('rp-chart'), hide ? upto : rpBars, st, evs, { slots: rpBars.length });
+  document.getElementById('rp-events').innerHTML = stepsHtml(st, evs, b.m);
+}
 
 // Context for follow-up questions, built from backtest.json once loaded
 function BT_CONTEXT_NOW() {
@@ -3621,6 +4029,7 @@ let btSample = null;
 function initBacktestChat() {
   btRenderHistory();
   loadBacktest();
+  setInterval(() => { if (BT) liveRefresh(false); }, 60000);
   const form = document.getElementById('bt-form');
   const input = document.getElementById('bt-input');
   const send = document.getElementById('bt-send');
