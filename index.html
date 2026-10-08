@@ -213,6 +213,20 @@ body {
 .price-change.up { color: var(--bull); background: rgba(52,199,89,0.12); }
 .price-change.down { color: var(--bear); background: rgba(255,59,48,0.12); }
 
+/* Morning analysis card */
+.an-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 10px; }
+.an-inst { background: var(--fill); border-radius: 10px; padding: 10px 12px; }
+.an-level { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.an-level:last-child { border-bottom: none; }
+.an-level .badge { font-size: 10px; padding: 1px 5px; }
+.an-swept { opacity: 0.55; }
+.an-last { color: var(--blue); font-weight: 600; }
+.an-dist { color: var(--text3); min-width: 64px; text-align: right; }
+.an-block { font-size: 13px; line-height: 1.45; padding: 6px 0; border-top: 1px solid var(--border); }
+.an-block b { display: inline-block; min-width: 0; margin-right: 6px; color: var(--text1, inherit); }
+.an-inval b { color: var(--bear); }
+.an-old { opacity: 0.6; }
+
 /* Freshness pill */
 .freshness-pill {
   display: flex; align-items: center; gap: 5px;
@@ -1120,6 +1134,9 @@ select { cursor: pointer; }
     <div class="ticker-chip"><div class="ticker-sym">GOLD</div><div class="ticker-price mono" id="tk-gold">–</div><div class="ticker-delta" id="tk-gold-d">–</div></div>
   </div>
 
+  <!-- Morning Analysis (analysis.json) -->
+  <div id="analysis-wrap"></div>
+
   <!-- Session Bar -->
   <div class="session-bar mb-md">
     <div class="flex items-center justify-between mb-sm">
@@ -1165,29 +1182,10 @@ select { cursor: pointer; }
     </div>
   </div>
 
-  <!-- Economic Events (static) -->
+  <!-- Economic Events (from analysis.json) -->
   <div class="section-label">Today's Events</div>
-  <div class="card mb-md">
-    <div class="card-row">
-      <span class="badge badge-bear">HIGH</span>
-      <span class="fs-13 fw-600 flex-1">CPI Data</span>
-      <span class="fs-12 text-2 mono">8:30 AM ET</span>
-    </div>
-    <div class="card-row">
-      <span class="badge badge-warn">MED</span>
-      <span class="fs-13 fw-600 flex-1">Jobless Claims</span>
-      <span class="fs-12 text-2 mono">8:30 AM ET</span>
-    </div>
-    <div class="card-row">
-      <span class="badge badge-warn">MED</span>
-      <span class="fs-13 fw-600 flex-1">Fed Speak — Waller</span>
-      <span class="fs-12 text-2 mono">11:00 AM ET</span>
-    </div>
-    <div class="card-row">
-      <span class="badge badge-neutral">LOW</span>
-      <span class="fs-13 fw-600 flex-1">EIA Crude Inventories</span>
-      <span class="fs-12 text-2 mono">10:30 AM ET</span>
-    </div>
+  <div class="card mb-md" id="events-card">
+    <div class="card-row"><span class="fs-13 text-2">No events loaded for today.</span></div>
   </div>
 
 </div>
@@ -1944,6 +1942,71 @@ const Sync = (() => {
 
   return { pull, push, setup, setStatus, status: () => status };
 })();
+
+// ============================================================
+// MORNING ANALYSIS — analysis.json (same for every device)
+// ============================================================
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+async function loadAnalysis() {
+  const wrap = document.getElementById('analysis-wrap');
+  if (!wrap) return;
+  let a;
+  try {
+    const res = await fetch('analysis.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
+    if (!res.ok) return;
+    a = await res.json();
+  } catch(e) { return; } // file:// or offline: leave the card out
+  const now = getCurrentETTime();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const isToday = a.date === today;
+  const dateLbl = new Date(a.date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+  const leanCls = a.lean === 'bull' ? 'badge-bull' : a.lean === 'bear' ? 'badge-bear' : 'badge-warn';
+  const tagCls = { BSL:'badge-blue', SSL:'badge-purple', swept:'badge-neutral' };
+  const fmt = n => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const inst = (a.instruments || []).map(ins => {
+    let markerDone = false;
+    const rows = ins.levels.map(l => {
+      let marker = '';
+      if (!markerDone && l.price < ins.last) {
+        markerDone = true;
+        marker = `<div class="an-level an-last"><span class="flex-1">▶ Last (as of ${esc(a.asOf)})</span><span class="mono">${fmt(ins.last)}</span></div>`;
+      }
+      const dist = l.price - ins.last;
+      return marker + `<div class="an-level${l.tag === 'swept' ? ' an-swept' : ''}">
+        <span class="flex-1">${esc(l.name)}${l.tag ? ` <span class="badge ${tagCls[l.tag] || 'badge-neutral'}">${esc(l.tag)}</span>` : ''}</span>
+        <span class="mono">${fmt(l.price)}</span><span class="mono an-dist">${dist >= 0 ? '+' : ''}${dist.toFixed(2)}</span></div>`;
+    }).join('');
+    return `<div class="an-inst"><div class="fs-13 fw-600 mb-sm">${esc(ins.sym)} levels</div>${rows}</div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+  <div class="section-label">Morning Analysis · ${esc(dateLbl)} · ${esc(a.asOf)}${isToday ? '' : ' (not today)'}</div>
+  <div class="card mb-md${isToday ? '' : ' an-old'}">
+    <div class="card-body">
+      <div class="flex-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+        <span class="badge ${leanCls}">${esc(a.leanLabel)}</span>
+        ${isToday ? '' : '<span class="badge badge-warn">Old analysis. Ask Claude for today’s.</span>'}
+      </div>
+      <div class="fs-13 fw-600" style="margin-bottom:10px;">${esc(a.headline)}</div>
+      <div class="an-grid">${inst}</div>
+      <div class="an-block"><b>SMT</b> ${esc(a.smt)}</div>
+      <div class="an-block"><b>HTF</b> ${esc(a.htf)}</div>
+      ${(a.steps || []).map(s => `<div class="an-block"><b>${esc(s.step)}</b> ${esc(s.text)}</div>`).join('')}
+      <div class="an-block an-inval"><b>Invalidation</b> ${esc(a.invalidation)}</div>
+      ${a.reminder ? `<div class="an-block"><b>From your backtest</b> ${esc(a.reminder)}</div>` : ''}
+      <div class="fs-12 text-2" style="margin-top:8px;">${esc(a.dataNote)} Levels from the TJR rules, not a trade recommendation.</div>
+    </div>
+  </div>`;
+
+  const ev = document.getElementById('events-card');
+  if (ev && isToday && a.events && a.events.length) {
+    const cls = { HIGH:'badge-bear', MED:'badge-warn', LOW:'badge-neutral' };
+    ev.innerHTML = a.events.map(e => `<div class="card-row"><span class="badge ${cls[e.impact] || 'badge-neutral'}">${esc(e.impact)}</span>
+      <span class="fs-13 fw-600 flex-1">${esc(e.name)}</span><span class="fs-12 text-2 mono">${esc(e.time)}</span></div>`).join('');
+  }
+}
 
 // ============================================================
 // TAB NAVIGATION
@@ -3043,6 +3106,7 @@ function init() {
   loadEdgeNotes();
   initTradeLogDate();
   initBacktestChat();
+  loadAnalysis();
 
   // AI signal — run immediately then every 60s
   setTimeout(refreshAISignal, 500);

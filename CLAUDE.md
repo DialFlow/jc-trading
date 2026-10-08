@@ -60,7 +60,7 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 ## Known bugs / open items (priority order)
 1. Prices are delayed, not real-time. GitHub's 5-min schedule only ran ~2×/11 h on Oct 7–8; the Cloudflare Worker above fixes this. For live futures numbers in the page you'd need a paid feed (Polygon/Databento) or a Cloudflare Worker proxy (free, but needs Jacob's account).
 2. GitHub disables scheduled workflows after 60 days with no repo activity. If prices go stale, re-enable it under Actions → Update prices.
-3. The economic-calendar rows on the Dashboard (e.g. "Fed Speak — Waller 11:00") look hardcoded; check before trusting them.
+3. Morning Analysis card + Today's Events now come from `analysis.json` (written by Claude on request; card greys out when the date isn't today). The old hardcoded events (CPI, Waller…) were sample data and are gone.
 
 ## Next backtest ideas (v5)
 - Wider stop (20–25 pts) or stop under the second sweep.
