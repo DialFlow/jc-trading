@@ -50,8 +50,15 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - **Prices in the page JS:** corsproxy.io now returns 401 without an API key, and free keyless proxies (allorigins, codetabs, thingproxy, cors.lol) all failed. So `.github/workflows/prices.yml` runs `scripts/fetch-prices.mjs` every 5 min Sun–Fri. It batch-fetches Yahoo `/v8/finance/spark` (max 20 symbols per call) for every value in `YAHOO_MAP` and force-pushes `prices.json` to the `data` branch. The page reads `raw.githubusercontent.com/DialFlow/jc-trading/data/prices.json` via `loadPrices()`/`fetchYahoo()`. Prices are delayed ~5–15 min; the freshness pill says "Delayed", never "Live".
 - To add a symbol: add it to `YAHOO_MAP` (and `ALL_JOURNAL_SYMS` for the journal); the workflow picks it up automatically.
 
+## Cloud sync + price API (built Oct 8, waiting on Jacob's Cloudflare account)
+- `cloudflare/worker.js`: Cloudflare Worker (free plan). `GET /prices?symbols=` (Yahoo spark, 15 s edge cache) and `GET/PUT /sync` (KV binding `JC`, secret `SYNC_KEY`, header `X-Sync-Key`). Stores `{key: {v, t}}`; newest `t` wins per key.
+- `index.html`: `const JC_API = ''`. Empty means sync is off and prices come from the GitHub Actions `prices.json`. Set it to the Worker URL to turn both on. `Sync` patches `Storage.prototype.setItem` so writes to `SYNC_KEYS` are timestamped and pushed (2 s debounce). It pulls before `init()` (3 s cap) and on `visibilitychange`, reloading if data changed. A device's first sync merges `jct_journal` (by date) and `jct_trades` (by id); other keys keep the synced copy and back up the local one to `jct_backup_<key>`. The header "Sync" pill prompts for the key. `jct_tab` is deliberately per-device.
+- Tested with a Node mock of the Worker and two Playwright contexts (merge, add, delete, wrong key, prices): all passed.
+- Setup still to do with Jacob: create Worker → paste worker.js → create KV namespace → bind as `JC` → add secret `SYNC_KEY` → put the workers.dev URL in `JC_API` → push → enter the key on each device (PC first).
+- Once live, the GitHub Actions price job can stay as a fallback or be removed.
+
 ## Known bugs / open items (priority order)
-1. Prices are delayed, not real-time. For live futures numbers in the page you'd need a paid feed (Polygon/Databento) or a Cloudflare Worker proxy (free, but needs Jacob's account).
+1. Prices are delayed, not real-time. GitHub's 5-min schedule only ran ~2×/11 h on Oct 7–8; the Cloudflare Worker above fixes this. For live futures numbers in the page you'd need a paid feed (Polygon/Databento) or a Cloudflare Worker proxy (free, but needs Jacob's account).
 2. GitHub disables scheduled workflows after 60 days with no repo activity. If prices go stale, re-enable it under Actions → Update prices.
 3. The economic-calendar rows on the Dashboard (e.g. "Fed Speak — Waller 11:00") look hardcoded; check before trusting them.
 

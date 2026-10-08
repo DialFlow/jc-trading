@@ -1028,6 +1028,10 @@ select { cursor: pointer; }
       <span class="fresh-dot" id="fresh-dot"></span>
       <span id="fresh-label">Fetching…</span>
     </div>
+    <div class="freshness-pill" id="sync-pill" onclick="Sync.setup()" style="cursor:pointer;display:none">
+      <span class="fresh-dot" id="sync-dot"></span>
+      <span id="sync-label">Sync off</span>
+    </div>
   </div>
 </header>
 
@@ -1810,6 +1814,138 @@ let esLevels = [];
 let nqLevels = [];
 
 // ============================================================
+// CLOUD SYNC + PRICE API — Cloudflare Worker (cloudflare/worker.js)
+// Empty JC_API = sync off, prices from the GitHub Actions prices.json
+// ============================================================
+const JC_API = '';
+const SYNC_KEYS = ['jct_bias','jct_bt_chat','jct_checklist','jct_dash_notes','jct_edge_notes',
+  'jct_journal','jct_levels','jct_trades','tjr_bias'];
+
+const Sync = (() => {
+  const _setItem = Storage.prototype.setItem;
+  let meta = { t: {}, synced: false };
+  try { meta = JSON.parse(localStorage.getItem('jct_sync_meta')) || meta; } catch(e) {}
+  let applying = false, pushTimer = null, status = 'off';
+
+  const key = () => { try { return localStorage.getItem('jct_sync_key') || ''; } catch(e) { return ''; } };
+  const saveMeta = () => { try { _setItem.call(localStorage, 'jct_sync_meta', JSON.stringify(meta)); } catch(e) {} };
+  const setLocal = (k, v) => { applying = true; try { localStorage.setItem(k, v); } finally { applying = false; } };
+  const enabled = () => !!(JC_API && key());
+
+  // Every write to a synced key is timestamped and queued for upload
+  Storage.prototype.setItem = function(k, v) {
+    _setItem.call(this, k, v);
+    if (this === localStorage && !applying && SYNC_KEYS.includes(k)) {
+      meta.t[k] = Date.now(); saveMeta(); schedulePush();
+    }
+  };
+
+  function setStatus(s, title) {
+    status = s;
+    const dot = document.getElementById('sync-dot'), lbl = document.getElementById('sync-label');
+    const pill = document.getElementById('sync-pill');
+    if (pill) pill.style.display = JC_API ? '' : 'none';
+    if (!dot || !lbl) return;
+    const map = { off: ['', 'Sync off'], ok: ['live', 'Synced'], busy: ['stale', 'Syncing…'], error: ['error', 'Sync error'] };
+    dot.className = 'fresh-dot ' + map[s][0];
+    lbl.textContent = map[s][1];
+    if (pill) pill.title = title || (s === 'off' ? 'Tap to enter your sync key' : '');
+  }
+
+  async function api(method, body) {
+    const res = await fetch(JC_API + '/sync', {
+      method, keepalive: method === 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Sync-Key': key() },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.status === 401) throw new Error('wrong sync key');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  // First sync on a device that already has data: merge instead of overwriting
+  function mergeFirst(k, local, remote) {
+    try {
+      const a = JSON.parse(local), b = JSON.parse(remote);
+      if (k === 'jct_journal') {
+        const out = { ...b };
+        for (const d in a) if (!out[d] || JSON.stringify(a[d]).length > JSON.stringify(out[d]).length) out[d] = a[d];
+        return JSON.stringify(out);
+      }
+      if (k === 'jct_trades' && Array.isArray(a) && Array.isArray(b)) {
+        const byId = new Map(); [...b, ...a].forEach(t => byId.set(t.id, t));
+        return JSON.stringify([...byId.values()].sort((x, y) => y.id - x.id));
+      }
+    } catch(e) {}
+    try { _setItem.call(localStorage, 'jct_backup_' + k, local); } catch(e) {}
+    return remote; // other keys: keep the synced copy, this device's copy is backed up
+  }
+
+  // Returns true if local data changed
+  async function pull() {
+    if (!enabled()) { setStatus('off'); return false; }
+    setStatus('busy');
+    let remote;
+    try { remote = await api('GET'); } catch(e) { setStatus('error', e.message); return false; }
+    let changed = false, needPush = false;
+    for (const k of SYNC_KEYS) {
+      const local = localStorage.getItem(k), r = remote[k], lt = meta.t[k] || 0;
+      if (!meta.synced) {
+        if (r && local != null && r.v !== local) {
+          const m = mergeFirst(k, local, r.v);
+          setLocal(k, m); changed = changed || m !== local;
+          if (m !== r.v) { meta.t[k] = Date.now(); needPush = true; } else meta.t[k] = r.t;
+        } else if (r) {
+          if (local == null) { setLocal(k, r.v); changed = true; }
+          meta.t[k] = r.t;
+        } else if (local != null) { meta.t[k] = Date.now(); needPush = true; }
+      } else if (r && r.t > lt) {
+        if (local !== r.v) { setLocal(k, r.v); changed = true; }
+        meta.t[k] = r.t;
+      } else if (local != null && lt > (r ? r.t : 0)) needPush = true;
+    }
+    meta.synced = true; saveMeta();
+    if (needPush) await push(); else setStatus('ok');
+    return changed;
+  }
+
+  async function push() {
+    clearTimeout(pushTimer); pushTimer = null;
+    if (!enabled()) return;
+    const body = {};
+    for (const k of SYNC_KEYS) {
+      const v = localStorage.getItem(k);
+      if (v != null && meta.t[k]) body[k] = { v, t: meta.t[k] };
+    }
+    setStatus('busy');
+    try { await api('PUT', body); setStatus('ok'); } catch(e) { setStatus('error', e.message); }
+  }
+
+  function schedulePush() {
+    if (!enabled()) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(push, 2000);
+  }
+
+  async function setup() {
+    if (!JC_API) return;
+    const k = prompt('Sync key (same on every device). Leave empty to turn sync off on this device:', key());
+    if (k === null) return;
+    try { _setItem.call(localStorage, 'jct_sync_key', k.trim()); } catch(e) {}
+    if (await pull()) location.reload();
+  }
+
+  // Coming back to the app (phone unlock, tab switch): get the other device's changes
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'hidden') { if (pushTimer) push(); return; }
+    if (await pull()) location.reload();
+  });
+
+  return { pull, push, setup, setStatus, status: () => status };
+})();
+
+// ============================================================
 // TAB NAVIGATION
 // ============================================================
 function showPage(name) {
@@ -1937,11 +2073,16 @@ const PRICES_URL = 'https://raw.githubusercontent.com/DialFlow/jc-trading/data/p
 let pricesSnap = null, pricesLoadedAt = 0, pricesLoading = null;
 
 async function loadPrices() {
-  if (pricesSnap && Date.now() - pricesLoadedAt < 60000) return pricesSnap;
+  // Worker: fresh quotes per request (cached 15 s). Fallback: GitHub Actions snapshot.
+  const maxAge = JC_API ? 15000 : 60000;
+  if (pricesSnap && Date.now() - pricesLoadedAt < maxAge) return pricesSnap;
   if (!pricesLoading) {
     pricesLoading = (async () => {
       try {
-        const res = await fetch(PRICES_URL + '?t=' + Math.floor(Date.now() / 60000), { signal: AbortSignal.timeout(8000) });
+        const url = JC_API
+          ? JC_API + '/prices?symbols=' + encodeURIComponent([...new Set(Object.values(YAHOO_MAP))].join(','))
+          : PRICES_URL + '?t=' + Math.floor(Date.now() / 60000);
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
         if (res.ok) {
           pricesSnap = await res.json();
           pricesLoadedAt = Date.now();
@@ -2913,7 +3054,14 @@ function init() {
   } catch(e) {}
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Pull synced data first (max ~3 s) so the tabs render with the latest copy
+document.addEventListener('DOMContentLoaded', async () => {
+  Sync.setStatus('off');
+  const pulled = Sync.pull().catch(() => false);
+  const first = await Promise.race([pulled, sleep(3000).then(() => 'slow')]);
+  init();
+  if (first === 'slow' && await pulled) location.reload(); // late data: re-render with it
+});
 </script>
 
 </body></html>
