@@ -50,6 +50,13 @@ The site will be shared with a few of Jacob's friends (beginners): keep wording 
 - `simAccount()` replays each bootstrapped trade's path: winners dip to their MAE first, then reach MFE; losers reach MFE first, then fall. An open-trade dip touching the floor = fail (counted as "fail mid-trade" when the trade would have closed above it). Intraday trailing raises the floor with unrealised highs. The DLL caps a day's loss. Funded: payouts withdraw down to the buffer and the floor stays locked. Stress-test trades now carry `mfe`/`mae`. Eight hand-worked unit cases pass (dip fail, intraday vs EOD, lock, consistency, payout maths).
 - Oct 8 results, NQ default setting with the scale-out exit and stress trades, 30-day eval / 60-day funded: 3 MNQ is about 21–26% pass and ~7% fail on every plan. 1 NQ fails 51–54% on Rapid/Rapid EOD/Pro (35–40% of failures mid-trade), and is blown 98–99% in Rapid funded (intraday trailing). Builder's $1,000 DLL changes 1 NQ to 65% pass / 34% fail.
 
+## Jacob's account: MFF Rapid EOD 50K (default plan)
+- `getPlan()` defaults to `rapidEod` (3 minis / 30 micros, 30% eval consistency, 4 min days, EOD trailing both stages). The Readiness risk check shows the plan's max size.
+
+## Replay / live setup chart (Oct 8, night)
+- `drawSetupChart` draws the order as a TradingView-style position box: **red = entry→stop (points at risk), green = entry→target (points to gain, R)**, from order placement to exit/cancel. It adds right-side tags (TP with the liquidity name, ½ take-profit, BUY/SELL, STOP −pts), markers with times (order, filled, ½ out, exit ±pts, "not filled · cancelled"), Asian/London/PD liquidity lines marked "taken HH:MM", and FVG/IFVG boxes from `scanFVGs` on the visible candles only (no look-ahead with "hide the future"). The 9:30/9:50/10:10 windows are neutral dashed lines, so red/green only mean loss/profit. On phones the chart keeps 620px and scrolls sideways.
+- Engine events now carry `data` (order: dir/limit/stop/target/targetName/tp1/tp1Name; fill/scale/exit: px, exit why/pts). Parity and the replay check still pass. The step list adds an "Exit plan: draw on liquidity" row and explains which liquidity (or time rule) ended the trade.
+
 ## Lab Highlights (Oct 8)
 - Default Lab view: a feed of post cards (today's verdict, result + equity spark, win rate vs win size, robustness checks, account survival via `mcQuick`, best/worst trade, 4-step diagram). Every results card carries the sample-size caveat.
 - `.gl` terms open a plain-English `GLOSSARY` popover. `hlShare(id)` draws a 1080×1350 PNG on a canvas and uses the Web Share sheet, else downloads it and copies the caption.

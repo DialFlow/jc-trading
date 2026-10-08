@@ -64,7 +64,7 @@ export function run(bars, sym, cfg, opts = {}) {
   let pending = null, pos = null, flatNext = false;
   const trades = [], skipped = new Set(), events = [], snaps = [];
   const bodies = bars.map(b => Math.abs(b.c - b.o));
-  const ev = (b, type, text) => events.push({ td: b.td, t: b.t, hm: b.hm, type, text });
+  const ev = (b, type, text, data) => events.push({ td: b.td, t: b.t, hm: b.hm, type, text, ...(data ? { data } : {}) });
 
   const levels = isHigh => {
     const a = [];
@@ -98,7 +98,7 @@ export function run(bars, sym, cfg, opts = {}) {
       stop: pos.stop0, target: pos.target, tp1: pos.tp1, scaled: !!pos.scaled, risk: +risk.toFixed(2), r: risk ? +(pts / risk).toFixed(2) : 0,
       mfe: +mfe.toFixed(2), mae: +mae.toFixed(2), mfeR: risk ? +(mfe / risk).toFixed(2) : 0, maeR: risk ? +(mae / risk).toFixed(2) : 0, mins: Math.round((b.t - pos.fillT) / 60),
       pts: +pts.toFixed(2), pnl: +(pts * I.pointValue - 2 * COMMISSION).toFixed(2), why, td: pos.td });
-    ev(b, 'exit', `${why === 'target' ? 'Target' : why === 'stop' ? 'Stopped out' : 'Closed'} at ${price.toFixed(2)} (${pts >= 0 ? '+' : ''}${pts.toFixed(2)} pts)`);
+    ev(b, 'exit', `${why === 'target' ? 'Target' : why === 'stop' ? 'Stopped out' : 'Closed'} at ${price.toFixed(2)} (${pts >= 0 ? '+' : ''}${pts.toFixed(2)} pts)`, { px: price, why, pts, dir: pos.dir, targetName: pos.targetName });
     pos = null;
   };
 
@@ -117,7 +117,7 @@ export function run(bars, sym, cfg, opts = {}) {
           const px = first && (p.dir === 'long' ? a <= L : a >= L) ? (p.dir === 'long' ? Math.min(a, L) : Math.max(a, L)) : L;
           pos = { dir: p.dir, entry: px, stop: p.stop, target: p.target, entryT: `${b.date} ${b.hm}`, td: b.td, fillT: b.t, best: px, worst: px, targetName: p.targetName, stop0: p.stop, tp1: p.tp1, tp1Name: p.tp1Name };
           pending = null;
-          ev(b, 'fill', `Filled ${p.dir} at ${px.toFixed(2)}`);
+          ev(b, 'fill', `Filled ${p.dir} at ${px.toFixed(2)}`, { px, dir: p.dir });
           a = ft ? T : px; // the rest of this leg can still reach the stop/target
         }
       }
@@ -130,7 +130,7 @@ export function run(bars, sym, cfg, opts = {}) {
         if (stopHit) { const gap = lng ? a < pos.stop : a > pos.stop; const raw = gap && first ? a : pos.stop; close(b, lng ? raw - cfg.slipTicks * tick : raw + cfg.slipTicks * tick, pos.scaled ? 'break-even' : 'stop'); return; }
         if (pos.tp1 != null && !pos.scaled) {
           const t1 = lng ? (first && a >= pos.tp1) || (!down && z >= pos.tp1 && a <= pos.tp1) : (first && a <= pos.tp1) || (down && z <= pos.tp1 && a >= pos.tp1);
-          if (t1) { pos.scaled = true; pos.half = Math.abs(pos.tp1 - pos.entry); pos.stop = pos.entry; ev(b, 'scale', `Half out at ${pos.tp1.toFixed(2)} (${pos.tp1Name}); stop to break-even ${pos.entry.toFixed(2)}`); }
+          if (t1) { pos.scaled = true; pos.half = Math.abs(pos.tp1 - pos.entry); pos.stop = pos.entry; ev(b, 'scale', `Half out at ${pos.tp1.toFixed(2)} (${pos.tp1Name}); stop to break-even ${pos.entry.toFixed(2)}`, { px: pos.tp1, name: pos.tp1Name }); }
         }
         if (tgtHit) { const gap = lng ? a > pos.target : a < pos.target; close(b, gap && first ? a : pos.target, 'target'); return; }
       }
@@ -220,7 +220,7 @@ export function run(bars, sym, cfg, opts = {}) {
       }
       pending = { dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, td: b.td };
       st.traded = true; st.rejected = '';
-      ev(b, 'order', `${lng ? 'Buy' : 'Sell'} limit ${lim.toFixed(2)} · stop ${stop.toFixed(2)} · target ${pending.target.toFixed(2)} (${pending.targetName})`);
+      ev(b, 'order', `${lng ? 'Buy' : 'Sell'} limit ${lim.toFixed(2)} · stop ${stop.toFixed(2)} · target ${pending.target.toFixed(2)} (${pending.targetName})`, { dir, limit: lim, stop, target: pending.target, targetName: pending.targetName, tp1, tp1Name });
       if (!c.risk) { c.risk = true; fun.orders++; }
     };
     if (canTrade && !Number.isNaN(st.fvgMidL)) place('long', st.fvgMidL);
