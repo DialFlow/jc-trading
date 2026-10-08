@@ -8,6 +8,8 @@
 // Routes:
 //   GET /prices?symbols=ES=F,NQ=F,...  → { updated, source, quotes: { sym: {price, prev, time} } }
 //   GET /bars                          → { updated, bars: { "ES=F": { "5m": [[t,o,h,l,c]…], "15m", "1h", "1d" }, "NQ=F": … } }
+//   GET /news                          → this week's USD high/medium events (Forex Factory)
+//   GET /sectors                       → sector ETF 1d/5d performance
 //   GET /sync                         → { key: { v, t } }        (header X-Sync-Key required)
 //   PUT /sync   body { key: { v, t } } → merged state, newest t wins per key
 
@@ -31,6 +33,8 @@ export default {
     try {
       if (url.pathname === '/prices' && req.method === 'GET') return await prices(url, ctx);
       if (url.pathname === '/bars' && req.method === 'GET') return await bars(ctx);
+      if (url.pathname === '/news' && req.method === 'GET') return await cached(ctx, 'news', 1800, news);
+      if (url.pathname === '/sectors' && req.method === 'GET') return await cached(ctx, 'sectors', 300, sectors);
       if (url.pathname === '/sync') return await sync(req, env);
       return json({ error: 'not found' }, 404);
     } catch (e) {
@@ -101,6 +105,30 @@ async function bars(ctx) {
   const body = JSON.stringify({ updated: Math.floor(Date.now() / 1000), source: 'Yahoo Finance via Worker', contracts, bars: out });
   ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Cache-Control': 'max-age=60' } })));
   return new Response(body, { headers: { 'Content-Type': 'application/json', ...CORS } });
+}
+
+async function cached(ctx, name, ttl, make) {
+  const key = new Request('https://cache.local/' + name), hit = await caches.default.match(key);
+  if (hit) return new Response(hit.body, { headers: { 'Content-Type': 'application/json', ...CORS } });
+  const body = JSON.stringify(await make());
+  ctx.waitUntil(caches.default.put(key, new Response(body, { headers: { 'Cache-Control': 'max-age=' + ttl } })));
+  return new Response(body, { headers: { 'Content-Type': 'application/json', ...CORS } });
+}
+async function news() {
+  const res = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  const all = res.ok ? await res.json() : [];
+  return { updated: Math.floor(Date.now() / 1000), source: 'Forex Factory calendar', events: all.filter(e => e.country === 'USD' && (e.impact === 'High' || e.impact === 'Medium'))
+    .map(e => ({ date: e.date, title: e.title, impact: e.impact, forecast: e.forecast || '', previous: e.previous || '' })) };
+}
+const SECTORS = { XLK: 'Technology', XLC: 'Communication', XLY: 'Consumer Discretionary', XLF: 'Financials', XLV: 'Health Care', XLI: 'Industrials',
+  XLE: 'Energy', XLB: 'Materials', XLP: 'Consumer Staples', XLU: 'Utilities', XLRE: 'Real Estate' };
+async function sectors() {
+  const res = await fetch('https://query1.finance.yahoo.com/v8/finance/spark?range=5d&interval=1d&symbols=' + Object.keys(SECTORS).join(','), { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  const data = res.ok ? await res.json() : {};
+  return { updated: Math.floor(Date.now() / 1000), source: 'SPDR sector ETFs via Yahoo', sectors: Object.entries(SECTORS).map(([sym, name]) => {
+    const c = (data[sym]?.close || []).filter(v => v != null);
+    return c.length >= 2 ? { sym, name, last: c.at(-1), d1: +((c.at(-1) / c.at(-2) - 1) * 100).toFixed(2), d5: +((c.at(-1) / c[0] - 1) * 100).toFixed(2) } : null;
+  }).filter(Boolean).sort((a, b) => b.d1 - a.d1) };
 }
 
 async function sync(req, env) {

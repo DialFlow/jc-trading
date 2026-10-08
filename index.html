@@ -232,6 +232,52 @@ body {
 .fc-head .btn { white-space: nowrap; text-decoration: none; }
 .fc-segs { margin-bottom: 8px; flex-wrap: wrap; }
 
+/* Market panel */
+.mk { padding: 14px 16px; }
+.mk-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; }
+.mk-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--text3); }
+.mk-dot.open { background: var(--bull); box-shadow: 0 0 0 3px rgba(52,199,89,0.2); }
+.mk-time { font: 600 15px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.mk-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .mk-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mk-tile { background: var(--fill); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.mk-sym { font-size: 13px; font-weight: 700; } .mk-sym span { display: block; font-size: 11px; font-weight: 400; color: var(--text3); }
+.mk-px { font-size: 22px; font-weight: 700; margin: 4px 0 2px; letter-spacing: -0.01em; }
+.mk-chg { font-size: 12px; font-weight: 600; } .mk-chg.up { color: var(--bull); } .mk-chg.dn { color: var(--bear); }
+.mk-prev { font-size: 11px; color: var(--text3); }
+.mk-sess { margin-top: 12px; }
+
+/* Morning Analysis (live) */
+.an2 .card-body { padding: 16px; }
+.an-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.an-head { font-size: 17px; font-weight: 600; line-height: 1.4; margin-bottom: 12px; }
+.an-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.an-nums > div { background: var(--fill); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.an-nums span { display: block; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
+.an-nums b { display: block; font-size: 20px; margin-top: 2px; } .an-nums em { display: block; font-style: normal; font-size: 11px; color: var(--text2); margin-top: 2px; }
+@media (max-width: 520px) { .an-nums b { font-size: 16px; } }
+.an-rows { display: flex; flex-direction: column; }
+.an-row { display: grid; grid-template-columns: 30px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); }
+.an-ic { width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: var(--fill); color: var(--text2); }
+.an-ic.ok { background: rgba(52,199,89,0.16); color: var(--bull); } .an-ic.bad { background: rgba(255,59,48,0.14); color: var(--bear); }
+.an-l { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
+.an-t { font-size: 14px; line-height: 1.45; margin-top: 2px; }
+.an-ctx { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--fill); font-size: 13px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; }
+.an-lv { margin-top: 10px; } .an-lv summary, .an-note summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--blue); padding: 6px 0; }
+.lv-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lv-tbl th { text-align: left; font-size: 11px; color: var(--text2); font-weight: 600; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.lv-tbl td { padding: 7px 4px; border-bottom: 1px solid var(--border); }
+.lv-now td { color: var(--blue); font-weight: 700; background: rgba(0,122,255,0.08); }
+.lv-swept td { opacity: 0.5; }
+.lv-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: var(--text3); } .lv-dot.b { background: var(--bull); } .lv-dot.s { background: var(--bear); }
+/* events + sectors */
+.ev-past { opacity: 0.5; }
+.sec-row { display: grid; grid-template-columns: minmax(0, 1.4fr) 1fr 64px 76px; gap: 10px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.sec-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sec-bar { position: relative; height: 8px; border-radius: 4px; background: var(--fill); } .sec-bar i { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+@media (max-width: 520px) { .sec-row { grid-template-columns: minmax(0, 1.4fr) 1fr 60px; } .sec-row > span:last-child { display: none; } }
+.cf-hist td { font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; cursor: help; } .cf-hist th { font-size: 11px; color: var(--text2); }
+
 /* Trade Readiness */
 .ready { overflow: visible; }
 .ready-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 16px 10px; }
@@ -1225,7 +1271,7 @@ select { cursor: pointer; }
     <div class="ai-signal-header">
       <div>
         <div class="section-eyebrow" style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text3);text-transform:uppercase;margin-bottom:2px;">⚡ AI Trade Signal</div>
-        <div class="ai-signal-subtitle">TJR methodology · updates with your Daily Bias</div>
+        <div class="ai-signal-subtitle">Confluences + price structure · ES1! &amp; NQ1! · updates on Refresh</div>
       </div>
       <button class="btn btn-secondary btn-sm" id="ai-refresh-btn" onclick="refreshAll()" style="font-size:12px;padding:5px 12px;">↻ Refresh</button>
     </div>
@@ -1259,7 +1305,7 @@ select { cursor: pointer; }
     <div class="ai-reasoning-section">
       <div class="ai-reasoning-label">Reasoning</div>
       <div class="ai-reasoning-list" id="ai-reasoning-list">
-        <div class="ai-reasoning-item"><span class="ai-r-icon">💡</span><span style="color:var(--text2);">Set your Daily Bias to generate a live signal.</span></div>
+        <div class="ai-reasoning-item"><span class="ai-r-icon">💡</span><span style="color:var(--text2);">Loading the confluence and structure read…</span></div>
       </div>
     </div>
     <div class="ai-tjr-steps" id="ai-tjr-steps">
@@ -1273,13 +1319,17 @@ select { cursor: pointer; }
     </div>
   </div>
 
-  <!-- Ticker Row -->
-  <div class="ticker-row" id="ticker-row">
-    <div class="ticker-chip"><div class="ticker-sym">ES1!</div><div class="ticker-price mono" id="tk-es">–</div><div class="ticker-delta up" id="tk-es-d">–</div></div>
-    <div class="ticker-chip"><div class="ticker-sym">NQ1!</div><div class="ticker-price mono" id="tk-nq">–</div><div class="ticker-delta up" id="tk-nq-d">–</div></div>
-    <div class="ticker-chip"><div class="ticker-sym">VIX</div><div class="ticker-price mono" id="tk-vix">–</div><div class="ticker-delta" id="tk-vix-d">–</div></div>
-    <div class="ticker-chip"><div class="ticker-sym">DXY</div><div class="ticker-price mono" id="tk-dxy">–</div><div class="ticker-delta" id="tk-dxy-d">–</div></div>
-    <div class="ticker-chip"><div class="ticker-sym">GOLD</div><div class="ticker-price mono" id="tk-gold">–</div><div class="ticker-delta" id="tk-gold-d">–</div></div>
+  <!-- Market panel: ES1!, NQ1!, VIX, Gold + status -->
+  <div class="card mb-md mk">
+    <div class="mk-head">
+      <div class="mk-status" id="mk-status">Loading market…</div>
+      <div class="mk-time"><span id="stat-time">–</span> ET</div>
+    </div>
+    <div class="mk-tiles" id="mk-tiles"></div>
+    <div class="mk-sess">
+      <div class="flex items-center justify-between" style="margin-bottom:6px"><span class="fs-12 fw-600 text-2" id="session-label">Session</span><span class="badge badge-blue" id="session-badge">–</span></div>
+      <div class="session-phases" id="session-phases"></div>
+    </div>
   </div>
 
   <!-- Morning Analysis (analysis.json) -->
@@ -1291,39 +1341,6 @@ select { cursor: pointer; }
   <!-- Multi-timeframe FVG scan -->
   <div id="mtf-wrap"></div>
 
-  <!-- Session Bar -->
-  <div class="session-bar mb-md">
-    <div class="flex items-center justify-between mb-sm">
-      <span class="fs-13 fw-600" id="session-label">Session Phase</span>
-      <span class="badge badge-blue" id="session-badge">–</span>
-    </div>
-    <div class="session-phases" id="session-phases"></div>
-  </div>
-
-  <!-- Stat Tiles -->
-  <div class="grid-4 mb-md">
-    <div class="stat-tile">
-      <div class="stat-eyebrow">ES1! Last</div>
-      <div class="stat-value mono" id="stat-es">–</div>
-      <div class="stat-sub" id="stat-es-sub">–</div>
-    </div>
-    <div class="stat-tile">
-      <div class="stat-eyebrow">NQ1! Last</div>
-      <div class="stat-value mono" id="stat-nq">–</div>
-      <div class="stat-sub" id="stat-nq-sub">–</div>
-    </div>
-    <div class="stat-tile">
-      <div class="stat-eyebrow">VIX</div>
-      <div class="stat-value mono" id="stat-vix">–</div>
-      <div class="stat-sub">Volatility Index</div>
-    </div>
-    <div class="stat-tile">
-      <div class="stat-eyebrow">Session Time</div>
-      <div class="stat-value" id="stat-time">–</div>
-      <div class="stat-sub">Eastern Time</div>
-    </div>
-  </div>
-
   <!-- Pre-Market Checklist -->
   <div class="section-label">Pre-Market Checklist</div>
   <div class="card mb-md" id="checklist-card"></div>
@@ -1332,15 +1349,17 @@ select { cursor: pointer; }
   <div class="section-label">Market Notes</div>
   <div class="card mb-md">
     <div class="card-body">
-      <textarea id="dash-notes" placeholder="Key observations, catalysts, alerts for today…" style="min-height:100px;" oninput="saveNotes()"></textarea>
+      <textarea id="dash-notes" placeholder="What you're seeing today (e.g. 'expecting a bearish open, CPI tomorrow'). The Morning Analysis reads this and compares it with the data." style="min-height:100px;" oninput="saveNotes();clearTimeout(window._anT);window._anT=setTimeout(renderAnalysis,800)"></textarea>
     </div>
   </div>
 
-  <!-- Economic Events (from analysis.json) -->
-  <div class="section-label">Today's Events</div>
+  <!-- Economic events (Forex Factory) + sector strength -->
+  <div class="section-label">Today's events · red folder</div>
   <div class="card mb-md" id="events-card">
-    <div class="card-row"><span class="fs-13 text-2">No events loaded for today.</span></div>
+    <div class="card-row"><span class="fs-13 text-2">Loading the economic calendar…</span></div>
   </div>
+  <div class="section-label">Sector strength · today</div>
+  <div class="card mb-md" id="sector-card"><div class="card-row"><span class="fs-13 text-2">Loading sectors…</span></div></div>
 
 </div>
 
@@ -1776,6 +1795,7 @@ select { cursor: pointer; }
       <button class="mtf-seg" data-v="live" onclick="labView('live')">Today's setup</button>
       <button class="mtf-seg" data-v="bt" onclick="labView('bt')">Results</button>
       <button class="mtf-seg" data-v="sim" onclick="labView('sim')">Account sim</button>
+      <button class="mtf-seg" data-v="ce" onclick="labView('ce')">Confluence edge</button>
       <button class="mtf-seg" data-v="sc" onclick="labView('sc')">Scenarios</button>
       <button class="mtf-seg" data-v="replay" onclick="labView('replay')">Replay</button>
     </div>
@@ -1825,6 +1845,9 @@ select { cursor: pointer; }
     </div></div>
     <div id="sim-out"></div>
   </div>
+
+  <!-- CONFLUENCE EDGE -->
+  <div class="lab-view" id="lab-ce" hidden></div>
 
   <!-- SCENARIOS -->
   <div class="lab-view" id="lab-sc" hidden></div>
@@ -2047,7 +2070,13 @@ const Sync = (() => {
 // ============================================================
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
+// analysis.json is now an optional "Claude's note"; the Morning Analysis is generated live (renderAnalysis)
 async function loadAnalysis() {
+  try { const r = await fetch('analysis.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-store' }); if (r.ok) { const a = await r.json(); const d = getCurrentETTime();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; window.todayAnalysis = a.date === today ? a : null; } } catch(e) {}
+  renderAnalysis();
+}
+async function loadAnalysisOld() {
   const wrap = document.getElementById('analysis-wrap');
   if (!wrap) return;
   let a;
@@ -2114,6 +2143,7 @@ async function loadAnalysis() {
 // MULTI-TIMEFRAME FVG SCAN — 5m / 15m / 1H / 4H / Daily
 // Candles: Worker /bars (JC_API) or bars.json from GitHub Actions
 // ============================================================
+// ===== CONFLUENCE-CORE START (scripts/confluence-stats.mjs evaluates this block in Node; keep it free of top-level DOM access)
 const BARS_URL = 'https://raw.githubusercontent.com/DialFlow/jc-trading/data/bars.json';
 const MTF_TFS = ['5m', '15m', '1h', '4h', '1d'];
 const MTF_LABEL = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H', '1d': 'Daily' };
@@ -2227,7 +2257,7 @@ async function loadMTF(force) {
   renderMTF();
   renderConfluences();
   renderFuturesCharts();
-  if (typeof renderReadiness === 'function') renderReadiness();
+  if (typeof renderReadiness === 'function') { renderReadiness(); renderAnalysis(); }
   if (typeof refreshAISignal === "function") refreshAISignal();
   return mtf;
 }
@@ -2370,12 +2400,12 @@ function renderConfluences() {
     </div>
     <div style="overflow-x:auto"><table class="cf-table">
       <tr><th></th>${tfs.map(tf => `<th class="cf-tf">${CONF_TFLBL[tf]}</th>`).join('')}</tr>
-      ${rows}${score}
+      ${rows}${score}${confHistoryRow(confView, tfs)}
       <tr class="cf-grp"><td colspan="${tfs.length + 1}">Time</td></tr>
       <tr><th>Entry macro 9:50–10:10</th><td colspan="${tfs.length}" class="cf-time">${inMacro ? '<span class="cf-b">✓ in the window now</span>' : inManip ? '<span class="cf-s">✗ manipulation window (9:30–9:50), no trades</span>' : '<span class="cf-n">not in the window</span>'}</td></tr>
     </table></div>
     <div id="conf-detail" class="fs-12 text-2" style="margin-top:8px;min-height:16px;">Tap a cell to see what was found.</div>
-    <div class="fs-12 text-2" style="margin-top:6px;"><span class="cf-b">✓</span> bullish · <span class="cf-s">✓</span> bearish · <span class="cf-n">·</span> not present. A timeframe counts as aligned at 4+ of 6 in one direction. Checks look at the last 40 candles of each timeframe; Yahoo data is delayed. Rules-based, not a trade recommendation.</div>
+    <div class="fs-12 text-2" style="margin-top:6px;"><span class="cf-b">✓</span> bullish · <span class="cf-s">✓</span> bearish · <span class="cf-n">·</span> not present. A timeframe counts as aligned at 4+ of 6 in one direction. The History row is how often 5+ of 6 aligned led to a 1-ATR move the right way before one the wrong way (green = beat random odds by 5+ points; full stats in Lab → Confluence edge). Checks look at the last 40 candles of each timeframe; Yahoo data is delayed. Rules-based, not a trade recommendation.</div>
   </div></div>`;
 }
 function confDetail(tf, key) {
@@ -2385,6 +2415,7 @@ function confDetail(tf, key) {
   el.textContent = `${MTF_SYMS.find(([s]) => s === confView)[1]} ${CONF_TFLBL[tf]} · ${r.name}: ${c[key].why}`;
 }
 
+// ===== CONFLUENCE-CORE END
 const biasBadge = (label, score) => {
   const cls = label === 'Bullish' ? 'badge-bull' : label === 'Bearish' ? 'badge-bear' : 'badge-neutral';
   return `<span class="badge ${cls}">${label} ${score >= 0 ? '+' : ''}${score.toFixed(2)}</span>`;
@@ -2601,10 +2632,10 @@ function updateClock() {
       sessLabel.textContent = currentSession.name;
       sessBadge.textContent = currentSession.name;
     } else {
-      sessLabel.textContent = 'Market Closed';
-      sessBadge.textContent = 'Closed';
+      sessLabel.textContent = 'Between sessions';
+      sessBadge.textContent = '–';
     }
-    if (sessLabelEl) sessLabelEl.textContent = currentSession ? currentSession.name : 'Market Closed';
+    if (sessLabelEl) sessLabelEl.textContent = currentSession ? currentSession.name : 'Between sessions';
   }
 
   // Render phases
@@ -2731,7 +2762,8 @@ setInterval(updateFreshnessPill, 1000);
 
 // Auto-fetch ES/NQ/VIX every 15s
 async function autoFetchHeader() {
-  const cache = await fetchPriceBatch(['ES1!', 'NQ1!', 'VIX', 'DXY', 'GOLD']);
+  const cache = await fetchPriceBatch(['ES1!', 'NQ1!', 'VIX', 'GOLD']);
+  renderMarketPanel();
   const es = cache['ES1!'], nq = cache['NQ1!'], vix = cache['VIX'];
   const fmt = (n, d=2) => n != null ? n.toFixed(d) : '–';
   const pct = (n) => n != null ? ((n>=0?'+':'')+n.toFixed(2)+'%') : '–';
@@ -3382,7 +3414,7 @@ function getCurrentSession() {
   return 'closed';
 }
 
-function computeAISignal() {
+function computeAISignalOld() {
   let bias = {}; try { bias = JSON.parse(localStorage.getItem('tjr_bias') || '{}'); } catch(e) {}
   // Fall back to the Daily Bias tab (jct_bias) so the signal follows what you set there
   try {
@@ -3508,7 +3540,8 @@ async function refreshAll() {
   const btn = document.getElementById('ai-refresh-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
   pricesLoadedAt = 0; // bypass the price cache
-  try { await Promise.all([autoFetchHeader(), loadAnalysis(), loadMTF(true), readyCycle(true)]); } catch(e) {}
+  try { await Promise.all([autoFetchHeader(), loadAnalysis(), loadMTF(true), readyCycle(true), loadContext()]); } catch(e) {}
+  renderAnalysis(); renderMarketPanel();
   if (!document.getElementById('lab-live').hidden) liveRefresh(true);
   refreshAISignal();
   if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
@@ -3703,7 +3736,8 @@ const usd = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { 
 
 function labView(v) {
   document.querySelectorAll('#lab-nav .mtf-seg').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  for (const id of ['hl', 'live', 'bt', 'sim', 'sc', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  for (const id of ['hl', 'live', 'bt', 'sim', 'ce', 'sc', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  if (v === 'ce') renderConfEdge();
   if (v === 'sc') renderScenarios(false);
   document.querySelector('.lab-pick').style.visibility = v === 'hl' ? 'hidden' : '';
   if (v === 'hl') renderHighlights();
@@ -3746,7 +3780,7 @@ function labInit() {
   if (!['rules', 'liq', 'scale'].includes(labExit)) labExit = defaultExitFor(labCfg());
   labRenderPick();
   let v = 'hl'; try { v = localStorage.getItem('jct_lab_view') || 'hl'; } catch(e) {}
-  labView(['hl', 'live', 'bt', 'sim', 'sc', 'replay'].includes(v) ? v : 'hl');
+  labView(['hl', 'live', 'bt', 'sim', 'ce', 'sc', 'replay'].includes(v) ? v : 'hl');
   readyCycle(false);
 }
 
@@ -4132,7 +4166,7 @@ function readiness(sym) {
   let jb = {}; try { jb = JSON.parse(localStorage.getItem('jct_bias') || '{}'); } catch(e) {}
   const myBias = jb.state === 'bull' ? 'bullish' : jb.state === 'bear' ? 'bearish' : null;
   add('Your daily bias', !myBias || !dirWord ? 'na' : myBias === dirWord ? 'ok' : 'bad', myBias ? `You set ${myBias}` : 'Not set: pick it on the Daily Bias tab');
-  const evts = (window.todayAnalysis && T.sameDay ? window.todayAnalysis.events || [] : []).map(e => ({ ...e, m: parseEventMin(e.time) })).filter(e => e.m != null);
+  const evts = T.sameDay ? todaysEvents().map(e => ({ ...e, name: e.title, impact: e.impact === 'High' ? 'HIGH' : 'MED' })) : [];
   const clash = evts.find(e => e.impact !== 'LOW' && e.m >= 590 - 30 && e.m <= 610 + 30);
   add('News clear', clash ? 'bad' : 'ok', clash ? `${clash.name} at ${clash.time}: inside 30 min of the entry window` : evts.length ? `${evts.map(e => e.name.split('(')[0].trim() + ' ' + e.time).join(', ')}: clear of 9:50–10:10` : 'No events loaded for today');
   if (order) { const rr = Math.abs(order.target - (order.limit ?? order.entry)) / stopPts;
@@ -4523,12 +4557,267 @@ function renderScenarios(rebuild = true) {
         <footer><button class="btn btn-secondary btn-sm" onclick="scReplay('${x.td}')">▶ Replay this day</button></footer>
       </article>`).join('') || '<div class="fs-13 text-2">No sessions in this group.</div>'}</div>`;
 }
+function renderConfEdge() {
+  const el = document.getElementById('lab-ce'); if (!el) return;
+  const cs = window.confStats; if (!cs) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">Loading confluence history…</div></div>'; loadContext().then(renderConfEdge); return; }
+  const pc = v => Math.round(v * 100) + '%';
+  const card = (sym, nm) => `<div class="card mb-md"><div class="card-body"><div class="fs-13 fw-600 mb-sm">${nm}</div>
+    <table class="bt-table"><tr><th>Timeframe</th><th>Signals</th><th>Right way first</th><th>Random odds</th><th>Edge</th><th>NY 9:30–12</th><th>4+ of 6</th></tr>
+    ${['1m', '5m', '15m', '30m', '1h', '4h'].map(tf => { const x = cs.tfs[tf]?.[sym]; if (!x) return ''; const e = x.signal5.winRate - x.baseline;
+      return `<tr><td><b>${CONF_TFLBL[tf]}</b></td><td>${x.signal5.n}</td><td>${pc(x.signal5.winRate)} <span class="text-3 fs-12">(${pc(x.signal5.ci[0])}–${pc(x.signal5.ci[1])})</span></td><td>${pc(x.baseline)}</td>
+        <td class="${e >= 0.05 ? 'bull' : e <= -0.05 ? 'bear' : ''}">${e >= 0 ? '+' : ''}${Math.round(e * 100)} pts</td><td>${x.signal5NY.n ? pc(x.signal5NY.winRate) + ` <span class="text-3 fs-12">n=${x.signal5NY.n}</span>` : '–'}</td><td>${pc(x.signal4.winRate)} <span class="text-3 fs-12">n=${x.signal4.n}</span></td></tr>`; }).join('')}</table></div></div>`;
+  const n4 = cs.tfs['4h']['NQ=F'], n30 = cs.tfs['30m']['NQ=F'], e5 = cs.tfs['5m']['ES=F'];
+  el.innerHTML = `<div class="card mb-md"><div class="card-body fs-13" style="line-height:1.55">
+    <div class="fw-600" style="font-size:16px;margin-bottom:6px">Does a full confluence checklist actually predict the next move?</div>
+    We replayed the Dashboard's checklist over history on every timeframe. Each time <b>5 or more of the 6 checks</b> (75%+) pointed the same way, we asked: did price move <b>one average candle range (1 ATR)</b> in that direction <b>before</b> moving one against it?
+    <ul style="margin:8px 0 0 18px;display:flex;flex-direction:column;gap:4px">
+      <li><b>Higher timeframes (30m–4H) beat random odds.</b> NQ1! 4H: ${pc(n4.signal5.winRate)} vs ${pc(n4.baseline)}; NQ1! 30m: ${pc(n30.signal5.winRate)} vs ${pc(n30.baseline)}.</li>
+      <li><b>Low timeframes (1m–15m) did not.</b> ES1! 5m: ${pc(e5.signal5.winRate)} vs ${pc(e5.baseline)}. By the time every box ticks on a fast chart, the move has usually happened.</li>
+      <li>So: use full alignment on <b>30m–4H for direction</b>, and the 5m/1m setup for <b>timing</b>. That matches TJR's own approach, and it's how the AI Signal now weights timeframes.</li>
+    </ul>
+    <div class="fs-12 text-2" style="margin-top:8px">Samples are small (28–143 signals per row); the ranges in brackets show the uncertainty. ${esc(cs.method)} Data ${cs.tfs['1h']['NQ=F'].from} → ${cs.tfs['1h']['NQ=F'].to} (1m: last 7 days only).</div></div></div>
+    ${card('NQ=F', 'NQ1!')}${card('ES=F', 'ES1!')}`;
+}
 function scReplay(td) { labView('replay'); setTimeout(() => { const s = document.getElementById('rp-day'); if (s) { s.value = td; rpLoad(); } }, 50); }
+
+// ============================================================
+// NEWS (Forex Factory) + SECTORS (SPDR ETFs) + CONFLUENCE HISTORY
+// ============================================================
+const DATA_URL = 'https://raw.githubusercontent.com/DialFlow/jc-trading/data/';
+window.newsData = null; window.sectorData = null; window.confStats = null;
+async function loadJSON(url) { try { const r = await fetch(url, { signal: AbortSignal.timeout(10000) }); return r.ok ? await r.json() : null; } catch(e) { return null; } }
+async function loadContext() {
+  const m = Math.floor(Date.now() / 60000);
+  const [n, s, c] = await Promise.all([
+    loadJSON(JC_API ? JC_API + '/news' : DATA_URL + 'news.json?t=' + m),
+    loadJSON(JC_API ? JC_API + '/sectors' : DATA_URL + 'sectors.json?t=' + m),
+    window.confStats ? Promise.resolve(window.confStats) : loadJSON('confstats.json')]);
+  if (n) window.newsData = n; if (s) window.sectorData = s; if (c) window.confStats = c;
+  renderEvents(); if (typeof renderConfluences === 'function') renderConfluences(); renderAnalysis();
+}
+// today's events in ET, with minutes after midnight
+function todaysEvents() {
+  if (!window.newsData) return [];
+  const today = (() => { const d = getCurrentETTime(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  return window.newsData.events.map(e => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(e.date)).map(x => [x.type, x.value]));
+    const m = +p.hour * 60 + +p.minute;
+    return { ...e, day: `${p.year}-${p.month}-${p.day}`, m, time: `${+p.hour % 12 || 12}:${p.minute} ${+p.hour >= 12 ? 'PM' : 'AM'} ET` };
+  }).filter(e => e.day === today).sort((a, b) => a.m - b.m);
+}
+function renderEvents() {
+  const ev = document.getElementById('events-card');
+  if (ev) {
+    const list = todaysEvents(), nowM = etNow().m;
+    ev.innerHTML = list.length ? list.map(e => `<div class="card-row${e.m < nowM ? ' ev-past' : ''}"><span class="badge ${e.impact === 'High' ? 'badge-bear' : 'badge-warn'}">${e.impact === 'High' ? 'RED' : 'MED'}</span>
+      <span class="fs-13 fw-600 flex-1">${esc(e.title)}${e.forecast ? `<span class="fs-12 text-2"> · fcst ${esc(e.forecast)}${e.previous ? ' · prev ' + esc(e.previous) : ''}</span>` : ''}</span><span class="fs-12 text-2 mono">${e.time}</span></div>`).join('')
+      : `<div class="card-row"><span class="fs-13 text-2">${window.newsData ? 'No USD high or medium-impact events today.' : 'Loading the economic calendar…'}</span></div>`;
+    ev.insertAdjacentHTML('beforeend', `<div class="card-row fs-12 text-2">Source: Forex Factory calendar (red = high impact). <a href="https://www.forexfactory.com/calendar" target="_blank" rel="noopener" style="margin-left:auto">Open calendar ↗</a></div>`);
+  }
+  const sc = document.getElementById('sector-card');
+  if (sc && window.sectorData) {
+    const s = window.sectorData.sectors, mx = Math.max(...s.map(x => Math.abs(x.d1)), 0.5);
+    sc.innerHTML = s.map(x => `<div class="sec-row"><span class="sec-name">${esc(x.name)} <span class="text-3 fs-12">${x.sym}</span></span>
+      <div class="sec-bar"><i style="${x.d1 >= 0 ? 'left:50%' : `right:50%`};width:${(Math.abs(x.d1) / mx * 50).toFixed(1)}%;background:${x.d1 >= 0 ? 'var(--bull)' : 'var(--bear)'}"></i></div>
+      <span class="mono fs-12 ${x.d1 >= 0 ? 'bull' : 'bear'}">${x.d1 >= 0 ? '+' : ''}${x.d1.toFixed(2)}%</span><span class="mono fs-12 text-2">${x.d5 >= 0 ? '+' : ''}${x.d5.toFixed(1)}% 5d</span></div>`).join('') +
+      `<div class="card-row fs-12 text-2">Today's % change of each S&amp;P sector ETF. <a href="https://finviz.com/groups.ashx?g=sector&v=110" target="_blank" rel="noopener" style="margin-left:auto">Finviz sectors ↗</a></div>`;
+  }
+}
+
+// ============================================================
+// MARKET PANEL — ES1!, NQ1!, VIX, Gold + market status
+// ============================================================
+const MK = [['ES1!', 'E-mini S&P 500'], ['NQ1!', 'E-mini Nasdaq-100'], ['VIX', 'Volatility index'], ['GOLD', 'Gold futures']];
+function cmeStatus() {
+  const { m, wd } = etNow();
+  if (wd === 6 || (wd === 0 && m < 1080) || (wd === 5 && m >= 1020)) return ['closed', 'Futures closed for the weekend', 'Reopens Sunday 6:00 PM ET'];
+  if (m >= 1020 && m < 1080) return ['closed', 'Daily break (5–6 PM ET)', 'Futures reopen at 6:00 PM ET'];
+  const sess = SESSIONS.find(x => { const a = timeToMins(x.start), b = timeToMins(x.end); return a < b ? m >= a && m < b : m >= a || m < b; });
+  return ['open', 'Futures open', sess ? `${sess.name} session` : 'Between sessions'];
+}
+function renderMarketPanel() {
+  const el = document.getElementById('mk-tiles'); if (!el) return;
+  el.innerHTML = MK.map(([k, name]) => {
+    const q = PriceCache[k];
+    const dec = k === 'VIX' ? 2 : k === 'GOLD' ? 1 : 2;
+    return `<div class="mk-tile"><div class="mk-sym">${k}<span>${name}</span></div>
+      <div class="mk-px mono">${q ? q.price.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : '–'}</div>
+      ${q ? `<div class="mk-chg ${q.change >= 0 ? 'up' : 'dn'}">${q.change >= 0 ? '▲' : '▼'} ${Math.abs(q.change).toFixed(dec)} (${q.change >= 0 ? '+' : ''}${q.changePct.toFixed(2)}%)</div><div class="mk-prev">prev ${q.prev.toFixed(dec)}</div>` : '<div class="mk-prev">waiting for prices</div>'}</div>`;
+  }).join('');
+  const [cls, title, sub] = cmeStatus(), st = document.getElementById('mk-status');
+  if (st) st.innerHTML = `<span class="mk-dot ${cls}"></span><b>${title}</b><span class="text-2"> · ${sub} · TJR entry window ${nextWindowText()}</span>`;
+}
+
+// ============================================================
+// AI TRADE SIGNAL — bullish / bearish / neutral from confluences + structure
+// HTF weights favour 30m–4H, where the checklist showed an edge in history (confstats.json)
+// ============================================================
+const SIG_W = { '5m': 0.5, '15m': 0.75, '30m': 1, '1h': 1.5, '4h': 2 };
+function signalFor(sym) {
+  const scan = window.mtfScan, C = scan?.conf?.[sym], ms = scan?.syms?.[sym];
+  if (!C || !ms) return null;
+  const parts = []; let num = 0, den = 0;
+  const add = (w, v, label, text) => { num += w * v; den += w; parts.push({ w, v, label, text }); };
+  // 1. confluence checklist per timeframe
+  for (const tf of ['4h', '1h', '30m', '15m', '5m']) {
+    const c = C[tf]; if (!c) continue;
+    add(SIG_W[tf], (c.bull - c.bear) / 6, `${CONF_TFLBL[tf]} confluences`, `${c.bull} bullish · ${c.bear} bearish of 6`);
+  }
+  // 2. price-action structure: latest break of structure on 15m and 1H
+  for (const tf of ['1h', '15m']) {
+    const b = C[tf]?.bos; if (!b) continue;
+    add(1, b.v === 'bull' ? 1 : b.v === 'bear' ? -1 : 0, `${CONF_TFLBL[tf]} structure`, b.v ? `${b.v === 'bull' ? 'Bullish' : 'Bearish'}: ${b.why}` : 'No break in the last 40 candles');
+  }
+  // 3. higher-timeframe FVG respect/disrespect
+  add(1.5, Math.max(-1, Math.min(1, ms.score)), 'HTF FVG scan', `${ms.label} (${ms.score >= 0 ? '+' : ''}${ms.score.toFixed(2)})`);
+  // 4. today's liquidity sweep from the strategy engine
+  const T = window.TJR && labRaw && BT ? todayRun(sym) : null;
+  if (T && T.sameDay) { const s = T.st; const v = s.sslSwept && !s.bslSwept ? 1 : s.bslSwept && !s.sslSwept ? -1 : 0;
+    if (s.sslSwept || s.bslSwept) add(1, v, 'Liquidity sweep', v > 0 ? `Sell-side taken (${s.sslName}): favours longs` : v < 0 ? `Buy-side taken (${s.bslName}): favours shorts` : 'Both sides swept: no edge'); }
+  // 5. SMT on 15m / 1H
+  for (const tf of ['1h', '15m']) { const sm = C[tf]?.smt; if (sm && sm.v) add(0.75, sm.v === 'bull' ? 1 : sm.v === 'bear' ? -1 : 0, `${CONF_TFLBL[tf]} SMT`, sm.why); }
+  const net = den ? num / den : 0;
+  return { net, parts, dir: net >= 0.2 ? 'BULLISH' : net <= -0.2 ? 'BEARISH' : 'NEUTRAL' };
+}
+function computeAISignal() {
+  const session = getCurrentSession();
+  const es = signalFor('ES=F'), nq = signalFor('NQ=F');
+  if (!es || !nq) return { direction: 'NEUTRAL', dirColor: 'var(--warn)', arrow: '→', score: 0, confLabel: 'Loading', session, tjrStep: 1,
+    factors: [{ icon: '⏳', text: 'Loading candles for the confluence and structure read…', cls: '' }] };
+  const net = (es.net + nq.net) / 2, split = Math.sign(es.net) !== Math.sign(nq.net) && Math.abs(es.net) >= 0.2 && Math.abs(nq.net) >= 0.2;
+  const direction = split ? 'NEUTRAL' : net >= 0.2 ? 'BULLISH' : net <= -0.2 ? 'BEARISH' : 'NEUTRAL';
+  const score = Math.min(10, Math.round(Math.abs(net) * 100) / 10 * 1.25 + (split ? 0 : 1));
+  const icon = v => v > 0.15 ? '🟢' : v < -0.15 ? '🔴' : '⚪';
+  const factors = [];
+  if (split) factors.push({ icon: '🔀', text: `ES1! reads ${es.dir.toLowerCase()} and NQ1! ${nq.dir.toLowerCase()}: they disagree, so the signal stays neutral (possible SMT).`, cls: 'caution' });
+  // merge the two contracts' factors by label
+  for (const p of nq.parts) {
+    const e = es.parts.find(x => x.label === p.label);
+    const v = e ? (e.v + p.v) / 2 : p.v;
+    factors.push({ icon: icon(v), text: `<b>${p.label}</b>: NQ1! ${p.text}${e ? ` · ES1! ${e.text}` : ''}`, cls: Math.abs(v) > 0.5 ? 'strong' : '' });
+  }
+  for (const e of es.parts) if (!nq.parts.find(x => x.label === e.label)) factors.push({ icon: icon(e.v), text: `<b>${e.label}</b>: ES1! ${e.text}`, cls: '' });
+  const cs = window.confStats?.tfs;
+  if (cs) factors.push({ icon: '📊', text: `History: when 5 of 6 checks align, 30m–4H beat random odds (NQ1! 4H ${Math.round(cs['4h']['NQ=F'].signal5.winRate * 100)}% vs ${Math.round(cs['4h']['NQ=F'].baseline * 100)}%); 1m–15m did not, so higher timeframes carry more weight here.`, cls: '' });
+  if (session === 'manipulation') factors.push({ icon: '🚫', text: '9:30–9:50 manipulation window: no entries, whatever the direction.', cls: 'bad' });
+  let jb = {}; try { jb = JSON.parse(localStorage.getItem('jct_bias') || '{}'); } catch(e) {}
+  if (jb.state === 'bull' || jb.state === 'bear') factors.push({ icon: '🧭', text: `Your Daily Bias: ${jb.state === 'bull' ? 'bullish' : 'bearish'} (${(jb.state === 'bull') === (direction === 'BULLISH') ? 'agrees' : direction === 'NEUTRAL' ? 'signal is neutral' : 'disagrees'}; not used for the direction).`, cls: '' });
+  const T = window.TJR && labRaw && BT ? todayRun('NQ=F') : null;
+  let tjrStep = 1; if (T && T.sameDay) { const s = T.st; if (s.sslSwept || s.bslSwept) tjrStep = 2; if (s.bosUp || s.bosDn) tjrStep = 3; if (s.pending || s.pos) tjrStep = 4; }
+  return { direction, dirColor: direction === 'BULLISH' ? 'var(--bull)' : direction === 'BEARISH' ? 'var(--bear)' : 'var(--warn)',
+    arrow: direction === 'BULLISH' ? '▲' : direction === 'BEARISH' ? '▼' : '→', score, confLabel: score >= 7.5 ? 'High' : score >= 5 ? 'Moderate' : score >= 2.5 ? 'Low' : 'Very low', factors, session, tjrStep };
+}
+
+// ============================================================
+// MORNING ANALYSIS — rebuilt from live data on every refresh
+// ============================================================
+let anSym = 'NQ=F';
+function anSetSym(s) { anSym = s; renderAnalysis(); }
+const NOTE_BULL = /\b(bull|bullish|long|longs|higher|buy|calls|up ?side|rally|bounce)\b/i, NOTE_BEAR = /\b(bear|bearish|short|shorts|lower|sell|puts|down ?side|dump|fade)\b/i;
+function levelsTable(T) {
+  const L = T.st.levels, px = T.last.c;
+  const rows = [['Prior-day high', L.pdH, 'B'], ['Asian high', L.asianH, 'B'], ['London high', L.londonH, 'B'], ['NY high', L.nyH, 'B'], ['Midnight open', L.mOpen, ''],
+    ['NY low', L.nyL, 'S'], ['London low', L.londonL, 'S'], ['Asian low', L.asianL, 'S'], ['Prior-day low', L.pdL, 'S']].filter(x => x[1] != null && !Number.isNaN(x[1])).sort((a, b) => b[1] - a[1]);
+  const dayBars = T.bars.filter(b => b.td === T.td);
+  let placed = false;
+  const tr = rows.map(([n, p, side]) => {
+    let pre = '';
+    if (!placed && p < px) { placed = true; pre = `<tr class="lv-now"><td>▶ Price now</td><td class="mono">${px.toFixed(2)}</td><td></td><td></td></tr>`; }
+    // taken = traded through after the 9:30 open (NY high/low are today's own extremes, so never "taken")
+    const swept = !/^NY /.test(n) && side && dayBars.some(b => b.m >= 570 && (side === 'S' ? b.l < p : b.h > p));
+    const d = p - px;
+    return pre + `<tr${swept ? ' class="lv-swept"' : ''}><td><span class="lv-dot ${side === 'B' ? 'b' : side === 'S' ? 's' : ''}"></span>${n}</td><td class="mono">${p.toFixed(2)}</td><td class="mono ${d >= 0 ? 'bull' : 'bear'}">${d >= 0 ? '+' : ''}${d.toFixed(2)}</td><td class="fs-12 text-2">${swept ? 'taken' : ''}</td></tr>`;
+  }).join('') + (placed ? '' : `<tr class="lv-now"><td>▶ Price now</td><td class="mono">${px.toFixed(2)}</td><td></td><td></td></tr>`);
+  return `<table class="lv-tbl"><tr><th>Level</th><th>Price</th><th>Away</th><th></th></tr>${tr}</table>`;
+}
+function renderAnalysis() {
+  const wrap = document.getElementById('analysis-wrap'); if (!wrap) return;
+  if (!window.TJR || !labRaw || !BT || !window.mtfScan) { wrap.innerHTML = '<div class="section-label">Morning Analysis</div><div class="card mb-md"><div class="card-body fs-13 text-2">Building the analysis from live candles…</div></div>'; return; }
+  const T = todayRun(anSym), sig = signalFor(anSym); if (!T || !sig) return;
+  const I = window.TJR.INSTR[anSym], nm = I.name, other = anSym === 'NQ=F' ? 'ES=F' : 'NQ=F', L = T.st.levels, px = T.last.c, st = T.st;
+  const lean = sig.dir, bull = lean === 'BULLISH', bear = lean === 'BEARISH';
+  const scan = window.mtfScan, C = scan.conf[anSym], tfs = scan.syms[anSym].tfs;
+  const B = x => `<b>${x}</b>`, f2 = v => v.toFixed(2);
+  const dayBars = T.bars.filter(b => b.td === T.td);
+  // overnight story: what London did to Asia and the prior day
+  const ldn = dayBars.filter(b => b.m >= 180 && b.m < 510), lowAll = Math.min(...dayBars.map(b => b.l)), highAll = Math.max(...dayBars.map(b => b.h));
+  const took = [];
+  if (ldn.length && L.londonL < L.asianL) took.push(`London took the Asian low ${B(f2(L.asianL))}`);
+  if (ldn.length && L.londonH > L.asianH) took.push(`London took the Asian high ${B(f2(L.asianH))}`);
+  if (lowAll < L.pdL) took.push(`the prior-day low ${B(f2(L.pdL))} was taken`);
+  if (highAll > L.pdH) took.push(`the prior-day high ${B(f2(L.pdH))} was taken`);
+  const evs = T.evs, sweep = evs.find(e => e.type === 'sweep'), bos = evs.find(e => e.type === 'bos'), fvg = evs.filter(e => e.type === 'fvg').pop(), ord = evs.find(e => e.type === 'order');
+  // nearest liquidity both ways (session + HTF), not yet taken
+  const pools = [['Prior-day high', L.pdH], ['Asian high', L.asianH], ['London high', L.londonH], ['NY high', L.nyH], ['Prior-day low', L.pdL], ['Asian low', L.asianL], ['London low', L.londonL], ['NY low', L.nyL], ['Midnight open', L.mOpen]]
+    .filter(x => x[1] != null && !Number.isNaN(x[1])).map(([n, p]) => ({ n, p })).concat(htfPools(anSym));
+  const above = pools.filter(x => x.p > px + 0.25).sort((a, b) => a.p - b.p)[0], below = pools.filter(x => x.p < px - 0.25).sort((a, b) => b.p - a.p)[0];
+  const draw = bull ? above : bear ? below : null;
+  // HTF summary
+  const lab = tf => tfs[tf]?.bias?.label || '–';
+  const htfAgree = ['1d', '4h', '1h'].filter(tf => (bull && lab(tf) === 'Bullish') || (bear && lab(tf) === 'Bearish')).length;
+  // SMT
+  const smtTf = ['15m', '1h', '30m', '5m'].find(tf => C[tf]?.smt?.v);
+  // backtest + confluence history
+  const r = viaExit(defaultCfgFor(anSym), defaultExitFor(defaultCfgFor(anSym))), rob = isRobust(r), cs = window.confStats?.tfs;
+  const best = cs ? ['4h', '1h', '30m'].map(tf => ({ tf, s: cs[tf][anSym] })).sort((a, b) => (b.s.signal5.winRate - b.s.baseline) - (a.s.signal5.winRate - a.s.baseline))[0] : null;
+  // notes
+  let notes = ''; try { notes = (localStorage.getItem('jct_dash_notes') || '').trim(); } catch(e) {}
+  const nb = NOTE_BULL.test(notes), nbr = NOTE_BEAR.test(notes), noteLean = nb && !nbr ? 'bullish' : nbr && !nb ? 'bearish' : null;
+  const evToday = todaysEvents(), nowM = etNow().m, nextRed = evToday.find(e => e.m >= nowM);
+  const secs = window.sectorData?.sectors || [], tech = secs.find(x => x.sym === 'XLK');
+
+  const head = `${took.length ? took[0].replace(/<[^>]+>/g, '') + (took[1] ? ', and ' + took[1].replace(/<[^>]+>/g, '') : '') + '. ' : 'No overnight level was taken. '}` +
+    `${nm} is ${bull ? 'leaning bullish' : bear ? 'leaning bearish' : 'mixed'} at ${f2(px)}${draw ? `, with the next liquidity at ${f2(draw.p)} (${draw.n})` : ''}.`;
+  const row = (ic, cls, label, txt) => `<div class="an-row"><span class="an-ic ${cls}">${ic}</span><div><div class="an-l">${label}</div><div class="an-t">${txt}</div></div></div>`;
+  const rows = [
+    row('🔀', smtTf ? (C[smtTf].smt.v === 'bull' ? 'ok' : 'bad') : '', 'SMT', smtTf ? `${CONF_TFLBL[smtTf]}: ${esc(C[smtTf].smt.why)}` : `No divergence: ${nm} and ${window.TJR.INSTR[other].name} are moving together.`),
+    row('🗓', htfAgree >= 2 ? 'ok' : htfAgree === 0 && lean !== 'NEUTRAL' ? 'bad' : '', 'Higher timeframes', `Daily ${B(lab('1d'))} · 4H ${B(lab('4h'))} · 1H ${B(lab('1h'))}${lean !== 'NEUTRAL' ? ` (${htfAgree} of 3 agree with the ${lean.toLowerCase()} lean)` : ''}.`),
+    row('1', sweep || took.length ? 'ok' : '', nowM >= 610 ? 'Potential · this morning' : 'Potential: liquidity sweep', sweep ? `${sweep.hm} ${esc(sweep.text.split(' (')[0])}.` : took.length ? `Overnight: ${took.join('; ')}. ${nowM < 570 ? 'Watching for a sweep after 9:30.' : 'No new sweep after 9:30 yet.'}` : 'No sweep yet.'),
+    row('2', bos || C['15m']?.bos?.v ? 'ok' : '', nowM >= 610 ? 'Confirmation · morning + now' : 'Confirmation: break of structure', `${bos ? `${bos.hm} ${esc(bos.text)}. ` : ''}${C['15m']?.bos?.v ? `${bos ? 'Now: ' : ''}15m structure is ${B(C['15m'].bos.v === 'bull' ? 'bullish' : 'bearish')} (${esc(C['15m'].bos.why)}).` : bos ? '' : 'No break of structure yet.'}`),
+    row('3', fvg ? 'ok' : '', nowM >= 610 ? 'Continuation · this morning' : 'Continuation: FVG entry', ord ? `${ord.hm} ${esc(ord.text)}.` : fvg ? `${fvg.hm} ${esc(fvg.text)}.` : C['5m']?.fvg?.v ? `5m: ${esc(C['5m'].fvg.why)}.` : 'No gap to enter from yet.'),
+    row('4', draw ? 'ok' : '', 'Draw on liquidity', draw ? `${B(f2(draw.p))} ${draw.n}${draw.htf ? ' (HTF)' : ''}, ${B(Math.abs(draw.p - px).toFixed(2))} pts away.` : `Lean is neutral. Above: ${above ? `${f2(above.p)} ${above.n}` : '–'} · below: ${below ? `${f2(below.p)} ${below.n}` : '–'}.`),
+    row('✋', 'bad', 'Invalidation', bull ? `A move below ${B(f2(Math.min(st.sweepLow || lowAll, below ? below.p : lowAll)))} (${below ? below.n : "today's low"}) breaks the bullish idea.` : bear ? `A move above ${B(f2(Math.max(st.sweepHigh || highAll, above ? above.p : highAll)))} (${above ? above.n : "today's high"}) breaks the bearish idea.` : `Wait for one side to be swept and structure to break before leaning.`),
+    row('📊', rob ? 'ok' : 'bad', 'From your backtest', `${nm}, best-tested settings: ${r.stats.trades} trades, ${Math.round(r.stats.winRate * 100)}% won, ${btMoney(r.stats.expectancy)} per trade ${rob ? '(passed all 3 checks)' : '(no proven edge)'}.${best ? ` Confluence history: ${CONF_TFLBL[best.tf]} alignment won ${Math.round(best.s.signal5.winRate * 100)}% vs ${Math.round(best.s.baseline * 100)}% random.` : ''}`),
+  ];
+  const ctx = [];
+  if (nextRed) ctx.push(`<span class="badge ${nextRed.impact === 'High' ? 'badge-bear' : 'badge-warn'}">${nextRed.impact === 'High' ? 'RED' : 'MED'}</span> ${esc(nextRed.title)} at ${nextRed.time}`);
+  if (secs.length) ctx.push(`Strongest sector: ${B(secs[0].name)} ${secs[0].d1 >= 0 ? '+' : ''}${secs[0].d1}% · weakest: ${B(secs.at(-1).name)} ${secs.at(-1).d1}%${anSym === 'NQ=F' && tech ? ` · Tech ${tech.d1 >= 0 ? '+' : ''}${tech.d1}% (NQ is tech-heavy)` : ''}`);
+  if (notes) ctx.push(`Your notes${noteLean ? ` lean ${B(noteLean)}${lean !== 'NEUTRAL' ? ` and the data leans ${B(lean.toLowerCase())}: ${noteLean === lean.toLowerCase() ? 'they agree' : 'they disagree, so double-check'}` : ''}` : ''}: “${esc(notes.slice(0, 160))}${notes.length > 160 ? '…' : ''}”`);
+  const note = window.todayAnalysis ? `<details class="an-note"><summary>Claude's note for today (${esc(window.todayAnalysis.asOf || '')})</summary><div class="fs-13">${esc(window.todayAnalysis.headline || '')}</div></details>` : '';
+  const upd = new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+  wrap.innerHTML = `
+  <div class="section-label">Morning Analysis · refreshed ${upd} ET · candles ${T.last.hm} ET</div>
+  <div class="card mb-md an2"><div class="card-body">
+    <div class="an-top">
+      <div class="mtf-segs">${[['NQ=F', 'NQ1!'], ['ES=F', 'ES1!']].map(([s, n]) => `<button class="mtf-seg${s === anSym ? ' on' : ''}" onclick="anSetSym('${s}')">${n}</button>`).join('')}</div>
+      <span class="badge ${bull ? 'badge-bull' : bear ? 'badge-bear' : 'badge-warn'}" style="font-size:13px;padding:4px 10px">${bull ? '▲ Bullish' : bear ? '▼ Bearish' : '→ Neutral'}</span>
+    </div>
+    <div class="an-head">${esc(head)}</div>
+    <div class="an-nums">
+      <div><span>Price</span><b class="mono">${f2(px)}</b></div>
+      <div><span>Liquidity above</span><b class="mono bull">${above ? f2(above.p) : '–'}</b><em>${above ? `${above.n} · +${(above.p - px).toFixed(2)}` : ''}</em></div>
+      <div><span>Liquidity below</span><b class="mono bear">${below ? f2(below.p) : '–'}</b><em>${below ? `${below.n} · −${(px - below.p).toFixed(2)}` : ''}</em></div>
+    </div>
+    <div class="an-rows">${rows.join('')}</div>
+    ${ctx.length ? `<div class="an-ctx">${ctx.map(x => `<div>${x}</div>`).join('')}</div>` : ''}
+    <details class="an-lv"><summary>All ${nm} levels</summary>${levelsTable(T)}</details>
+    ${note}
+    <div class="fs-12 text-2" style="margin-top:8px">Built from live candles, the strategy engine, the confluence checklist and the FVG scan. Rules-based read, not financial advice.</div>
+  </div></div>`;
+}
+
+// confluence checklist: historical edge row (confstats.json)
+function confHistoryRow(sym, tfs) {
+  const cs = window.confStats?.tfs; if (!cs) return '';
+  return `<tr class="cf-hist"><th>History when 5+ of 6 align</th>${tfs.map(tf => { const s = cs[tf]?.[sym]; if (!s) return '<td>–</td>';
+    const edge = s.signal5.winRate - s.baseline, cls = edge >= 0.05 ? 'cf-b' : edge <= -0.05 ? 'cf-s' : 'cf-n';
+    return `<td class="${cls}" title="${s.signal5.n} signals, ${s.from}–${s.to}; random ${Math.round(s.baseline * 100)}%">${Math.round(s.signal5.winRate * 100)}%</td>`; }).join('')}</tr>`;
+}
 
 // One refresh for everything that reads today's candles
 async function readyCycle(force) {
   await ensureBars(force);
-  whenTJR(() => { renderReadiness(); renderPlaybook(); if (!document.getElementById('lab-hl')?.hidden) renderHighlights(); });
+  whenTJR(() => { renderReadiness(); renderPlaybook(); renderAnalysis(); refreshAISignal(); if (!document.getElementById('lab-hl')?.hidden) renderHighlights(); });
 }
 
 // Context for follow-up questions, built from backtest.json once loaded
@@ -4609,6 +4898,9 @@ function init() {
   initTradeLogDate();
   initBacktestChat();
   loadRisk();
+  loadContext();
+  renderMarketPanel(); setInterval(renderMarketPanel, 30000);
+  setInterval(loadContext, 15 * 60000);
   loadAnalysis();
   loadMTF();
 

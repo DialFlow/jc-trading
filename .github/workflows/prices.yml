@@ -1,7 +1,7 @@
 name: Update prices
 
 # Every 5 minutes Sun–Fri (GitHub may delay scheduled runs by a few minutes).
-# Writes prices.json + bars.json to the `data` branch; the site reads it from raw.githubusercontent.com.
+# Writes prices.json, bars.json, news.json and sectors.json to the `data` branch; the site reads it from raw.githubusercontent.com.
 # Pages deploys from `main`, so these updates don't trigger a site rebuild.
 on:
   schedule:
@@ -31,6 +31,6 @@ jobs:
           cd "$RUNNER_TEMP"
           cd out
           git init -q -b data
-          git add prices.json bars.json
+          git add *.json
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "prices $(date -u +%FT%TZ)"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" data

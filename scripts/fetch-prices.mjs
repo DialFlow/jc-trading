@@ -1,6 +1,8 @@
 // Fetches delayed Yahoo data and writes two files into <outdir>:
 //   prices.json — last quote for every symbol in index.html's YAHOO_MAP
 //   bars.json   — ES/NQ candles (1m, 5m, 15m, 30m, 1h, 1d) for the multi-timeframe FVG scan
+//   news.json   — this week's USD high/medium-impact events (Forex Factory calendar feed; "red folder" = High)
+//   sectors.json — 1-day / 5-day performance of the 11 S&P sector ETFs (sector strength)
 // Run by .github/workflows/prices.yml.  Usage: node scripts/fetch-prices.mjs <outdir>
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -70,3 +72,25 @@ for (const sym of ['ES=F', 'NQ=F']) {
   }
 }
 writeFileSync(join(outDir, 'bars.json'), JSON.stringify({ updated, source: 'Yahoo Finance (delayed)', contracts, bars }));
+
+// ---- news.json ---- Forex Factory's public weekly calendar feed
+try {
+  const res = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', UA);
+  const all = res.ok ? await res.json() : [];
+  const events = all.filter(e => e.country === 'USD' && (e.impact === 'High' || e.impact === 'Medium'))
+    .map(e => ({ date: e.date, title: e.title, impact: e.impact, forecast: e.forecast || '', previous: e.previous || '' }));
+  writeFileSync(join(outDir, 'news.json'), JSON.stringify({ updated, source: 'Forex Factory calendar', events }));
+} catch (e) { console.error('news:', e.message); }
+
+// ---- sectors.json ---- sector strength from the SPDR sector ETFs
+const SECTORS = { XLK: 'Technology', XLC: 'Communication', XLY: 'Consumer Discretionary', XLF: 'Financials', XLV: 'Health Care', XLI: 'Industrials',
+  XLE: 'Energy', XLB: 'Materials', XLP: 'Consumer Staples', XLU: 'Utilities', XLRE: 'Real Estate' };
+try {
+  const res = await fetch('https://query1.finance.yahoo.com/v8/finance/spark?range=5d&interval=1d&symbols=' + Object.keys(SECTORS).join(','), UA);
+  const data = res.ok ? await res.json() : {};
+  const sectors = Object.entries(SECTORS).map(([sym, name]) => {
+    const c = (data[sym]?.close || []).filter(v => v != null);
+    return c.length >= 2 ? { sym, name, last: c.at(-1), d1: +((c.at(-1) / c.at(-2) - 1) * 100).toFixed(2), d5: +((c.at(-1) / c[0] - 1) * 100).toFixed(2) } : null;
+  }).filter(Boolean).sort((a, b) => b.d1 - a.d1);
+  writeFileSync(join(outDir, 'sectors.json'), JSON.stringify({ updated, source: 'SPDR sector ETFs via Yahoo', sectors }));
+} catch (e) { console.error('sectors:', e.message); }
