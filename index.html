@@ -232,6 +232,72 @@ body {
 .fc-head .btn { white-space: nowrap; text-decoration: none; }
 .fc-segs { margin-bottom: 8px; flex-wrap: wrap; }
 
+/* Trade Readiness */
+.ready { overflow: visible; }
+.ready-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 16px 10px; }
+.ready-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.ready-hero { margin: 0 16px 12px; padding: 16px; border-radius: 14px; background: var(--fill); }
+.ready-title { font-size: 22px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
+.ready-sub { font-size: 14px; color: var(--text2); margin-top: 6px; line-height: 1.4; }
+.ready-go { background: rgba(52,199,89,0.14); } .ready-go .ready-title { color: var(--bull); }
+.ready-caution { background: rgba(255,149,0,0.15); } .ready-caution .ready-title { color: var(--warn); }
+.ready-bad { background: rgba(255,59,48,0.12); } .ready-bad .ready-title { color: var(--bear); }
+.ready-watch, .ready-prep { background: rgba(0,122,255,0.10); } .ready-watch .ready-title, .ready-prep .ready-title { color: var(--blue); }
+.ready-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; padding: 4px 16px 12px; }
+.rc { display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--fill); }
+.rc-ic { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: var(--fill2, var(--fill)); color: var(--text3); }
+.rc-ok .rc-ic { background: var(--bull); color: #fff; } .rc-bad .rc-ic { background: var(--bear); color: #fff; } .rc-wait .rc-ic { background: var(--warn); color: #fff; }
+.rc-l { font-size: 13px; font-weight: 600; } .rc-t { font-size: 12px; color: var(--text2); margin-top: 2px; line-height: 1.35; }
+.rc-must { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; margin-left: 4px; }
+.ready-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 16px 8px; }
+.sb { position: relative; height: 28px; margin: 0 16px; border-radius: 8px; background: var(--fill); overflow: hidden; }
+.sb-seg { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: var(--text2); overflow: hidden; white-space: nowrap; border-right: 1px solid var(--bg); }
+.sb-ldn { background: rgba(48,176,199,0.18); } .sb-pre { background: rgba(0,122,255,0.12); } .sb-man { background: rgba(255,59,48,0.25); color: var(--bear); }
+.sb-mac { background: rgba(52,199,89,0.30); color: var(--bull); } .sb-rest { background: rgba(52,199,89,0.10); } .sb-mng { background: rgba(142,142,147,0.15); }
+.sb-now { position: absolute; top: -2px; bottom: -2px; width: 3px; background: var(--text); border-radius: 2px; box-shadow: 0 0 0 2px var(--bg); }
+.sb-ticks { position: relative; height: 14px; margin: 4px 16px 12px; font-size: 10px; color: var(--text3); }
+.sb-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.sb-ticks span:first-child { transform: none; } .sb-ticks span:last-child { transform: translateX(-100%); }
+@media (max-width: 520px) { .sb-man span, .sb-mac span, .sb-rest span { display: none; } }
+#pb-clock .sb, #pb-clock .sb-ticks { margin-left: 0; margin-right: 0; }
+
+/* Playbook */
+.pb-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.pb-step { display: grid; grid-template-columns: 32px 1fr; gap: 10px; background: var(--surface); border-radius: 12px; padding: 14px; }
+.pb-num { width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.pb-now { background: rgba(0,122,255,0.10); } .pb-now .level-label, .pb-now .level-price { color: var(--blue); font-weight: 700; }
+.pb-swept { opacity: 0.55; }
+.pb-risk { display: grid; gap: 10px; font-size: 13px; }
+.pb-risk label { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.pb-risk input { width: 110px; text-align: right; }
+
+/* Glossary */
+.gl { border-bottom: 1px dotted var(--blue); cursor: help; }
+.gl-pop { position: absolute; z-index: 50; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+
+/* Lab highlights feed */
+.hl-feed { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.hl-post { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; }
+.hl-post header { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.hl-av { width: 36px; height: 36px; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.hl-big { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.hl-big.bull { color: var(--bull); } .hl-big.bear { color: var(--bear); }
+.hl-small { font-size: 16px; font-weight: 600; color: var(--text2); letter-spacing: 0; }
+.hl-title { font-size: 16px; font-weight: 600; margin: 6px 0 10px; line-height: 1.35; }
+.hl-body { display: flex; flex-direction: column; gap: 10px; }
+.hl-spark { width: 100%; height: 70px; }
+.hl-bars { display: flex; flex-direction: column; gap: 8px; }
+.hl-bar { display: grid; grid-template-columns: 72px 1fr auto; gap: 8px; align-items: center; font-size: 12px; }
+.hl-bar > div { height: 12px; border-radius: 6px; background: var(--fill); overflow: hidden; display: flex; }
+.hl-bar i { display: block; height: 100%; }
+.hl-checks { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.hl-checks b { display: inline-block; width: 18px; }
+.hl-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hl-two > div { background: var(--fill); border-radius: 12px; padding: 10px; }
+.hl-diagram { width: 100%; height: auto; background: var(--fill); border-radius: 12px; }
+.hl-cav { font-size: 11px; color: var(--text3); margin-top: 12px; line-height: 1.4; }
+.hl-post footer { display: flex; justify-content: flex-end; margin-top: 10px; }
+
 /* Lab */
 .lab-view[hidden] { display: none !important; }
 .lab-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -1122,8 +1188,7 @@ select { cursor: pointer; }
   <button class="tab-btn" onclick="showPage('charts')">📈 Charts</button>
   <button class="tab-btn" onclick="showPage('journal')">📓 Morning Journal</button>
   <button class="tab-btn" onclick="showPage('bias')">🎯 Daily Bias</button>
-  <button class="tab-btn" onclick="showPage('levels')">📐 Key Levels</button>
-  <button class="tab-btn" onclick="showPage('strategy')">🧠 Strategy</button>
+  <button class="tab-btn" onclick="showPage('strategy')">📘 Playbook</button>
   <button class="tab-btn" onclick="showPage('tradelog')">📒 Trade Log</button>
   <button class="tab-btn" onclick="showPage('edge')">⚡ Edge</button>
   <button class="tab-btn" onclick="showPage('backtest')">🧪 Lab</button>
@@ -1136,7 +1201,7 @@ select { cursor: pointer; }
 
 <!-- ===== TAB 1: DASHBOARD ===== -->
 <div class="tab-page active" id="page-dashboard">
-  <div id="live-mini" class="mb-md"></div>
+  <div id="ready-wrap"></div>
 
   <!-- ===== AI TRADE SIGNAL ===== -->
   <div class="ai-signal-card" id="ai-signal-card">
@@ -1426,165 +1491,58 @@ select { cursor: pointer; }
 
 </div>
 
-<!-- ===== TAB 5: KEY LEVELS ===== -->
-<div class="tab-page" id="page-levels">
-
-  <div class="flex items-center justify-between mb-sm">
-    <div class="section-label" style="padding-top:4px;padding-bottom:0;">Key Levels</div>
-    <button class="btn btn-primary btn-sm" onclick="addLevel()">+ Add Level</button>
-  </div>
-
-  <!-- ES Levels -->
-  <div class="section-label">ES · S&P 500</div>
-  <div class="card mb-md" id="levels-es">
-    <div class="level-row" id="lev-es-template" style="display:none;">
-      <div class="level-type-dot" style="background:var(--bull);"></div>
-      <input class="price-input flex-1" placeholder="Label" style="width:auto;min-width:0;text-align:left;font-family:inherit;">
-      <input class="price-input" placeholder="Price" style="width:80px;">
-      <select style="background:var(--fill);border:none;border-radius:7px;padding:4px 7px;font-size:12px;color:var(--text);width:80px;">
-        <option value="res">Res</option>
-        <option value="sup">Sup</option>
-        <option value="vwap">VWAP</option>
-        <option value="pivot">Pivot</option>
-        <option value="gap">Gap</option>
-      </select>
-      <button class="btn btn-secondary btn-xs" onclick="removeLevel(this)">✕</button>
-    </div>
-    <div id="es-levels-list"></div>
-    <div class="card-row">
-      <button class="btn btn-secondary btn-xs" onclick="addESLevel()">+ ES Level</button>
-    </div>
-  </div>
-
-  <!-- NQ Levels -->
-  <div class="section-label">NQ · Nasdaq</div>
-  <div class="card mb-md" id="levels-nq">
-    <div id="nq-levels-list"></div>
-    <div class="card-row">
-      <button class="btn btn-secondary btn-xs" onclick="addNQLevel()">+ NQ Level</button>
-    </div>
-  </div>
-
-  <!-- Notable Levels (static reference) -->
-  <div class="section-label">Reference Levels</div>
-  <div class="card mb-md">
-    <div class="level-row">
-      <div class="level-type-dot" style="background:var(--bull);"></div>
-      <span class="level-label">ES All-Time High</span>
-      <span class="level-price">5878</span>
-      <span class="level-note">Key resistance</span>
-    </div>
-    <div class="level-row">
-      <div class="level-type-dot" style="background:var(--teal);"></div>
-      <span class="level-label">ES 200 DMA</span>
-      <span class="level-price">5420</span>
-      <span class="level-note">Long-term support</span>
-    </div>
-    <div class="level-row">
-      <div class="level-type-dot" style="background:var(--purple);"></div>
-      <span class="level-label">NQ All-Time High</span>
-      <span class="level-price">20735</span>
-      <span class="level-note">Key resistance</span>
-    </div>
-    <div class="level-row">
-      <div class="level-type-dot" style="background:var(--warn);"></div>
-      <span class="level-label">VIX Spike Zone</span>
-      <span class="level-price">20+</span>
-      <span class="level-note">Elevated vol</span>
-    </div>
-  </div>
-
-</div>
-
-<!-- ===== TAB 6: STRATEGY ===== -->
+<!-- ===== TAB 5: PLAYBOOK (strategy + key levels) ===== -->
 <div class="tab-page" id="page-strategy">
 
-  <div class="section-label">Playbook</div>
-  <div class="card mb-md">
-    <div class="edge-item">
-      <div class="edge-title">Opening Range Breakout (ORB)</div>
-      <div class="edge-desc">Wait for the first 5-minute candle to close. Mark high/low. Trade the breakout of that range with volume confirmation. Best when premarket trend aligns with direction.</div>
-      <div class="edge-tags">
-        <span class="badge badge-blue">9:30 Open</span>
-        <span class="badge badge-neutral">5m Chart</span>
-        <span class="badge badge-warn">Momentum</span>
-      </div>
+  <div class="section-label" style="padding-top:4px">Today's levels · filled in automatically</div>
+  <div class="grid-2 mb-md" id="pb-auto"><div class="card"><div class="card-body fs-13 text-2">Loading levels…</div></div></div>
+
+  <div class="section-label">The TJR setup in 4 steps</div>
+  <div class="pb-steps mb-md">
+    <div class="pb-step"><div class="pb-num">1</div><div><div class="fw-600">Potential: a <span class="gl" data-g="sweep">liquidity sweep</span></div>
+      <div class="fs-13 text-2">After 9:30, price pokes through a level where stops sit (Asian, London or prior-day high/low), then snaps back. Taking out lows sets up longs; taking out highs sets up shorts.</div></div></div>
+    <div class="pb-step"><div class="pb-num">2</div><div><div class="fw-600">Confirmation: a <span class="gl" data-g="bos">break of structure</span></div>
+      <div class="fs-13 text-2">A candle closes beyond the last 5 candles in the opposite direction of the sweep. That says the move is turning.</div></div></div>
+    <div class="pb-step"><div class="pb-num">3</div><div><div class="fw-600">Continuation: enter at the <span class="gl" data-g="fvg">fair value gap</span></div>
+      <div class="fs-13 text-2">The break leaves a gap between candles. A limit order goes at its midpoint, only between 9:50 and 10:10. 9:30–9:50 is the manipulation window: no entries.</div></div></div>
+    <div class="pb-step"><div class="pb-num">4</div><div><div class="fw-600">Exit: the next pool of liquidity</div>
+      <div class="fs-13 text-2">Target the next high or low on the other side (or 2× the risk). The stop goes past the sweep or a fixed distance. Flat by 12:00, no matter what.</div></div></div>
+  </div>
+  <div class="card mb-md"><div class="card-body"><div class="fs-12 fw-600 text-2 mb-sm">SESSION CLOCK (ET)</div><div id="pb-clock"></div></div></div>
+
+  <div class="section-label">Your levels</div>
+  <div class="grid-2 mb-md">
+    <div class="card" id="levels-es">
+      <div class="card-row"><span class="fs-13 fw-600 flex-1">ES1!</span><button class="btn btn-secondary btn-xs" onclick="addESLevel()">+ Level</button></div>
+      <div id="es-levels-list"></div>
     </div>
-    <div class="edge-item">
-      <div class="edge-title">VWAP Reclaim / Rejection</div>
-      <div class="edge-desc">Price returns to VWAP after a gap or move. Long on reclaim from below with volume. Short on failed retest from above. Best in trending sessions, not chop.</div>
-      <div class="edge-tags">
-        <span class="badge badge-blue">Intraday</span>
-        <span class="badge badge-neutral">Mean Revert</span>
-      </div>
-    </div>
-    <div class="edge-item">
-      <div class="edge-title">Impulse Pullback</div>
-      <div class="edge-desc">Strong directional impulse move on above-average volume. Wait for a 3-candle pullback to prior resistance (now support) or VWAP. Enter on the first close in the direction of the impulse.</div>
-      <div class="edge-tags">
-        <span class="badge badge-bull">Trend</span>
-        <span class="badge badge-neutral">2nd Entry</span>
-      </div>
-    </div>
-    <div class="edge-item">
-      <div class="edge-title">Failed Auction / Trap</div>
-      <div class="edge-desc">Price breaks a key level (premarket high, prior day high/low) and immediately reverses. Trade the trap — fade the breakout when the candle closes back below/above the level.</div>
-      <div class="edge-tags">
-        <span class="badge badge-bear">Reversal</span>
-        <span class="badge badge-warn">High Risk</span>
-      </div>
+    <div class="card" id="levels-nq">
+      <div class="card-row"><span class="fs-13 fw-600 flex-1">NQ1!</span><button class="btn btn-secondary btn-xs" onclick="addNQLevel()">+ Level</button></div>
+      <div id="nq-levels-list"></div>
     </div>
   </div>
 
-  <div class="section-label">Rules</div>
-  <div class="card mb-md">
-    <div class="check-item" id="rule-1" onclick="toggleRule('rule-1')">
-      <div class="check-box"></div>
-      <span class="check-label">No trades in first 5 minutes unless I have a clear ORB setup</span>
+  <div class="grid-2 mb-md" style="align-items:start">
+    <div>
+      <div class="section-label">Your rules</div>
+      <div class="card">
+        <div class="check-item" id="rule-1" onclick="toggleRule('rule-1')"><div class="check-box"></div><span class="check-label">No entries 9:30–9:50 (manipulation window). Orders only 9:50–10:10.</span></div>
+        <div class="check-item" id="rule-2" onclick="toggleRule('rule-2')"><div class="check-box"></div><span class="check-label">One setup per session. If it's skipped or stopped, I'm done.</span></div>
+        <div class="check-item" id="rule-3" onclick="toggleRule('rule-3')"><div class="check-box"></div><span class="check-label">Stop and target set before entry. Never move a stop against me.</span></div>
+        <div class="check-item" id="rule-4" onclick="toggleRule('rule-4')"><div class="check-box"></div><span class="check-label">Risk per trade stays inside my limit below; size down to micros if it doesn't.</span></div>
+        <div class="check-item" id="rule-5" onclick="toggleRule('rule-5')"><div class="check-box"></div><span class="check-label">No trading 30 min before high-impact news.</span></div>
+        <div class="check-item" id="rule-6" onclick="toggleRule('rule-6')"><div class="check-box"></div><span class="check-label">Flat by 12:00 ET.</span></div>
+      </div>
     </div>
-    <div class="check-item" id="rule-2" onclick="toggleRule('rule-2')">
-      <div class="check-box"></div>
-      <span class="check-label">Max 3 trades per session. After 3 losses, done for the day.</span>
-    </div>
-    <div class="check-item" id="rule-3" onclick="toggleRule('rule-3')">
-      <div class="check-box"></div>
-      <span class="check-label">Pre-defined stop loss before entry. Never move a stop against me.</span>
-    </div>
-    <div class="check-item" id="rule-4" onclick="toggleRule('rule-4')">
-      <div class="check-box"></div>
-      <span class="check-label">Scale out 50% at 1R. Move stop to breakeven. Let rest run.</span>
-    </div>
-    <div class="check-item" id="rule-5" onclick="toggleRule('rule-5')">
-      <div class="check-box"></div>
-      <span class="check-label">No trading 30 min before high-impact news events.</span>
-    </div>
-    <div class="check-item" id="rule-6" onclick="toggleRule('rule-6')">
-      <div class="check-box"></div>
-      <span class="check-label">Only trade in the direction of the daily bias (unless null case).</span>
-    </div>
-  </div>
-
-  <div class="section-label">Risk Parameters</div>
-  <div class="card mb-md">
-    <div class="card-row">
-      <span class="fs-13 fw-600 flex-1">Max Daily Loss</span>
-      <span class="badge badge-bear">$500</span>
-    </div>
-    <div class="card-row">
-      <span class="fs-13 fw-600 flex-1">Max Per-Trade Risk</span>
-      <span class="badge badge-warn">$200</span>
-    </div>
-    <div class="card-row">
-      <span class="fs-13 fw-600 flex-1">Min Risk/Reward</span>
-      <span class="badge badge-blue">1:2</span>
-    </div>
-    <div class="card-row">
-      <span class="fs-13 fw-600 flex-1">Max Contracts (ES)</span>
-      <span class="badge badge-neutral">2</span>
-    </div>
-    <div class="card-row">
-      <span class="fs-13 fw-600 flex-1">Max Contracts (NQ)</span>
-      <span class="badge badge-neutral">2</span>
+    <div>
+      <div class="section-label">Your risk limits · used by Trade Readiness</div>
+      <div class="card"><div class="card-body pb-risk">
+        <label>Max risk per trade ($) <input type="number" id="risk-trade" min="0" step="25" oninput="saveRisk()"></label>
+        <label>Max daily loss ($) <input type="number" id="risk-day" min="0" step="50" oninput="saveRisk()"></label>
+        <label>Account trailing drawdown ($) <input type="number" id="risk-dd" min="0" step="100" oninput="saveRisk()"></label>
+        <label>Min reward : risk <input type="number" id="risk-rr" min="0" step="0.1" oninput="saveRisk()"></label>
+        <div class="fs-12 text-2">Saved on this device (and synced once Cloudflare sync is on).</div>
+      </div></div>
     </div>
   </div>
 
@@ -1797,8 +1755,9 @@ select { cursor: pointer; }
 <div class="tab-page" id="page-backtest">
   <div class="lab-nav">
     <div class="mtf-segs" id="lab-nav">
-      <button class="mtf-seg on" data-v="live" onclick="labView('live')">Live setup</button>
-      <button class="mtf-seg" data-v="bt" onclick="labView('bt')">Backtest</button>
+      <button class="mtf-seg on" data-v="hl" onclick="labView('hl')">Highlights</button>
+      <button class="mtf-seg" data-v="live" onclick="labView('live')">Today's setup</button>
+      <button class="mtf-seg" data-v="bt" onclick="labView('bt')">Results</button>
       <button class="mtf-seg" data-v="sim" onclick="labView('sim')">Account sim</button>
       <button class="mtf-seg" data-v="replay" onclick="labView('replay')">Replay</button>
     </div>
@@ -1808,8 +1767,11 @@ select { cursor: pointer; }
     </div>
   </div>
 
+  <!-- HIGHLIGHTS -->
+  <div class="lab-view hl-feed" id="lab-hl"></div>
+
   <!-- LIVE -->
-  <div class="lab-view" id="lab-live">
+  <div class="lab-view" id="lab-live" hidden>
     <div id="live-banner" class="live-banner">Loading today's candles…</div>
     <div class="grid-2 mb-md" style="align-items:start">
       <div class="card"><div class="card-body">
@@ -1905,6 +1867,7 @@ select { cursor: pointer; }
 </div>
 
 </main>
+<div id="gl-pop" class="gl-pop" hidden role="tooltip"></div>
 
 <script type="module">
 // Shared strategy engine (same file the backtest runs in Node) — see scripts/tjr-engine.mjs
@@ -1931,7 +1894,7 @@ let nqLevels = [];
 // ============================================================
 const JC_API = '';
 const SYNC_KEYS = ['jct_bias','jct_bt_chat','jct_checklist','jct_dash_notes','jct_edge_notes',
-  'jct_journal','jct_levels','jct_trades','tjr_bias'];
+  'jct_journal','jct_levels','jct_trades','tjr_bias','jct_risk'];
 
 const Sync = (() => {
   const _setItem = Storage.prototype.setItem;
@@ -2075,6 +2038,7 @@ async function loadAnalysis() {
   const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const isToday = a.date === today;
   window.todayAnalysis = isToday ? a : null;
+  setTimeout(() => typeof renderReadiness === 'function' && renderReadiness(), 0);
   const dateLbl = new Date(a.date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
   const leanCls = a.lean === 'bull' ? 'badge-bull' : a.lean === 'bear' ? 'badge-bear' : 'badge-warn';
   const tagCls = { BSL:'badge-blue', SSL:'badge-purple', swept:'badge-neutral' };
@@ -2241,6 +2205,7 @@ async function loadMTF(force) {
   renderMTF();
   renderConfluences();
   renderFuturesCharts();
+  if (typeof renderReadiness === 'function') renderReadiness();
   if (typeof refreshAISignal === "function") refreshAISignal();
   return mtf;
 }
@@ -2547,18 +2512,20 @@ function renderFuturesCharts() {
 // TAB NAVIGATION
 // ============================================================
 function showPage(name) {
+  if (name === 'levels') name = 'strategy'; // Key Levels merged into the Playbook tab
   document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   const page = document.getElementById('page-' + name);
   if (page) page.classList.add('active');
   const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabNames = ['dashboard','charts','journal','bias','levels','strategy','tradelog','edge','backtest'];
+  const tabNames = ['dashboard','charts','journal','bias','strategy','tradelog','edge','backtest'];
   const idx = tabNames.indexOf(name);
   if (idx >= 0 && tabBtns[idx]) tabBtns[idx].classList.add('active');
   currentTab = name;
   if (name === 'journal') initJournalDate();
   if (name === 'tradelog') renderTradeLog();
   if (name === 'charts') renderFuturesCharts();
+  if (name === 'strategy') readyCycle(false);
   try { localStorage.setItem('jct_tab', name); } catch(e) {}
 }
 
@@ -3519,7 +3486,8 @@ async function refreshAll() {
   const btn = document.getElementById('ai-refresh-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
   pricesLoadedAt = 0; // bypass the price cache
-  try { await Promise.all([autoFetchHeader(), loadAnalysis(), loadMTF(true), liveRefresh(false)]); } catch(e) {}
+  try { await Promise.all([autoFetchHeader(), loadAnalysis(), loadMTF(true), readyCycle(true)]); } catch(e) {}
+  if (!document.getElementById('lab-live').hidden) liveRefresh(true);
   refreshAISignal();
   if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
   const asOf = lastPriceFetch ? lastPriceFetch.toLocaleTimeString('en-US', { timeZone:'America/New_York', hour:'numeric', minute:'2-digit' }) + ' ET' : 'unavailable';
@@ -3713,7 +3681,9 @@ const usd = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { 
 
 function labView(v) {
   document.querySelectorAll('#lab-nav .mtf-seg').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  for (const id of ['live', 'bt', 'sim', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  for (const id of ['hl', 'live', 'bt', 'sim', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  document.querySelector('.lab-pick').style.visibility = v === 'hl' ? 'hidden' : '';
+  if (v === 'hl') renderHighlights();
   try { localStorage.setItem('jct_lab_view', v); } catch(e) {}
   if (v === 'live') liveRefresh();
   if (v === 'replay') rpInit();
@@ -3745,8 +3715,9 @@ function labRerender() {
 function labInit() {
   if (!BT) return;
   labCfgId = labDefaultCfg(); labRenderPick();
-  let v = 'live'; try { v = localStorage.getItem('jct_lab_view') || 'live'; } catch(e) {}
-  labView(['live', 'bt', 'sim', 'replay'].includes(v) ? v : 'live');
+  let v = 'hl'; try { v = localStorage.getItem('jct_lab_view') || 'hl'; } catch(e) {}
+  labView(['hl', 'live', 'bt', 'sim', 'replay'].includes(v) ? v : 'hl');
+  readyCycle(false);
 }
 
 // ---------- shared setup chart: candles, session levels, order lines, fills ----------
@@ -3862,12 +3833,7 @@ async function liveRefresh(useCache) {
   if (!BT) return;
   whenTJR(async () => {
     const E = window.TJR, r = labCfg();
-    if (!useCache || !labRaw || Date.now() - labLoadedAt > 60000) {
-      try {
-        const url = JC_API ? JC_API + '/bars' : BARS_URL + '?t=' + Math.floor(Date.now() / 60000);
-        const res = await fetch(url, { signal: AbortSignal.timeout(10000) }); if (res.ok) { labRaw = await res.json(); labLoadedAt = Date.now(); }
-      } catch(e) {}
-    }
+    await ensureBars(!useCache);
     const rows = labRaw?.bars?.[labSym]?.['5m'];
     if (!rows || rows.length < 100) { document.getElementById('live-banner').textContent = 'Today\'s candles are not available yet.'; return; }
     const bars = E.toBars(rows);
@@ -3890,7 +3856,8 @@ async function liveRefresh(useCache) {
   });
 }
 // compact card on the Dashboard
-function liveMini(st, evs, nowM, ageMin, r, title) {
+function liveMini() { renderReadiness(); }
+function liveMiniOld(st, evs, nowM, ageMin, r, title) {
   const el = document.getElementById('live-mini'); if (!el) return;
   const [cls] = bannerFor(st, evs, nowM, ageMin);
   el.innerHTML = `<div class="live-banner ${cls}" style="margin:0;cursor:pointer" onclick="showPage('backtest');labView('live')">${esc(title)}<span class="sub">Live setup · ${esc(r.name)} · ${isRobust(r) ? '✔ robust settings' : '✗ settings not robust'} · tap for the full ticket</span></div>`;
@@ -4006,6 +3973,336 @@ function rpDraw() {
   document.getElementById('rp-events').innerHTML = stepsHtml(st, evs, b.m);
 }
 
+// ============================================================
+// RISK LIMITS (Playbook tab) — used by Trade Readiness
+// ============================================================
+const RISK_DEFAULT = { trade: 200, day: 500, dd: 2000, rr: 2 };
+function getRisk() {
+  let r = {}; try { r = JSON.parse(localStorage.getItem('jct_risk') || '{}'); } catch(e) {}
+  return { ...RISK_DEFAULT, ...r };
+}
+function loadRisk() {
+  const r = getRisk();
+  for (const [k, id] of [['trade', 'risk-trade'], ['day', 'risk-day'], ['dd', 'risk-dd'], ['rr', 'risk-rr']]) { const el = document.getElementById(id); if (el) el.value = r[k]; }
+}
+function saveRisk() {
+  const v = id => +document.getElementById(id).value || 0;
+  try { localStorage.setItem('jct_risk', JSON.stringify({ trade: v('risk-trade'), day: v('risk-day'), dd: v('risk-dd'), rr: v('risk-rr') })); } catch(e) {}
+  renderReadiness();
+}
+
+// ============================================================
+// GLOSSARY — tap a dotted term for a plain-English definition
+// ============================================================
+const GLOSSARY = {
+  sweep: 'Liquidity sweep: price pokes through an obvious high or low (where other traders keep their stops), triggers those orders, then reverses.',
+  bos: 'Break of structure (BOS): a candle closes beyond the recent swing high or low, showing the direction has flipped.',
+  fvg: 'Fair value gap (FVG): a 3-candle gap where price moved so fast it left a hole. Price often comes back to fill it, which is where the entry goes.',
+  ifvg: 'Inverse FVG: a gap that price closed straight through. It now acts in the opposite direction.',
+  r: 'R = the amount you risk on a trade. A +2R win made twice what you risked; a −1R loss lost exactly what you risked.',
+  dd: 'Drawdown: how far the account fell from its highest point. Funded accounts end if it falls past a set limit (e.g. $2,000).',
+  wr: 'Win rate: the share of trades that made money. A strategy can win under half the time and still profit if winners are bigger than losers.',
+  exp: 'Expectancy: the average profit or loss per trade, after costs. Above $0 means the rules made money on average.',
+  micro: 'Micro contracts (MES, MNQ) are 1/10 the size of ES and NQ: same chart, 1/10 the dollars won or lost.',
+  stress: 'Stress test: the same trades replayed with worse fills and extra slippage, to see if the profit survives real-world execution.',
+  halves: 'Both halves: the test period split in two. A real edge should make money in each half, not just one lucky stretch.',
+  mc: 'Monte Carlo: thousands of simulated futures, built by reshuffling the real trades, to estimate the odds of passing or blowing an account.',
+};
+document.addEventListener('click', e => {
+  const pop = document.getElementById('gl-pop'); if (!pop) return;
+  const t = e.target.closest && e.target.closest('.gl');
+  if (!t || !GLOSSARY[t.dataset.g]) { pop.hidden = true; return; }
+  pop.textContent = GLOSSARY[t.dataset.g];
+  pop.hidden = false;
+  const r = t.getBoundingClientRect(), w = Math.min(300, window.innerWidth - 24);
+  pop.style.width = w + 'px';
+  pop.style.left = Math.max(12, Math.min(window.innerWidth - w - 12, r.left)) + 'px';
+  pop.style.top = (r.bottom + window.scrollY + 6) + 'px';
+});
+
+// ============================================================
+// SHARED: today's candles + engine run per contract
+// ============================================================
+async function ensureBars(force) {
+  if (!force && labRaw && Date.now() - labLoadedAt < 60000) return labRaw;
+  try {
+    const url = JC_API ? JC_API + '/bars' : BARS_URL + '?t=' + Math.floor(Date.now() / 60000);
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (res.ok) { labRaw = await res.json(); labLoadedAt = Date.now(); }
+  } catch(e) {}
+  return labRaw;
+}
+function defaultCfgFor(sym) {
+  const runs = BT ? BT.runs.filter(r => r.sym === sym) : [];
+  const rob = runs.filter(isRobust).sort((a, b) => Math.min(b.halves[0].net, b.halves[1].net) - Math.min(a.halves[0].net, a.halves[1].net));
+  return rob[0] || runs.find(r => r.id === 'v4');
+}
+function cfgFor(sym) { return (sym === labSym && labCfgId && BT) ? (BT.runs.find(r => r.sym === sym && r.id === labCfgId) || defaultCfgFor(sym)) : defaultCfgFor(sym); }
+function todayRun(sym) {
+  const E = window.TJR, rows = labRaw?.bars?.[sym]?.['5m'];
+  if (!E || !rows || rows.length < 100 || !BT) return null;
+  const r = cfgFor(sym), bars = E.toBars(rows);
+  const res = E.run(bars, sym, { ...E.BASE, ...r }, { keepOpen: true });
+  const st = res.state, td = st.td, last = bars[bars.length - 1];
+  const midnight = bars.find(b => b.td === td && b.m === 0);
+  return { r, st, td, bars, last, evs: res.events.filter(e => e.td === td), midnightOpen: midnight ? midnight.o : NaN,
+    ageMin: (Date.now() / 1000 - last.t - 300) / 60, sameDay: E.et(Date.now() / 1000).td === td };
+}
+
+// ============================================================
+// TRADE READINESS (Dashboard) — GO / CAUTION / STAND ASIDE, per your rules
+// ============================================================
+let readySym = 'NQ=F';
+function readySetSym(s) { readySym = s; renderReadiness(); }
+function etNow() { const d = getCurrentETTime(); return { d, m: d.getHours() * 60 + d.getMinutes(), wd: d.getDay() }; }
+const isTradeDay = wd => wd >= 1 && wd <= 5;
+function nextWindowText() {
+  const { d, m, wd } = etNow();
+  if (isTradeDay(wd) && m < 590) { const left = 590 - m; return `in ${Math.floor(left / 60) ? Math.floor(left / 60) + 'h ' : ''}${left % 60}m`; }
+  let k = 1; while (!isTradeDay((wd + k) % 7)) k++;
+  return k === 1 ? 'tomorrow 9:50 ET' : new Date(d.getTime() + k * 864e5).toLocaleDateString('en-US', { weekday: 'long' }) + ' 9:50 ET';
+}
+function parseEventMin(t) { const m = String(t).match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i); if (!m) return null; let h = +m[1] % 12; if (/pm/i.test(m[3])) h += 12; return h * 60 + +m[2]; }
+
+function readiness(sym) {
+  const T = todayRun(sym); if (!T) return null;
+  const { r, st, evs } = T, I = window.TJR.INSTR[sym], risk = getRisk();
+  const { m: nowM, wd } = etNow(), live = T.sameDay && isTradeDay(wd);
+  const order = st.pending || st.pos;
+  const dir = order ? order.dir : st.sslSwept && !st.bslSwept ? 'long' : st.bslSwept && !st.sslSwept ? 'short'
+    : (window.todayAnalysis && T.sameDay ? (window.todayAnalysis.lean === 'bull' ? 'long' : window.todayAnalysis.lean === 'bear' ? 'short' : null) : null);
+  const dirWord = dir === 'long' ? 'bullish' : dir === 'short' ? 'bearish' : null;
+  const checks = [];
+  const add = (label, state, text, hard) => checks.push({ label, state, text, hard });
+
+  // hard gates
+  add('Track record', isRobust(r) ? 'ok' : 'bad', isRobust(r)
+    ? `These settings passed all 3 history checks (${r.stats.trades} trades, +$${Math.round(r.stats.expectancy)} per trade)`
+    : `No setting for ${I.name} passed the history checks: the rules can fire, but there's no proven edge`, true);
+  const dataNeeded = live && nowM >= 540 && nowM < 720;
+  add('Fresh data', !dataNeeded ? 'na' : T.ageMin <= 15 ? 'ok' : 'bad',
+    !dataNeeded ? `Last candle ${T.last.hm} ET` : T.ageMin <= 15 ? `Last candle ${T.last.hm} ET` : `Candles are ${Math.round(T.ageMin)} min old: use your TradingView chart`, true);
+  const pv = I.pointValue;
+  const stopPts = order ? Math.abs((order.limit ?? order.entry) - order.stop)
+    : r.stopMode === 'Fixed points' ? r.fixedStop : (r.trades.length ? r.trades.reduce((a, t) => a + t.risk, 0) / r.trades.length : r.maxRisk);
+  const microRisk = stopPts * pv / 10 + 1.5, fullRisk = stopPts * pv + 5, maxMicro = Math.floor(risk.trade / microRisk);
+  add('Risk fits your limit', maxMicro >= 1 ? 'ok' : 'bad',
+    `${order ? '' : 'Typical '}stop ${stopPts.toFixed(1)} pts = $${Math.round(microRisk)} per ${I.micro}, $${Math.round(fullRisk)} per ${I.name.replace('1!', '')}. Your limit $${risk.trade}: ${maxMicro >= 1 ? `up to ${maxMicro} ${I.micro}${fullRisk <= risk.trade ? ` or ${Math.floor(risk.trade / fullRisk)} ${I.name.replace('1!', '')}` : ''}` : `even 1 ${I.micro} is over it`}`, true);
+
+  // confirmations
+  const ms = window.mtfScan?.syms?.[sym];
+  if (ms) add('Higher timeframes', !dirWord ? 'na' : ms.label.toLowerCase() === dirWord ? 'ok' : ms.label === 'Mixed' ? 'wait' : 'bad', `FVG scan reads ${ms.label} (${ms.score >= 0 ? '+' : ''}${ms.score.toFixed(2)})${dirWord ? `; setup is ${dirWord}` : ''}`);
+  const cf = window.mtfScan?.conf?.[sym];
+  if (cf) { const al = dir === 'long' ? cf.bullTFs : dir === 'short' ? cf.bearTFs : 0, op = dir === 'long' ? cf.bearTFs : dir === 'short' ? cf.bullTFs : 0;
+    add('Confluences', !dir ? 'na' : al > op ? 'ok' : op > al ? 'bad' : 'wait', `${cf.bullTFs} timeframe(s) aligned bullish, ${cf.bearTFs} bearish (1m–4H)`); }
+  let jb = {}; try { jb = JSON.parse(localStorage.getItem('jct_bias') || '{}'); } catch(e) {}
+  const myBias = jb.state === 'bull' ? 'bullish' : jb.state === 'bear' ? 'bearish' : null;
+  add('Your daily bias', !myBias || !dirWord ? 'na' : myBias === dirWord ? 'ok' : 'bad', myBias ? `You set ${myBias}` : 'Not set: pick it on the Daily Bias tab');
+  const evts = (window.todayAnalysis && T.sameDay ? window.todayAnalysis.events || [] : []).map(e => ({ ...e, m: parseEventMin(e.time) })).filter(e => e.m != null);
+  const clash = evts.find(e => e.impact !== 'LOW' && e.m >= 590 - 30 && e.m <= 610 + 30);
+  add('News clear', clash ? 'bad' : 'ok', clash ? `${clash.name} at ${clash.time}: inside 30 min of the entry window` : evts.length ? `${evts.map(e => e.name.split('(')[0].trim() + ' ' + e.time).join(', ')}: clear of 9:50–10:10` : 'No events loaded for today');
+  if (order) { const rr = Math.abs(order.target - (order.limit ?? order.entry)) / stopPts;
+    add('Reward : risk', rr >= risk.rr ? 'ok' : 'bad', `${rr.toFixed(2)}R vs your minimum ${risk.rr}R`); }
+
+  const hardBad = checks.find(c => c.hard && c.state === 'bad');
+  const soft = checks.filter(c => !c.hard && c.state !== 'na'), softBad = soft.filter(c => c.state === 'bad').length, softWait = soft.filter(c => c.state === 'wait').length;
+  const ready = checks.filter(c => c.state === 'ok').length, counted = checks.filter(c => c.state !== 'na').length;
+  const exit = evs.find(e => e.type === 'exit'), cancel = evs.find(e => e.type === 'cancel');
+  let v;
+  if (!isTradeDay(wd) || !T.sameDay || nowM >= 720) {
+    v = exit ? ['done', '✅ Done for today', exit.text] : ['off', '⚪ Market closed for this setup', `Next entry window ${nextWindowText()}`];
+  } else if (st.pos) {
+    v = hardBad ? ['bad', '🔴 In a trade the checks don\'t support', hardBad.text] : ['go', '🟢 In the trade (per the rules)', `Entry ${st.pos.entry.toFixed(2)} · stop ${st.pos.stop.toFixed(2)} · target ${st.pos.target.toFixed(2)} · flat by 12:00`];
+  } else if (st.pending) {
+    const p = st.pending, side = p.dir === 'long' ? 'BUY' : 'SELL';
+    v = hardBad ? ['bad', `🔴 Stand aside: rules say ${side} ${p.limit.toFixed(2)}, but a key check fails`, hardBad.text]
+      : softBad ? ['caution', `🟡 Caution: ${side} limit ${p.limit.toFixed(2)}`, `Rules fired, but ${softBad} confirmation${softBad > 1 ? 's' : ''} disagree${softBad > 1 ? '' : 's'}. Size down or skip.`]
+      : ['go', `🟢 GO: ${side} limit ${p.limit.toFixed(2)}`, `${softWait ? `Must-pass checks all pass; ${softWait} confirmation${softWait > 1 ? 's are' : ' is'} neutral, none against.` : 'All your conditions are met.'} Stop ${p.stop.toFixed(2)} · target ${p.target.toFixed(2)} · cancel at 11:00 if unfilled`];
+  } else if (exit) v = ['done', '✅ Done for today', exit.text];
+  else if (cancel) v = ['off', '⚪ Order expired unfilled: no trade today', 'Price never came back to the entry before 11:00.'];
+  else if (st.rejected) v = ['off', '⚪ Setup skipped today', st.rejected];
+  else if (hardBad && hardBad.label === 'Track record') v = ['bad', '🔴 Stand aside today', hardBad.text];
+  else if (nowM < 570) v = ['prep', '⏳ Prepare', `Entry window opens ${nextWindowText()}. ${ready} of ${counted} conditions already in place.`];
+  else if (nowM < 590) v = ['watch', '👀 Watch only (9:30–9:50)', st.sslSwept || st.bslSwept ? `Sweep seen (${st.sslSwept ? st.sslName : st.bslName}). Waiting for a break of structure and a gap.` : 'Waiting for price to sweep a level. No entries yet.'];
+  else if (nowM < 610) v = ['watch', '⏳ Entry window open: waiting for the setup', `${[st.sslSwept || st.bslSwept, st.bosUp || st.bosDn, !Number.isNaN(st.fvgMidL) || !Number.isNaN(st.fvgMidS)].filter(Boolean).length} of 3 steps done (sweep, break, gap)`];
+  else v = ['off', '⚪ No setup today', 'The rules didn\'t complete a setup by 10:10. Nothing to do.'];
+  return { T, r, checks, verdict: v, order, ready, counted, I };
+}
+
+function sessionBar(nowM) {
+  // 7:00–12:30 ET with the TJR windows marked
+  const a = 420, b = 750, X = mm => ((Math.min(b, Math.max(a, mm)) - a) / (b - a) * 100).toFixed(2) + '%';
+  const seg = (s, e, cls, lbl) => `<div class="sb-seg ${cls}" style="left:${X(s)};width:calc(${X(e)} - ${X(s)})" title="${lbl}"><span>${lbl}</span></div>`;
+  return `<div class="sb">${seg(420, 510, 'sb-ldn', 'London')}${seg(510, 570, 'sb-pre', 'NY open')}${seg(570, 590, 'sb-man', 'No entries')}${seg(590, 610, 'sb-mac', 'Entry')}${seg(610, 660, 'sb-rest', 'Order rests')}${seg(660, 720, 'sb-mng', 'Manage')}
+    ${nowM >= a && nowM <= b ? `<div class="sb-now" style="left:${X(nowM)}"></div>` : ''}</div>
+    <div class="sb-ticks">${[[420, '7:00'], [570, '9:30'], [610, '10:10'], [720, '12:00']].map(([mm, t]) => `<span style="left:${X(mm)}">${t}</span>`).join('')}</div>`;
+}
+
+function renderReadiness() {
+  const el = document.getElementById('ready-wrap'); if (!el) return;
+  if (!BT || !window.TJR || !labRaw) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">Trade Readiness is loading…</div></div>'; return; }
+  const both = [['NQ=F', 'NQ1!'], ['ES=F', 'ES1!']].map(([s, n]) => ({ s, n, R: readiness(s) }));
+  const cur = both.find(x => x.s === readySym)?.R;
+  if (!cur) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">Waiting for today\'s candles…</div></div>'; return; }
+  const dot = c => ({ go: 'var(--bull)', caution: 'var(--warn)', bad: 'var(--bear)', watch: 'var(--blue)', prep: 'var(--blue)' }[c] || 'var(--text3)');
+  const ic = { ok: '✓', bad: '✗', wait: '•', na: '–' };
+  const { verdict: [cls, title, sub], checks, r, I } = cur;
+  el.innerHTML = `
+  <div class="ready card mb-md">
+    <div class="ready-top">
+      <div class="fs-12 fw-600 text-2" style="letter-spacing:.06em">TRADE READINESS · PER YOUR RULES</div>
+      <div class="mtf-segs">${both.map(x => `<button class="mtf-seg${x.s === readySym ? ' on' : ''}" onclick="readySetSym('${x.s}')"><span class="ready-dot" style="background:${x.R ? dot(x.R.verdict[0]) : 'var(--text3)'}"></span>${x.n}</button>`).join('')}</div>
+    </div>
+    <div class="ready-hero ready-${cls}"><div class="ready-title">${esc(title)}</div><div class="ready-sub">${esc(sub)}</div></div>
+    ${sessionBar(etNow().m)}
+    <div class="ready-checks">${checks.map(c => `<div class="rc rc-${c.state}"><span class="rc-ic">${ic[c.state]}</span><div><div class="rc-l">${c.label}${c.hard ? ' <span class="rc-must">must pass</span>' : ''}</div><div class="rc-t">${esc(c.text)}</div></div></div>`).join('')}</div>
+    <div class="ready-foot">
+      <span class="fs-12 text-2">${I.name} · ${esc(btLabel(r))} · ${cur.ready} of ${cur.counted} conditions met · candles ${cur.T.last.hm} ET</span>
+      <button class="btn btn-secondary btn-sm" onclick="showPage('backtest');labSetSym('${readySym}');labView('live')">Full ticket &amp; chart</button>
+    </div>
+    <div class="fs-12 text-2" style="padding:0 16px 14px">A rules-based checklist of your own conditions, not financial advice. "Must pass" items block a GO.</div>
+  </div>`;
+}
+
+// ============================================================
+// PLAYBOOK: today's levels + session clock
+// ============================================================
+function renderPlaybook() {
+  const el = document.getElementById('pb-auto'); if (!el) return;
+  const cards = [['NQ=F', 'NQ1!'], ['ES=F', 'ES1!']].map(([s, n]) => {
+    const T = todayRun(s); if (!T) return `<div class="card"><div class="card-body fs-13 text-2">${n}: waiting for candles…</div></div>`;
+    const L = T.st.levels, px = T.last.c;
+    const rows = [['Prior-day high', L.pdH, 'BSL'], ['Asian high', L.asianH, 'BSL'], ['London high', L.londonH, 'BSL'], ['Midnight open', T.midnightOpen, ''],
+      ['London low', L.londonL, 'SSL'], ['Asian low', L.asianL, 'SSL'], ['Prior-day low', L.pdL, 'SSL']].filter(x => !Number.isNaN(x[1]))
+      .sort((a, b) => b[1] - a[1]);
+    let placed = false;
+    const html = rows.map(([nm, p, tag]) => {
+      let mark = '';
+      if (!placed && p < px) { placed = true; mark = `<div class="level-row pb-now"><span class="level-label">▶ Now (${T.last.hm} ET)</span><span class="level-price">${px.toFixed(2)}</span></div>`; }
+      const swept = tag === 'SSL' ? T.bars.some(b => b.td === T.td && b.m >= 570 && b.l < p) : tag === 'BSL' ? T.bars.some(b => b.td === T.td && b.m >= 570 && b.h > p) : false;
+      return mark + `<div class="level-row${swept ? ' pb-swept' : ''}"><div class="level-type-dot" style="background:${tag === 'BSL' ? 'var(--bull)' : tag === 'SSL' ? 'var(--bear)' : 'var(--text3)'}"></div><span class="level-label">${nm}${swept ? ' · swept today' : ''}</span><span class="level-price">${p.toFixed(2)}</span><span class="level-note">${(p - px >= 0 ? '+' : '') + (p - px).toFixed(2)}</span></div>`;
+    }).join('') + (placed ? '' : `<div class="level-row pb-now"><span class="level-label">▶ Now (${T.last.hm} ET)</span><span class="level-price">${px.toFixed(2)}</span></div>`);
+    return `<div class="card"><div class="card-row"><span class="fs-13 fw-600 flex-1">${n}</span><span class="fs-12 text-2">session ${T.td}</span></div>${html}</div>`;
+  });
+  el.innerHTML = cards.join('');
+  const c = document.getElementById('pb-clock');
+  if (c) c.innerHTML = `${sessionBar(etNow().m)}<div class="fs-12 text-2" style="margin-top:8px">Asian 6 pm–3 am · London 3–8:30 am · NY open 8:30–9:30 · <b style="color:var(--bear)">No entries 9:30–9:50</b> · <b style="color:var(--bull)">Entry window 9:50–10:10</b> · unfilled orders cancel 11:00 · flat by 12:00</div>`;
+}
+
+// ============================================================
+// LAB HIGHLIGHTS — the numbers in plain English, shareable
+// ============================================================
+function mcQuick(r, kind, cnt, days = 30, paths = 2000) {
+  const pv = window.TJR.INSTR[r.sym].pointValue, src = r.stress.trades, risk = getRisk();
+  const p = src.length / BT.instruments[r.sym].nySessions, target = 3000, dd = risk.dd || 2000;
+  let pass = 0, fail = 0;
+  for (let k = 0; k < paths; k++) {
+    let bal = 0, peak = 0;
+    for (let d = 0; d < days; d++) {
+      if (Math.random() < p) { const t = src[(Math.random() * src.length) | 0]; bal += cnt * (kind === 'micro' ? t.pts * pv / 10 - 1.5 : t.pts * pv - 5); }
+      if (bal <= Math.min(peak - dd, 0)) { fail++; break; }
+      if (bal >= target) { pass++; break; }
+      peak = Math.max(peak, bal);
+    }
+  }
+  return { pass: pass / paths, fail: fail / paths };
+}
+function spark(eq, w = 260, h = 60) {
+  const e = [0, ...eq], lo = Math.min(0, ...e), hi = Math.max(0, ...e), sp = (hi - lo) || 1;
+  const pts = e.map((v, i) => `${(i / (e.length - 1) * w).toFixed(1)},${(h - 4 - (v - lo) / sp * (h - 8)).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" class="hl-spark" aria-hidden="true"><line x1="0" x2="${w}" y1="${h - 4 - (0 - lo) / sp * (h - 8)}" y2="${h - 4 - (0 - lo) / sp * (h - 8)}" stroke="var(--border)" stroke-dasharray="3 3"/><polyline points="${pts}" fill="none" stroke="${e[e.length - 1] >= 0 ? 'var(--bull)' : 'var(--bear)'}" stroke-width="2.5"/></svg>`;
+}
+let HL_POSTS = [];
+function renderHighlights() {
+  const el = document.getElementById('lab-hl'); if (!el || !BT || !window.TJR) return;
+  const nq = defaultCfgFor('NQ=F'), es = defaultCfgFor('ES=F'), I = BT.instruments['NQ=F'];
+  const fmtD = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const period = `${fmtD(I.from)}–${fmtD(I.to)} · ${I.nySessions} sessions`;
+  const esRob = BT.runs.filter(r => r.sym === 'ES=F' && isRobust(r)).length, nqRob = BT.runs.filter(r => r.sym === 'NQ=F' && isRobust(r)).length;
+  const s = nq.stats, aw = s.avgWin, al = Math.abs(s.avgLoss);
+  const best = nq.trades.reduce((a, t) => t.pnl > a.pnl ? t : a), worst = nq.trades.reduce((a, t) => t.pnl < a.pnl ? t : a);
+  const mcFull = mcQuick(nq, 'full', 1), mcMicro = mcQuick(nq, 'micro', 3);
+  const R = readiness(readySym);
+  const caveat = `${s.trades} trades over ${I.nySessions} sessions. A small sample: past results don't predict future ones. Not financial advice.`;
+  HL_POSTS = [
+    { id: 'today', kicker: 'Today', big: R ? R.verdict[1] : '—', bigCls: '', title: R ? R.verdict[2] : '', body: `<div class="fs-13 text-2">Trade Readiness checks the live market against the rules every minute.</div>`, share: false },
+    { id: 'result', equity: nq.equity, kicker: `NQ1! · ${period}`, big: btMoney(s.net), bigCls: btCls(s.net), title: 'If you had followed the rules exactly, 1 NQ contract', body: spark(nq.equity) + `<div class="fs-13">${s.wins} wins, ${s.trades - s.wins} losses. Each dot of the line is one trade.</div>`, caveat },
+    { id: 'winrate', kicker: 'Why it works', big: `${Math.round(s.winRate * 100)}% <span class="hl-small">win rate</span>`, title: 'It loses more often than it wins, and still makes money', body: `
+      <div class="hl-bars"><div class="hl-bar"><span>Avg win</span><div><i style="width:${(aw / Math.max(aw, al) * 100).toFixed(0)}%;background:var(--bull)"></i></div><b class="bull">${btMoney(aw)}</b></div>
+      <div class="hl-bar"><span>Avg loss</span><div><i style="width:${(al / Math.max(aw, al) * 100).toFixed(0)}%;background:var(--bear)"></i></div><b class="bear">${btMoney(-al)}</b></div></div>
+      <div class="fs-13">Winners average ${(aw / al).toFixed(1)}× the size of losers, so the <span class="gl" data-g="exp">expectancy</span> is ${btMoney(s.expectancy)} per trade. That's why the <span class="gl" data-g="wr">win rate</span> alone doesn't tell you much.</div>`, caveat },
+    { id: 'tests', kicker: 'Does it hold up?', big: `${[nq.stats.net > 0, nq.halves[0].net > 0 && nq.halves[1].net > 0, nq.stress.stats.net > 0].filter(Boolean).length} / 3 <span class="hl-small">checks passed</span>`, title: `${nqRob} of 25 NQ1! versions pass all three. ES1!: ${esRob} of 25.`, body: `
+      <div class="hl-checks"><div><b class="bull">✓</b> Made money overall <span class="text-2">${btMoney(s.net)}</span></div>
+      <div><b class="${nq.halves[0].net > 0 && nq.halves[1].net > 0 ? 'bull' : 'bear'}">${nq.halves[0].net > 0 && nq.halves[1].net > 0 ? '✓' : '✗'}</b> Made money in <span class="gl" data-g="halves">both halves</span> <span class="text-2">${btMoney(nq.halves[0].net)} / ${btMoney(nq.halves[1].net)}</span></div>
+      <div><b class="${nq.stress.stats.net > 0 ? 'bull' : 'bear'}">${nq.stress.stats.net > 0 ? '✓' : '✗'}</b> Survived the <span class="gl" data-g="stress">stress test</span> <span class="text-2">${btMoney(nq.stress.stats.net)}</span></div></div>
+      <div class="fs-13">The same rules on ES1! lost money in every version (${btMoney(es.stats.net)} for the closest one). Same idea, different market: that's why we test.</div>`, caveat },
+    { id: 'survival', kicker: 'Account survival · 30 days', big: `${Math.round(mcMicro.fail * 100)}% <span class="hl-small">blow-up risk with 3 MNQ</span>`, title: `vs ${Math.round(mcFull.fail * 100)}% with 1 full NQ`, body: `
+      <div class="hl-bars"><div class="hl-bar"><span>3 × MNQ</span><div><i style="width:${(mcMicro.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcMicro.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcMicro.pass * 100)}% pass</b></div>
+      <div class="hl-bar"><span>1 × NQ</span><div><i style="width:${(mcFull.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcFull.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcFull.pass * 100)}% pass</b></div></div>
+      <div class="fs-13">2,000 <span class="gl" data-g="mc">Monte Carlo</span> runs against a $3,000 target and $${getRisk().dd.toLocaleString()} <span class="gl" data-g="dd">drawdown</span> limit. <span class="gl" data-g="micro">Micros</span> pass slower but blow up far less. Green = pass, red = fail.</div>`, caveat },
+    { id: 'trades', kicker: 'Best and worst trade', big: `${btMoney(best.pnl)} <span class="hl-small">/ ${btMoney(worst.pnl)}</span>`, title: 'Every trade is listed in Results', body: `
+      <div class="hl-two"><div><div class="fs-12 text-2">Best · ${best.entryTime.slice(5, 10)}</div><div class="fw-600">${best.dir} ${best.entry.toFixed(2)} → ${best.exit.toFixed(2)}</div><div class="bull fs-13">${best.r >= 0 ? '+' : ''}${best.r}<span class="gl" data-g="r">R</span> · ${best.why}</div></div>
+      <div><div class="fs-12 text-2">Worst · ${worst.entryTime.slice(5, 10)}</div><div class="fw-600">${worst.dir} ${worst.entry.toFixed(2)} → ${worst.exit.toFixed(2)}</div><div class="bear fs-13">${worst.r}R · ${worst.why}</div></div></div>`, caveat },
+    { id: 'learn', kicker: 'Learn the setup', big: '4 steps', title: 'Sweep → break → gap → target', body: `
+      <svg viewBox="0 0 320 120" class="hl-diagram" aria-label="Sweep, break of structure, fair value gap entry, target">
+        <line x1="10" x2="310" y1="78" y2="78" stroke="var(--warn)" stroke-dasharray="4 3"/><text x="12" y="74" class="mtf-ax" style="fill:var(--warn)">Asian low</text>
+        <polyline points="20,40 60,60 90,70 110,96 130,62 160,48 185,30 215,46 240,34 300,10" fill="none" stroke="var(--text)" stroke-width="2"/>
+        <circle cx="110" cy="96" r="5" fill="var(--bear)"/><text x="96" y="114" class="mtf-ax">1 sweep</text>
+        <line x1="150" x2="200" y1="50" y2="50" stroke="var(--blue)"/><text x="150" y="62" class="mtf-ax">2 break</text>
+        <rect x="200" y="36" width="34" height="12" fill="var(--bull)" opacity="0.3"/><text x="200" y="30" class="mtf-ax">3 gap: entry</text>
+        <circle cx="300" cy="10" r="5" fill="var(--bull)"/><text x="248" y="22" class="mtf-ax">4 target</text></svg>
+      <div class="fs-13">1. Price <span class="gl" data-g="sweep">sweeps</span> a low. 2. It <span class="gl" data-g="bos">breaks structure</span> back up. 3. Enter at the <span class="gl" data-g="fvg">gap</span> between 9:50 and 10:10. 4. Take profit at the next high. Details in the Playbook tab.</div>`, share: false },
+  ];
+  el.innerHTML = HL_POSTS.map(p => `
+    <article class="hl-post">
+      <header><div class="hl-av">JC</div><div><div class="fw-600 fs-13">JC Trading Lab</div><div class="fs-12 text-2">${p.kicker}</div></div></header>
+      <div class="hl-big ${p.bigCls || ''}">${p.big}</div>
+      <div class="hl-title">${esc(p.title)}</div>
+      <div class="hl-body">${p.body}</div>
+      ${p.caveat ? `<div class="hl-cav">${esc(p.caveat)}</div>` : ''}
+      ${p.share === false ? '' : `<footer><button class="btn btn-secondary btn-sm" onclick="hlShare('${p.id}')">↗ Share</button></footer>`}
+    </article>`).join('');
+}
+
+// Share: draw the post as a 1080×1350 image, then use the phone's share sheet or download it
+async function hlShare(id) {
+  const p = HL_POSTS.find(x => x.id === id); if (!p) return;
+  const strip = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent.replace(/\s+/g, ' ').trim(); };
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1350;
+  const g = c.getContext('2d'), F = 'Inter, -apple-system, Segoe UI, sans-serif';
+  const grd = g.createLinearGradient(0, 0, 0, 1350); grd.addColorStop(0, '#111114'); grd.addColorStop(1, '#1c1c22'); g.fillStyle = grd; g.fillRect(0, 0, 1080, 1350);
+  g.fillStyle = '#0a84ff'; g.beginPath(); g.arc(110, 120, 44, 0, 7); g.fill();
+  g.fillStyle = '#fff'; g.font = `700 34px ${F}`; g.textAlign = 'center'; g.fillText('JC', 110, 132); g.textAlign = 'left';
+  g.font = `600 36px ${F}`; g.fillText('JC Trading Lab', 178, 112); g.fillStyle = '#9a9aa2'; g.font = `400 28px ${F}`; g.fillText(strip(p.kicker), 178, 152);
+  const big = strip(p.big); g.fillStyle = p.bigCls === 'bull' ? '#30d158' : p.bigCls === 'bear' ? '#ff453a' : '#ffffff';
+  g.font = `800 ${big.length > 14 ? 96 : 150}px ${F}`; g.fillText(big, 80, 420);
+  const wrap = (txt, x, y, w, lh, font, col) => { g.font = font; g.fillStyle = col; let line = ''; for (const word of txt.split(' ')) { const t = line ? line + ' ' + word : word; if (g.measureText(t).width > w) { g.fillText(line, x, y); y += lh; line = word; } else line = t; } if (line) g.fillText(line, x, y); return y + lh; };
+  let y = wrap(strip(p.title), 80, 520, 920, 62, `600 48px ${F}`, '#ffffff');
+  y = wrap(strip(p.body).slice(0, 360), 80, y + 30, 920, 48, `400 34px ${F}`, '#c7c7cc');
+  if (p.equity && p.equity.length) {
+    const e = [0, ...p.equity], lo = Math.min(0, ...e), hi = Math.max(0, ...e), sp = (hi - lo) || 1, X0 = 80, W0 = 920, Y0 = Math.max(y + 40, 760), H0 = 1120 - Math.max(y + 40, 760);
+    const Y = v => Y0 + H0 - (v - lo) / sp * H0;
+    g.strokeStyle = '#3a3a40'; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(X0, Y(0)); g.lineTo(X0 + W0, Y(0)); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = e[e.length - 1] >= 0 ? '#30d158' : '#ff453a'; g.lineWidth = 6; g.lineJoin = 'round'; g.beginPath();
+    e.forEach((v, i) => { const x = X0 + i / (e.length - 1) * W0; i ? g.lineTo(x, Y(v)) : g.moveTo(x, Y(v)); }); g.stroke();
+  }
+  wrap(p.caveat || '', 80, 1210, 920, 38, `400 26px ${F}`, '#8e8e93');
+  const caption = `${strip(p.title)}: ${big}. ${p.caveat || ''}`;
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  const file = new File([blob], `jc-trading-${id}.png`, { type: 'image/png' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: caption }); return; }
+  } catch(e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  try { await navigator.clipboard.writeText(caption); showToast('Image saved · caption copied'); } catch(e) { showToast('Image saved'); }
+}
+
+// One refresh for everything that reads today's candles
+async function readyCycle(force) {
+  await ensureBars(force);
+  whenTJR(() => { renderReadiness(); renderPlaybook(); if (!document.getElementById('lab-hl')?.hidden) renderHighlights(); });
+}
+
 // Context for follow-up questions, built from backtest.json once loaded
 function BT_CONTEXT_NOW() {
   if (!BT) return BT_CONTEXT_OLD;
@@ -4029,7 +4326,7 @@ let btSample = null;
 function initBacktestChat() {
   btRenderHistory();
   loadBacktest();
-  setInterval(() => { if (BT) liveRefresh(false); }, 60000);
+  setInterval(() => { if (BT) { readyCycle(true); if (!document.getElementById('lab-live').hidden) liveRefresh(true); } }, 60000);
   const form = document.getElementById('bt-form');
   const input = document.getElementById('bt-input');
   const send = document.getElementById('bt-send');
@@ -4083,6 +4380,7 @@ function init() {
   loadEdgeNotes();
   initTradeLogDate();
   initBacktestChat();
+  loadRisk();
   loadAnalysis();
   loadMTF();
 

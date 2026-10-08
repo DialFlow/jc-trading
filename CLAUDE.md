@@ -14,9 +14,24 @@ A single-file personal trading dashboard (`index.html`) for Jacob, who day-trade
 ## Design system (keep it)
 Apple HIG look: black/white/light gray, Inter, iOS system colors as CSS tokens on `:root` (`--bull`, `--bear`, `--warn`, `--blue`…). Light/dark via `prefers-color-scheme` plus `data-theme`. Cards, segmented controls, pill badges.
 
-## Tabs (9)
-Dashboard, Charts, Morning Journal, Daily Bias, Key Levels, Strategy, Trade Log, Edge, Backtesting with AI.
-Tab switching: `showPage(name)` plus the `tabNames` array in the same order as the buttons. Add new tabs to both.
+## Tabs (8)
+Dashboard, Charts, Morning Journal, Daily Bias, Playbook (id `strategy`), Trade Log, Edge, Lab (id `backtest`).
+Tab switching: `showPage(name)` plus the `tabNames` array in the same order as the buttons. Add new tabs to both. `showPage('levels')` maps to `strategy` (Key Levels merged into Playbook on Oct 8).
+The site will be shared with a few of Jacob's friends (beginners): keep wording plain, always show sample size and caveats next to results, and never present examples as real data.
+
+## Trade Readiness (Dashboard hero, Oct 8)
+- `readiness(sym)` gives a GO / CAUTION / STAND ASIDE / PREPARE / WATCH verdict per ES1! and NQ1!, from the engine run on today's candles (`todayRun`, same config as the Lab via `cfgFor`) plus checks.
+- **Must pass** (they block a GO): track record (`isRobust`), fresh data (≤15 min, only 9:00–12:00), and risk per trade within the Playbook limit (`jct_risk`, shown per full and micro contract).
+- **Confirmations:** MTF FVG scan direction, confluence alignment, Jacob's Daily Bias, news within 30 min of 9:50–10:10 (from `analysis.json` events), and reward:risk ≥ his minimum. A disagreeing confirmation gives CAUTION; neutral ones are noted.
+- Settings with no robust track record (ES on Oct 8) show "Stand aside" all session. `sessionBar()` draws the 7:00–12:30 timeline with a now marker. It refreshes with `readyCycle()` (60 s, Refresh button, opening the Playbook).
+- Tested by time-travelling today's candles (cut at 8:45 / 9:40 / 10:02 / 10:12 / 11:06 / 12:30 with a faked clock): verdicts matched the engine events.
+
+## Playbook tab (Oct 8)
+- Auto levels per contract (PDH/PDL, Asia, London, midnight open, marked "swept today"), TJR 4 steps in plain English with glossary terms, a session clock, Jacob's own levels (`jct_levels`), rules (rewritten to TJR; the old ORB/VWAP template text was removed), and editable risk limits (`jct_risk`, synced). The old hardcoded "reference levels" (ES ATH 5878…) were placeholder data and are gone.
+
+## Lab Highlights (Oct 8)
+- Default Lab view: a feed of post cards (today's verdict, result + equity spark, win rate vs win size, robustness checks, account survival via `mcQuick`, best/worst trade, 4-step diagram). Every results card carries the sample-size caveat.
+- `.gl` terms open a plain-English `GLOSSARY` popover. `hlShare(id)` draws a 1080×1350 PNG on a canvas and uses the Web Share sheet, else downloads it and copies the caption.
 
 ## TJR methodology (Jacob's rules)
 - 4 steps: Potential → Confirmation (BOS + IFVG) → Continuation (FVG + EQ) → Exit (draw on liquidity).
