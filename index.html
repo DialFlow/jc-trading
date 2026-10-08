@@ -329,7 +329,9 @@ body {
 /* Replay / live setup charts: readable on phones (swipe sideways) */
 .rp-chart, #live-chart { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 @media (max-width: 640px) { .rp-chart svg, #live-chart svg { min-width: 620px; } .rpn-list { max-height: 280px; } }
-.rp-panel { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
+.rp-panel { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; min-width: 0; }
+.rp-grid { display: grid; grid-template-columns: 1fr; gap: 0 20px; }
+@media (min-width: 1000px) { .rp-grid { grid-template-columns: 1fr 1fr; } .rp-grid > .rp-panel { border-top: 0; margin-top: 4px; } .rp-grid > .rp-panel + .rp-panel { border-left: 1px solid var(--border); padding-left: 20px; } }
 .rp-panel:first-child { border-top: 0; margin-top: 4px; }
 .rp-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .rp-sym { font-size: 18px; font-weight: 800; }
@@ -4130,9 +4132,9 @@ function simRunOld() {
 // Replay: ES1! and NQ1! on the same clock. Each contract uses its own setting/exit
 // (the Lab's picks for the Lab's symbol, the robust default for the other).
 const RP_SYMS = [['ES=F', 'ES1!'], ['NQ=F', 'NQ1!']];
-let rpMode = (() => { try { return localStorage.getItem('jct_rp_mode') || 'both'; } catch(e) { return 'both'; } })();
+let rpMode = 'both';   // always opens with ES1! and NQ1! together
 let rpSets = {}, rpBars = [];   // rpBars = the clock (the contract with the most candles that day)
-function rpSetMode(m) { rpMode = m; try { localStorage.setItem('jct_rp_mode', m); } catch(e) {} rpPanels(); rpDraw(); }
+function rpSetMode(m) { rpMode = m; rpPanels(); rpDraw(); }
 function rpSymsShown() { return RP_SYMS.filter(([s]) => rpMode === 'both' || rpMode === s); }
 function rpCfgFor(sym) {
   const r = sym === labSym ? labCfg() : defaultCfgFor(sym);
@@ -4141,7 +4143,8 @@ function rpCfgFor(sym) {
 }
 function rpPanels() {
   document.getElementById('rp-mode').innerHTML = [['both', 'Both'], ...RP_SYMS].map(([v, n]) => `<button class="mtf-seg${rpMode === v ? ' on' : ''}" onclick="rpSetMode('${v}')">${n}</button>`).join('');
-  document.getElementById('rp-panels').innerHTML = rpSymsShown().map(([sym, nm]) => { const id = nm.replace('1!', ''), c = rpCfgFor(sym);
+  const pn = document.getElementById('rp-panels'); pn.className = rpSymsShown().length > 1 ? 'rp-grid' : '';
+  pn.innerHTML = rpSymsShown().map(([sym, nm]) => { const id = nm.replace('1!', ''), c = rpCfgFor(sym);
     return `<section class="rp-panel">
       <div class="rp-head"><span class="rp-sym">${nm}</span><span class="badge badge-blue">5-minute candles</span><span class="fs-12 text-2">${esc(btLabel(c.r))} · ${EXIT_LABEL[c.exit] || ''}</span></div>
       <div id="rp-banner-${id}" class="live-banner" style="margin:8px 0"></div>
@@ -4193,7 +4196,7 @@ function rpDraw() {
     const [cls, title, sub] = bannerFor(st, evs, b.m, null), ban = document.getElementById('rp-banner-' + id);
     ban.className = 'live-banner ' + cls; ban.innerHTML = `${nm} · ${b.hm} ET · ${esc(title)}<span class="sub">${esc(sub)}</span>`;
     drawSetupChart(document.getElementById('rp-chart-' + id), hide ? upto : S.bars, st, evs, { slots: S.bars.length });
-    el.innerHTML = `<details class="rp-steps" ${window.innerWidth > 700 ? 'open' : ''}><summary>Checklist: the rules step by step</summary>${stepsHtml(st, evs, b.m)}</details>` + rpNotesHtml(upto, res.snapshots, evs, upto.length - 1, sym, c.r, 'rpn-list-' + id);
+    el.innerHTML = `<details class="rp-steps" open><summary>Checklist: the rules step by step</summary>${stepsHtml(st, evs, b.m)}</details>` + rpNotesHtml(upto, res.snapshots, evs, upto.length - 1, sym, c.r, 'rpn-list-' + id);
     const nl = document.getElementById('rpn-list-' + id); if (nl) nl.scrollTop = nl.scrollHeight;
   }
 }
