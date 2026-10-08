@@ -11,6 +11,11 @@ import { writeFileSync } from 'node:fs';
 import { INSTR, COMMISSION, SLIP_TICKS, BASE, EXITS, configs, et, run, stats } from './tjr-engine.mjs';
 
 const VALIDATE = process.argv.includes('--validate');
+// Structure model used by the Lab (chosen by scripts/structure-study.mjs, Oct 8): 5-candle BOS, sweeps from the 8:30 open count,
+// entries 9:50–11:00 (still none 9:30–9:50), unfilled orders cancel 11:30, one setup per day.
+// TradingView parity is checked separately with the original Pine windows (BASE).
+export const MODEL = { id: 'bars5|pre|1', label: 'Sweeps from 8:30 · enter 9:50–11:00 · 5-candle BOS · 1 setup/day',
+  bosMode: 'bars5', watchStart: 510, watchEnd: 660, entryStart: 590, entryEnd: 660, restEnd: 690, maxTrades: 1 };
 const here = p => new URL('../' + p, import.meta.url);
 
 async function load(sym) {
@@ -28,7 +33,7 @@ async function load(sym) {
 
 const slim = s => { const { equity, ...rest } = s; return rest; };
 
-const out = { generated: new Date().toISOString(), costs: { commissionPerSide: COMMISSION, slippageTicks: SLIP_TICKS, contracts: 1 }, instruments: {}, runs: [] };
+const out = { generated: new Date().toISOString(), struct: MODEL, costs: { commissionPerSide: COMMISSION, slippageTicks: SLIP_TICKS, contracts: 1 }, instruments: {}, runs: [] };
 const replay = { generated: out.generated, days: {} };
 
 for (const sym of Object.keys(INSTR)) {
@@ -39,7 +44,7 @@ for (const sym of Object.keys(INSTR)) {
     nySessions: sessions.length, sessions, splitAt: mid };
 
   for (const cfg of configs(sym)) {
-    const c = { ...BASE, ...cfg };
+    const c = { ...BASE, ...cfg, ...MODEL };
     const r = run(bars, sym, c);
     const st = stats(r.trades);
     // walk-forward check: same settings, first half of sessions vs second half
@@ -60,13 +65,13 @@ for (const sym of Object.keys(INSTR)) {
   }
 
   // replay data: levels as of the 07:25 bar (from a full run), then candles 07:30–12:30
-  const full = run(bars, sym, { ...BASE, ...configs(sym)[0] }, { snapshots: true });
+  const full = run(bars, sym, { ...BASE, ...configs(sym)[0], ...MODEL }, { snapshots: true });
   replay.days[sym] = {};
   for (const td of sessions) {
     const idx = bars.findIndex(b => b.td === td && b.m === 445); // 07:25
     if (idx < 0) continue;
     const s = full.snapshots[idx];
-    const seed = { aH: s.levels.asianH, aL: s.levels.asianL, lH: s.levels.londonH, lL: s.levels.londonL, pdH: s.levels.pdH, pdL: s.levels.pdL, dH: s.levels.dH, dL: s.levels.dL, mOpen: s.levels.mOpen };
+    const seed = { aH: s.levels.asianH, aL: s.levels.asianL, lH: s.levels.londonH, lL: s.levels.londonL, pdH: s.levels.pdH, pdL: s.levels.pdL, dH: s.levels.dH, dL: s.levels.dL, mOpen: s.levels.mOpen, swH: s.swH, swL: s.swL, taken: s.taken };
     const day = bars.filter((b, i) => i > idx && b.td === td && b.m <= 750); // 07:30–12:30
     // 20 candles before 07:30 for the displacement average and the 5-bar BOS lookback
     const pre = bars.slice(Math.max(0, idx - 19), idx + 1);
@@ -74,13 +79,14 @@ for (const sym of Object.keys(INSTR)) {
   }
 
   if (VALIDATE) {
-    const v4 = out.runs.find(r => r.sym === sym && r.id === 'v4');
-    console.log(`${I.name} v4 funnel`, v4.funnel, 'stats', v4.stats.trades, 'trades', v4.stats.net);
+    // TradingView parity: v4 settings with the original Pine windows
+    const v4 = run(bars, sym, { ...BASE, ...configs(sym)[0] }), v4s = stats(v4.trades);
+    console.log(`${I.name} v4 (Pine windows) funnel`, v4.funnel, 'stats', v4s.trades, 'trades', v4s.net);
     if (sym === 'ES=F') for (const t of v4.trades) console.log('  ', t.dir.padEnd(5), t.entryTime, t.entry, '->', t.exitTime, t.exit, t.why.padEnd(10), t.pnl);
     // replay seeding must reproduce the full-history run exactly, for every setting
     let bad = 0;
     for (const ex of Object.keys(EXITS)) for (const cfg of configs(sym)) {
-      const c = { ...BASE, ...cfg, exitMode: ex }, ref = ex === 'rules' ? out.runs.find(r => r.sym === sym && r.id === cfg.id).trades : run(bars, sym, c).trades;
+      const c = { ...BASE, ...cfg, ...MODEL, exitMode: ex }, ref = ex === 'rules' ? out.runs.find(r => r.sym === sym && r.id === cfg.id).trades : run(bars, sym, c).trades;
       for (const [td, d] of Object.entries(replay.days[sym])) {
         const { toBars } = await import('./tjr-engine.mjs');
         const rb = toBars([...d.pre, ...d.bars]);

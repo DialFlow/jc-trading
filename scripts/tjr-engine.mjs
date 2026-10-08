@@ -14,7 +14,15 @@ export const SLIP_TICKS = 1;   // market and stop orders only (Pine doesn't slip
 // restEnd: ET minute when an unfilled order is cancelled (rules: 11:00). Scenarios use 12:00 for "what if it had stayed open".
 // exitMode: 'rules' = Pine target (default, TradingView parity) · 'liq' = all out at the first liquidity ≥ 1R ·
 //           'scale' = half out at that liquidity, stop to break-even, rest to the rules target
-export const BASE = { rr: 2, dispLen: 20, dispMult: 1.5, rollGap: 0.02, fillThrough: 0, slipTicks: SLIP_TICKS, restEnd: 660, exitMode: 'rules' };
+export const BASE = { rr: 2, dispLen: 20, dispMult: 1.5, rollGap: 0.02, fillThrough: 0, slipTicks: SLIP_TICKS, restEnd: 660, exitMode: 'rules',
+  bosMode: 'bars5', watchStart: 570, watchEnd: 610, entryStart: 590, entryEnd: 610, maxTrades: 1, freshLevels: false };
+// freshLevels: a level only counts as liquidity (for sweeps and targets) until price first trades through it.
+//   Off reproduces the Pine script; on means e.g. an Asian high London already took is no longer "swept" at 8:30.
+// Structure options (defaults = the Pine v4/v5 rules):
+//   bosMode 'bars5' = close beyond the last 5 candles' high/low · 'swing' = close through the last confirmed swing high/low (2-candle pivot)
+//   watchStart/watchEnd = ET minutes when sweeps/BOS/FVGs count (570–610) · entryStart/entryEnd = when orders may be placed (590–610)
+//   maxTrades = setups per session (1); after a trade closes or an order expires, a fresh sweep is required
+export const STRUCT = { bosMode: 'bars5', watchStart: 570, watchEnd: 610, entryStart: 590, entryEnd: 610, maxTrades: 1 };
 export const EXITS = { rules: 'Rules target', liq: 'First liquidity ≥ 1R', scale: 'Half at liquidity, rest runs' };
 
 // v4 + the 24 v5 combinations from CLAUDE.md's "Next backtest ideas"
@@ -58,7 +66,11 @@ export function run(bars, sym, cfg, opts = {}) {
   const st = { aH: NaN, aL: NaN, lH: NaN, lL: NaN, pdH: NaN, pdL: NaN, dH: NaN, dL: NaN,
     sslSwept: false, bslSwept: false, sweepLow: NaN, sweepHigh: NaN, traded: false,
     sslCount: 0, bslCount: 0, wasBelow: false, wasAbove: false, ssl2Low: NaN, bsl2High: NaN,
-    bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rejected: '', mOpen: NaN, nyH: NaN, nyL: NaN };
+    bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rejected: '', mOpen: NaN, nyH: NaN, nyL: NaN,
+    swH: NaN, swL: NaN, refH: NaN, refL: NaN, nTrades: 0, rearm: false,
+    taken: { aH: false, aL: false, lH: false, lL: false, pdH: false, pdL: false } };
+  const fresh = !!cfg.freshLevels;
+  const W0 = cfg.watchStart ?? 570, W1 = cfg.watchEnd ?? 610, E0 = cfg.entryStart ?? 590, E1 = cfg.entryEnd ?? 610, maxT = cfg.maxTrades || 1;
   const fun = { days: 0, sweep: 0, bos: 0, fvg: 0, orders: 0 };
   let c = { sweep: false, bos: false, fvg: false, risk: false };
   let pending = null, pos = null, flatNext = false;
@@ -68,10 +80,10 @@ export function run(bars, sym, cfg, opts = {}) {
 
   const levels = isHigh => {
     const a = [];
-    if (cfg.sweepLvl === 'Any' || cfg.sweepLvl === 'Asian H/L') a.push({ p: isHigh ? st.aH : st.aL, n: isHigh ? 'Asian high' : 'Asian low' });
-    if (cfg.sweepLvl === 'Any' || cfg.sweepLvl === 'London H/L') a.push({ p: isHigh ? st.lH : st.lL, n: isHigh ? 'London high' : 'London low' });
-    if (cfg.sweepLvl === 'Any' || cfg.sweepLvl === 'PDH/PDL') a.push({ p: isHigh ? st.pdH : st.pdL, n: isHigh ? 'Prior-day high' : 'Prior-day low' });
-    return a.filter(x => !Number.isNaN(x.p));
+    if (cfg.sweepLvl === 'Any' || cfg.sweepLvl === 'Asian H/L') a.push({ p: isHigh ? st.aH : st.aL, n: isHigh ? 'Asian high' : 'Asian low', k: isHigh ? 'aH' : 'aL' });
+    if (cfg.sweepLvl === 'Any' || cfg.sweepLvl === 'London H/L') a.push({ p: isHigh ? st.lH : st.lL, n: isHigh ? 'London high' : 'London low', k: isHigh ? 'lH' : 'lL' });
+    if (cfg.sweepLvl === 'Any' || cfg.sweepLvl === 'PDH/PDL') a.push({ p: isHigh ? st.pdH : st.pdL, n: isHigh ? 'Prior-day high' : 'Prior-day low', k: isHigh ? 'pdH' : 'pdL' });
+    return a.filter(x => x.p != null && !Number.isNaN(x.p) && !(fresh && st.taken[x.k]));
   };
   const nearest = (a, isHigh) => a.length ? a.reduce((m, x) => (isHigh ? x.p < m.p : x.p > m.p) ? x : m) : null;
   const target = (a, isHigh, edge) => { const f = a.filter(x => isHigh ? x.p >= edge : x.p <= edge); return f.length ? nearest(f, isHigh) : null; };
@@ -98,6 +110,7 @@ export function run(bars, sym, cfg, opts = {}) {
       stop: pos.stop0, target: pos.target, tp1: pos.tp1, scaled: !!pos.scaled, risk: +risk.toFixed(2), r: risk ? +(pts / risk).toFixed(2) : 0,
       mfe: +mfe.toFixed(2), mae: +mae.toFixed(2), mfeR: risk ? +(mfe / risk).toFixed(2) : 0, maeR: risk ? +(mae / risk).toFixed(2) : 0, mins: Math.round((b.t - pos.fillT) / 60),
       pts: +pts.toFixed(2), pnl: +(pts * I.pointValue - 2 * COMMISSION).toFixed(2), why, td: pos.td });
+    if (maxT > 1) st.rearm = true;
     ev(b, 'exit', `${why === 'target' ? 'Target' : why === 'stop' ? 'Stopped out' : 'Closed'} at ${price.toFixed(2)} (${pts >= 0 ? '+' : ''}${pts.toFixed(2)} pts)`, { px: price, why, pts, dir: pos.dir, targetName: pos.targetName });
     pos = null;
   };
@@ -139,7 +152,7 @@ export function run(bars, sym, cfg, opts = {}) {
   }
 
   let prevTd = null, prevC = null, rollDay = null, i0 = 0;
-  if (opts.seed) { Object.assign(st, opts.seed); i0 = opts.seedFrom || 0; prevTd = bars[i0] && bars[i0].td; prevC = bars[i0] && bars[i0].o; }
+  if (opts.seed) { for (const [k, v] of Object.entries(opts.seed)) { if (k === 'taken') st.taken = { ...st.taken, ...v }; else st[k] = v == null ? NaN : v; } i0 = opts.seedFrom || 0; prevTd = bars[i0] && bars[i0].td; prevC = bars[i0] && bars[i0].o; }
   for (let i = i0; i < bars.length; i++) {
     const b = bars[i], m = b.m;
     // 1. orders resting from the previous bar's close fill on this bar
@@ -151,22 +164,26 @@ export function run(bars, sym, cfg, opts = {}) {
     // 2. script logic on this bar's close
     if (b.td !== prevTd) {
       if (prevC != null && Math.abs(b.o - prevC) / prevC > cfg.rollGap) { rollDay = b.td; skipped.add(b.td); }
-      st.pdH = rollDay === b.td ? NaN : st.dH; st.pdL = rollDay === b.td ? NaN : st.dL; st.dH = b.h; st.dL = b.l;
+      st.pdH = rollDay === b.td ? NaN : st.dH; st.pdL = rollDay === b.td ? NaN : st.dL; st.dH = b.h; st.dL = b.l; st.taken.pdH = st.taken.pdL = false;
     } else { st.dH = Math.max(st.dH, b.h); st.dL = Math.min(st.dL, b.l); }
     prevTd = b.td; prevC = b.c;
-    const asian = inWin(m, ...SESS.asian), london = inWin(m, ...SESS.london), watch = inWin(m, ...SESS.watch), macro = inWin(m, ...SESS.macro);
+    const asian = inWin(m, ...SESS.asian), london = inWin(m, ...SESS.london), watch = inWin(m, W0, W1), macro = inWin(m, E0, E1);
     const pb = bars[i - 1], pm = pb ? pb.m : -1;
-    if (asian && !(pb && inWin(pm, ...SESS.asian))) { st.aH = b.h; st.aL = b.l; } else if (asian) { st.aH = Math.max(st.aH, b.h); st.aL = Math.min(st.aL, b.l); }
-    if (london && !(pb && inWin(pm, ...SESS.london))) { st.lH = b.h; st.lL = b.l; } else if (london) { st.lH = Math.max(st.lH, b.h); st.lL = Math.min(st.lL, b.l); }
+    if (asian && !(pb && inWin(pm, ...SESS.asian))) { st.aH = b.h; st.aL = b.l; st.taken.aH = st.taken.aL = false; } else if (asian) { st.aH = Math.max(st.aH, b.h); st.aL = Math.min(st.aL, b.l); }
+    if (london && !(pb && inWin(pm, ...SESS.london))) { st.lH = b.h; st.lL = b.l; st.taken.lH = st.taken.lL = false; } else if (london) { st.lH = Math.max(st.lH, b.h); st.lL = Math.min(st.lL, b.l); }
     if (m === 0) st.mOpen = b.o;
     if (b.td !== (pb && pb.td)) st.mOpen = NaN;
     if (m >= 570 && m < 720) { st.nyH = (pb && pb.td === b.td && pm >= 570) ? Math.max(st.nyH, b.h) : b.h; st.nyL = (pb && pb.td === b.td && pm >= 570) ? Math.min(st.nyL, b.l) : b.l; }
-    const startWatch = watch && !(pb && inWin(pm, ...SESS.watch) && pb.td === b.td);
+    const startWatch = watch && !(pb && inWin(pm, W0, W1) && pb.td === b.td);
     if (startWatch) {
       Object.assign(st, { sslSwept: false, bslSwept: false, traded: false, sweepLow: b.l, sweepHigh: b.h, sslCount: 0, bslCount: 0,
-        wasBelow: false, wasAbove: false, ssl2Low: NaN, bsl2High: NaN, bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rejected: '' });
+        wasBelow: false, wasAbove: false, ssl2Low: NaN, bsl2High: NaN, bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rejected: '', nTrades: 0, rearm: false });
       c = { sweep: false, bos: false, fvg: false, risk: false };
       if (!skipped.has(b.td)) fun.days++;
+    } else if (st.rearm && watch && !pos && !pending) {
+      // a new setup needs a new sweep, break and gap
+      Object.assign(st, { sslSwept: false, bslSwept: false, sweepLow: b.l, sweepHigh: b.h, sslCount: 0, bslCount: 0, wasBelow: false, wasAbove: false,
+        ssl2Low: NaN, bsl2High: NaN, bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rearm: false });
     }
     const lowArr = levels(false), highArr = levels(true), lowLiq = nearest(lowArr, false), highLiq = nearest(highArr, true);
     if (watch) {
@@ -183,24 +200,33 @@ export function run(bars, sym, cfg, opts = {}) {
       }
       st.wasBelow = below; st.wasAbove = above;
     }
+    if (!asian) { if (b.h > st.aH) st.taken.aH = true; if (b.l < st.aL) st.taken.aL = true; }
+    if (!london && !asian) { if (b.h > st.lH) st.taken.lH = true; if (b.l < st.lL) st.taken.lL = true; }
+    if (b.h > st.pdH) st.taken.pdH = true; if (b.l < st.pdL) st.taken.pdL = true;
     let avgBody = 0; for (let k = Math.max(0, i - cfg.dispLen + 1); k <= i; k++) avgBody += bodies[k]; avgBody /= Math.min(cfg.dispLen, i + 1);
     const dispUp = b.c > b.o && bodies[i] > cfg.dispMult * avgBody, dispDn = b.c < b.o && bodies[i] > cfg.dispMult * avgBody;
     const b2 = bars[i - 2];
     const bullFVG = b2 && b.l > b2.h, bearFVG = b2 && b.h < b2.l;
     let hh = -Infinity, ll = Infinity; for (let k = Math.max(0, i - 5); k < i; k++) { hh = Math.max(hh, bars[k].h); ll = Math.min(ll, bars[k].l); }
-    const bullBOS = b.c > hh && (!cfg.useDisp || dispUp), bearBOS = b.c < ll && (!cfg.useDisp || dispDn);
+    if (i >= 4) { const j = i - 2, p = bars[j];
+      if (p.h > bars[j - 1].h && p.h > bars[j - 2].h && p.h >= bars[j + 1].h && p.h >= bars[j + 2].h) st.swH = p.h;
+      if (p.l < bars[j - 1].l && p.l < bars[j - 2].l && p.l <= bars[j + 1].l && p.l <= bars[j + 2].l) st.swL = p.l; }
+    const swing = cfg.bosMode === 'swing', pc = i > 0 ? bars[i - 1].c : b.c;
+    st.refH = swing ? st.swH : hh; st.refL = swing ? st.swL : ll;
+    const bullBOS = swing ? (!Number.isNaN(st.swH) && b.c > st.swH && pc <= st.swH && (!cfg.useDisp || dispUp)) : b.c > hh && (!cfg.useDisp || dispUp);
+    const bearBOS = swing ? (!Number.isNaN(st.swL) && b.c < st.swL && pc >= st.swL && (!cfg.useDisp || dispDn)) : b.c < ll && (!cfg.useDisp || dispDn);
     if (watch) {
-      if (st.sslSwept && bullBOS && !st.bosUp) { st.bosUp = true; ev(b, 'bos', `Bullish break of structure: close ${b.c.toFixed(2)} above ${hh.toFixed(2)}`); }
-      if (st.bslSwept && bearBOS && !st.bosDn) { st.bosDn = true; ev(b, 'bos', `Bearish break of structure: close ${b.c.toFixed(2)} below ${ll.toFixed(2)}`); }
-      if (st.bosUp && bullFVG) { st.fvgMidL = (b.l + b2.h) / 2; ev(b, 'fvg', `Bullish FVG ${b2.h.toFixed(2)}–${b.l.toFixed(2)}, midpoint ${st.fvgMidL.toFixed(2)}`); }
-      if (st.bosDn && bearFVG) { st.fvgMidS = (b.h + b2.l) / 2; ev(b, 'fvg', `Bearish FVG ${b.h.toFixed(2)}–${b2.l.toFixed(2)}, midpoint ${st.fvgMidS.toFixed(2)}`); }
+      if (st.sslSwept && bullBOS && !st.bosUp) { st.bosUp = true; ev(b, 'bos', `Bullish break of structure: close ${b.c.toFixed(2)} above ${st.refH.toFixed(2)} (${swing ? 'last swing high' : '5-candle high'})`, { dir: 'bull', level: st.refH, close: b.c }); }
+      if (st.bslSwept && bearBOS && !st.bosDn) { st.bosDn = true; ev(b, 'bos', `Bearish break of structure: close ${b.c.toFixed(2)} below ${st.refL.toFixed(2)} (${swing ? 'last swing low' : '5-candle low'})`, { dir: 'bear', level: st.refL, close: b.c }); }
+      if (st.bosUp && bullFVG) { st.fvgMidL = (b.l + b2.h) / 2; ev(b, 'fvg', `Bullish FVG ${b2.h.toFixed(2)}–${b.l.toFixed(2)}, midpoint ${st.fvgMidL.toFixed(2)}`, { dir: 'bull', lo: b2.h, hi: b.l, mid: st.fvgMidL }); }
+      if (st.bosDn && bearFVG) { st.fvgMidS = (b.h + b2.l) / 2; ev(b, 'fvg', `Bearish FVG ${b.h.toFixed(2)}–${b2.l.toFixed(2)}, midpoint ${st.fvgMidS.toFixed(2)}`, { dir: 'bear', lo: b.h, hi: b2.l, mid: st.fvgMidS }); }
       if (!skipped.has(b.td)) {
         if ((st.sslSwept || st.bslSwept) && !c.sweep) { c.sweep = true; fun.sweep++; }
         if ((st.bosUp || st.bosDn) && !c.bos) { c.bos = true; fun.bos++; }
         if ((!Number.isNaN(st.fvgMidL) || !Number.isNaN(st.fvgMidS)) && !c.fvg) { c.fvg = true; fun.fvg++; }
       }
     }
-    const canTrade = macro && !st.traded && !pos && !skipped.has(b.td);
+    const canTrade = () => macro && st.nTrades < maxT && !pos && !pending && !skipped.has(b.td);
     const place = (dir, entry) => {
       const lng = dir === 'long', stop = stopFor(lng, entry), risk = lng ? entry - stop : stop - entry;
       if (!(risk > 0 && risk <= cfg.maxRisk)) {
@@ -219,13 +245,13 @@ export function run(bars, sym, cfg, opts = {}) {
         else if (lng ? p1 < tgtP : p1 > tgtP) { tp1 = Math.round(p1 / tick) * tick; tp1Name = n1; }
       }
       pending = { dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, td: b.td };
-      st.traded = true; st.rejected = '';
+      st.traded = true; st.nTrades++; st.rejected = '';
       ev(b, 'order', `${lng ? 'Buy' : 'Sell'} limit ${lim.toFixed(2)} · stop ${stop.toFixed(2)} · target ${pending.target.toFixed(2)} (${pending.targetName})`, { dir, limit: lim, stop, target: pending.target, targetName: pending.targetName, tp1, tp1Name });
       if (!c.risk) { c.risk = true; fun.orders++; }
     };
-    if (canTrade && !Number.isNaN(st.fvgMidL)) place('long', st.fvgMidL);
-    if (canTrade && !st.traded && !Number.isNaN(st.fvgMidS)) place('short', st.fvgMidS);
-    if (!inWin(m, SESS.rest[0], cfg.restEnd || SESS.rest[1]) && !pos && pending) { ev(b, 'cancel', `Unfilled order cancelled (${Math.floor((cfg.restEnd || 660) / 60)}:${String((cfg.restEnd || 660) % 60).padStart(2, '0')})`); pending = null; }
+    if (canTrade() && !Number.isNaN(st.fvgMidL)) place('long', st.fvgMidL);
+    if (canTrade() && !Number.isNaN(st.fvgMidS)) place('short', st.fvgMidS);
+    if (!inWin(m, SESS.rest[0], cfg.restEnd || SESS.rest[1]) && !pos && pending) { ev(b, 'cancel', `Unfilled order cancelled (${Math.floor((cfg.restEnd || 660) / 60)}:${String((cfg.restEnd || 660) % 60).padStart(2, '0')})`); pending = null; if (maxT > 1) st.rearm = true; }
     if (inWin(m, ...SESS.flat) && pos) flatNext = true;
     if (opts.snapshots) snaps.push(snapshot(b));
   }
@@ -234,7 +260,7 @@ export function run(bars, sym, cfg, opts = {}) {
       levels: { asianH: st.aH, asianL: st.aL, londonH: st.lH, londonL: st.lL, pdH: st.pdH, pdL: st.pdL, dH: st.dH, dL: st.dL, mOpen: st.mOpen, nyH: st.nyH, nyL: st.nyL },
       sslSwept: st.sslSwept, bslSwept: st.bslSwept, sslName: st.sslName, bslName: st.bslName, sweepLow: st.sweepLow, sweepHigh: st.sweepHigh,
       sslCount: st.sslCount, bslCount: st.bslCount, bosUp: st.bosUp, bosDn: st.bosDn, fvgMidL: st.fvgMidL, fvgMidS: st.fvgMidS,
-      traded: st.traded, rejected: st.rejected, pending: pending && { ...pending }, pos: pos && { ...pos }, skipped: skipped.has(b.td) };
+      taken: { ...st.taken }, traded: st.traded, nTrades: st.nTrades, rejected: st.rejected, swH: st.swH, swL: st.swL, refH: st.refH, refL: st.refL, bosMode: cfg.bosMode || 'bars5', pending: pending && { ...pending }, pos: pos && { ...pos }, skipped: skipped.has(b.td) };
   }
   const last = bars[bars.length - 1];
   const state = last ? snapshot(last) : null;

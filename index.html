@@ -330,6 +330,14 @@ body {
 #rp-chart, #live-chart { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 @media (max-width: 640px) { #rp-chart svg, #live-chart svg { min-width: 620px; } }
 
+/* Replay candle-by-candle notes */
+.rpn-list { max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; }
+.rpn { display: grid; grid-template-columns: 50px 1fr; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.45; }
+.rpn:last-child { border-bottom: 0; }
+.rpn-t { font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--blue); padding-top: 1px; }
+.rpn-now { background: rgba(0,122,255,0.08); }
+.rpn b { font-weight: 700; }
+
 /* Account sim plan */
 .sim-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sim-plan-pick { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
@@ -1550,7 +1558,7 @@ select { cursor: pointer; }
     <div class="pb-step"><div class="pb-num">2</div><div><div class="fw-600">Confirmation: a <span class="gl" data-g="bos">break of structure</span></div>
       <div class="fs-13 text-2">A candle closes beyond the last 5 candles in the opposite direction of the sweep. That says the move is turning.</div></div></div>
     <div class="pb-step"><div class="pb-num">3</div><div><div class="fw-600">Continuation: enter at the <span class="gl" data-g="fvg">fair value gap</span></div>
-      <div class="fs-13 text-2">The break leaves a gap between candles. A limit order goes at its midpoint, only between 9:50 and 10:10. 9:30–9:50 is the manipulation window: no entries.</div></div></div>
+      <div class="fs-13 text-2">The break leaves a gap between candles. A limit order goes at its midpoint. TJR's entry macro is 9:50–10:10; testing on NQ found more good setups when entries run until 11:00 and sweeps count from the 8:30 open, so the Lab uses that (Lab → Structure study). 9:30–9:50 is still the manipulation window: no entries.</div></div></div>
     <div class="pb-step"><div class="pb-num">4</div><div><div class="fw-600">Exit: the next pool of liquidity</div>
       <div class="fs-13 text-2">Target the next high or low on the other side (or 2× the risk). The stop goes past the sweep or a fixed distance. Flat by 12:00, no matter what.</div></div></div>
   </div>
@@ -1572,7 +1580,7 @@ select { cursor: pointer; }
     <div>
       <div class="section-label">Your rules</div>
       <div class="card">
-        <div class="check-item" id="rule-1" onclick="toggleRule('rule-1')"><div class="check-box"></div><span class="check-label">No entries 9:30–9:50 (manipulation window). Orders only 9:50–10:10.</span></div>
+        <div class="check-item" id="rule-1" onclick="toggleRule('rule-1')"><div class="check-box"></div><span class="check-label">No entries 9:30–9:50 (manipulation window). Orders 9:50–11:00 (TJR macro 9:50–10:10).</span></div>
         <div class="check-item" id="rule-2" onclick="toggleRule('rule-2')"><div class="check-box"></div><span class="check-label">One setup per session. If it's skipped or stopped, I'm done.</span></div>
         <div class="check-item" id="rule-3" onclick="toggleRule('rule-3')"><div class="check-box"></div><span class="check-label">Stop and target set before entry. Never move a stop against me.</span></div>
         <div class="check-item" id="rule-4" onclick="toggleRule('rule-4')"><div class="check-box"></div><span class="check-label">Risk per trade stays inside my limit below; size down to micros if it doesn't.</span></div>
@@ -1805,6 +1813,7 @@ select { cursor: pointer; }
       <button class="mtf-seg" data-v="live" onclick="labView('live')">Today's setup</button>
       <button class="mtf-seg" data-v="bt" onclick="labView('bt')">Results</button>
       <button class="mtf-seg" data-v="sim" onclick="labView('sim')">Account sim</button>
+      <button class="mtf-seg" data-v="ss" onclick="labView('ss')">Structure study</button>
       <button class="mtf-seg" data-v="ce" onclick="labView('ce')">Confluence edge</button>
       <button class="mtf-seg" data-v="sc" onclick="labView('sc')">Scenarios</button>
       <button class="mtf-seg" data-v="replay" onclick="labView('replay')">Replay</button>
@@ -1852,6 +1861,9 @@ select { cursor: pointer; }
     </div></div>
     <div id="sim-out"></div>
   </div>
+
+  <!-- STRUCTURE STUDY -->
+  <div class="lab-view" id="lab-ss" hidden></div>
 
   <!-- CONFLUENCE EDGE -->
   <div class="lab-view" id="lab-ce" hidden></div>
@@ -2385,7 +2397,7 @@ function renderConfluences() {
   const mark = v => v === 'bull' ? '<span class="cf-b">✓</span>' : v === 'bear' ? '<span class="cf-s">✓</span>'
     : v === 'both' ? '<span class="cf-b">✓</span><span class="cf-s">✓</span>' : '<span class="cf-n">·</span>';
   const now = getCurrentETTime(), mins = now.getHours() * 60 + now.getMinutes();
-  const inMacro = mins >= 590 && mins < 610, inManip = mins >= 570 && mins < 590;
+  const inMacro = mins >= WIN().entryStart && mins < WIN().entryEnd, inManip = mins >= 570 && mins < 590;
   let lastGroup = '';
   const rows = CONF_ROWS.map(r => {
     const g = r.group !== lastGroup ? `<tr class="cf-grp"><td colspan="${tfs.length + 1}">${r.group}</td></tr>` : '';
@@ -2409,7 +2421,7 @@ function renderConfluences() {
       <tr><th></th>${tfs.map(tf => `<th class="cf-tf">${CONF_TFLBL[tf]}</th>`).join('')}</tr>
       ${rows}${score}${confHistoryRow(confView, tfs)}
       <tr class="cf-grp"><td colspan="${tfs.length + 1}">Time</td></tr>
-      <tr><th>Entry macro 9:50–10:10</th><td colspan="${tfs.length}" class="cf-time">${inMacro ? '<span class="cf-b">✓ in the window now</span>' : inManip ? '<span class="cf-s">✗ manipulation window (9:30–9:50), no trades</span>' : '<span class="cf-n">not in the window</span>'}</td></tr>
+      <tr><th>Entry window ${WIN().eTxt}</th><td colspan="${tfs.length}" class="cf-time">${inMacro ? '<span class="cf-b">✓ in the window now</span>' : inManip ? '<span class="cf-s">✗ manipulation window (9:30–9:50), no trades</span>' : '<span class="cf-n">not in the window</span>'}</td></tr>
     </table></div>
     <div id="conf-detail" class="fs-12 text-2" style="margin-top:8px;min-height:16px;">Tap a cell to see what was found.</div>
     <div class="fs-12 text-2" style="margin-top:6px;"><span class="cf-b">✓</span> bullish · <span class="cf-s">✓</span> bearish · <span class="cf-n">·</span> not present. A timeframe counts as aligned at 4+ of 6 in one direction. The History row is how often 5+ of 6 aligned led to a 1-ATR move the right way before one the wrong way (green = beat random odds by 5+ points; full stats in Lab → Confluence edge). Checks look at the last 40 candles of each timeframe; Yahoo data is delayed. Rules-based, not a trade recommendation.</div>
@@ -3642,6 +3654,7 @@ async function loadBacktest() {
   const v4 = BT.runs.find(r => r.sym === 'ES=F' && r.id === 'v4');
   document.getElementById('bt-about').innerHTML = `<p><strong>What this is:</strong> your strategy (<span class="mono">jc_tjr_backtest_v5.pine</span>) re-run bar by bar on real ES1! and NQ1! 5-minute candles (${esc(es.contract)} / ${esc(nq.contract)}, CME front month). Same sessions, sweep, BOS, FVG-midpoint limit entry in the 9:50–10:10 macro, stop, target and 12:00 flat as the Pine script.</p>
     <p style="margin-top:6px;"><strong>Checked against TradingView:</strong> with the v4 settings it reproduces your TradingView Strategy Tester trade list exactly: the same 7 trades from Aug 16 to Oct 7 at the same prices, −$2,760. This run also covers Jul 30 – Aug 15 and Oct 8, which TradingView's free plan didn't load.</p>
+    <p style="margin-top:6px;"><strong>Structure model:</strong> ${esc((BT.struct && BT.struct.label) || 'Pine windows')} (see Structure study). TradingView parity is checked with the original Pine windows.</p>
     <p style="margin-top:6px;" class="text-2">NQ1! uses stops scaled 4× (fixed 80 pts, max 100; v4 max 60) because NQ moves about 4× ES in points. Point values: ES $50, NQ $20.</p>`;
   btRenderSym(); btPickV4();
   btRenderGrid(); btRenderVerdict();
@@ -3743,7 +3756,8 @@ const usd = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { 
 
 function labView(v) {
   document.querySelectorAll('#lab-nav .mtf-seg').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  for (const id of ['hl', 'live', 'bt', 'sim', 'ce', 'sc', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  for (const id of ['hl', 'live', 'bt', 'sim', 'ss', 'ce', 'sc', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  if (v === 'ss') renderStructStudy();
   if (v === 'ce') renderConfEdge();
   if (v === 'sc') renderScenarios(false);
   document.querySelector('.lab-pick').style.visibility = v === 'hl' ? 'hidden' : '';
@@ -3787,7 +3801,7 @@ function labInit() {
   if (!['rules', 'liq', 'scale'].includes(labExit)) labExit = defaultExitFor(labCfg());
   labRenderPick();
   let v = 'hl'; try { v = localStorage.getItem('jct_lab_view') || 'hl'; } catch(e) {}
-  labView(['hl', 'live', 'bt', 'sim', 'ce', 'sc', 'replay'].includes(v) ? v : 'hl');
+  labView(['hl', 'live', 'bt', 'sim', 'ss', 'ce', 'sc', 'replay'].includes(v) ? v : 'hl');
   readyCycle(false);
 }
 
@@ -3816,7 +3830,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   const inR = p => p >= lo && p <= hi;
   let svg = '';
   // session time markers (neutral, so red/green only ever mean loss/profit)
-  for (const [m, lbl, ly] of [[570, '9:30', 0], [590, '9:50', 0], [610, '10:10', 0]]) {
+  for (const [m, lbl, ly] of [[WIN().watchStart, WIN().wTxt, 0], [570, '9:30', 0], [590, '9:50', 0], [WIN().entryEnd, WIN().endTxt, 0]].filter((x, i, a) => a.findIndex(y => y[0] === x[0]) === i)) {
     const i = bars.findIndex(b => b.m >= m); if (i < 0) continue;
     svg += `<line x1="${x(i) - cw / 2}" x2="${x(i) - cw / 2}" y1="${PT}" y2="${H - PB}" stroke="var(--text3)" stroke-width="0.6" stroke-dasharray="2 3"/><text x="${x(i) - cw / 2 - 12}" y="${PT - 4}" class="mtf-ax">${lbl}</text>`;
   }
@@ -3883,7 +3897,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   if (!order) for (let k = 0; k <= 3; k++) { const p = lo + (hi - lo) * k / 3; svg += `<text x="${right + 4}" y="${y(p) + 3}" class="mtf-ax">${p.toFixed(0)}</text>`; }
   for (const b of [...new Set([bars[0], bars.find(b => b.m === 660), last].filter(Boolean))]) { const i = bars.indexOf(b); svg += `<text x="${Math.min(right - 30, Math.max(0, x(i) - 14))}" y="${H - 5}" class="mtf-ax">${b.hm}</text>`; }
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="Setup chart with liquidity, fair value gaps and the position">${svg}</svg>
-    <div class="fs-12 text-2" style="margin-top:4px">9:30–9:50 no entries, 9:50–10:10 entry window · green box = profit zone to the target · red box = loss zone to the stop · dashed orange = Asian / London / prior-day liquidity (dot = when it was taken) · shaded boxes = FVGs, dashed = IFVGs.</div>`;
+    <div class="fs-12 text-2" style="margin-top:4px">sweeps count from ${WIN().wTxt} · 9:30–9:50 no entries · entries ${WIN().eTxt} · green box = profit zone to the target · red box = loss zone to the stop · dashed orange = Asian / London / prior-day liquidity (dot = when it was taken) · shaded boxes = FVGs, dashed = IFVGs.</div>`;
 }
 
 // ---------- step list shared by live + replay ----------
@@ -3896,18 +3910,18 @@ function stepsHtml(st, evs, nowM) {
   out.push(row('ok', '✓', 'Levels set', `PDH ${fx2(lv.pdH)} · PDL ${fx2(lv.pdL)} · Asia ${fx2(lv.asianH)}/${fx2(lv.asianL)} · London ${fx2(lv.londonH)}/${fx2(lv.londonL)}`));
   const sw = evs.filter(e => e.type === 'sweep');
   out.push(sw.length ? row('ok', '✓', '1 · Potential: liquidity swept after 9:30', sw.map(e => `${e.hm} ${e.text}`).join('<br>'))
-    : row('no', '○', '1 · Potential: no sweep yet', nowM < 570 ? 'Watching starts at 9:30' : nowM >= 610 ? 'No sweep in the 9:30–10:10 window' : 'Waiting for price to take a level'));
+    : row('no', '○', '1 · Potential: no sweep yet', nowM < WIN().watchStart ? `Watching starts at ${WIN().wTxt}` : nowM >= WIN().entryEnd ? `No sweep in the ${WIN().wTxt}–${WIN().endTxt} window` : 'Waiting for price to take a level'));
   const bos = evText('bos'), fvg = evText('fvg');
   out.push(has('bos') ? row('ok', '✓', '2 · Confirmation: break of structure', `${bos.hm} ${bos.text}`) : row('no', '○', '2 · Confirmation: no BOS yet', sw.length ? 'Needs a close beyond the last 5 candles, against the sweep' : ''));
   out.push(has('fvg') ? row('ok', '✓', '3 · Continuation: FVG formed', `${fvg.hm} ${fvg.text}`) : row('no', '○', '3 · Continuation: no FVG yet', ''));
   const o = evText('order'), fl = evText('fill'), ex = evText('exit'), cn = evText('cancel');
   if (has('order')) {
-    out.push(row('ok', '✓', 'Order placed (9:50–10:10 only)', `${o.hm} ${o.text}`));
+    out.push(row('ok', '✓', `Order placed (${WIN().eTxt} only)`, `${o.hm} ${o.text}`));
     const d = o.data;
     if (d) out.push(row('ok', '→', 'Exit plan: draw on liquidity', `${d.tp1 != null ? `Take half at the ${d.tp1Name} ${d.tp1.toFixed(2)} (+${Math.abs(d.tp1 - d.limit).toFixed(1)} pts) and move the stop to the entry, then ` : ''}take ${d.tp1 != null ? 'the rest' : 'profit'} at the ${d.targetName} ${d.target.toFixed(2)} (+${Math.abs(d.target - d.limit).toFixed(1)} pts). Risk: ${Math.abs(d.limit - d.stop).toFixed(1)} pts to the stop ${d.stop.toFixed(2)}. Flat by 12:00 whatever happens.`));
   }
   else if (st.rejected) out.push(row('bad', '✗', 'Setup skipped', st.rejected));
-  else out.push(row('no', '○', 'Order', nowM < 590 ? 'Orders only go in from 9:50 to 10:10' : nowM >= 610 ? 'No order today' : 'Waiting for all three steps'));
+  else out.push(row('no', '○', 'Order', nowM < WIN().entryStart ? `Orders only go in from ${WIN().eTxt}` : nowM >= WIN().entryEnd ? 'No order today' : 'Waiting for all three steps'));
   if (has('fill')) out.push(row('ok', '✓', '4 · Filled', `${fl.hm} ${fl.text}`));
   if (has('scale')) { const sc = evText('scale'); out.push(row('ok', '✓', 'Half out at liquidity', `${sc.hm} ${sc.text}`)); }
   if (has('exit')) out.push(row(ex.data && ex.data.pts >= 0 ? 'ok' : 'bad', ex.data && ex.data.pts >= 0 ? '✓' : '✗', '4 · Exit', `${ex.hm} ${ex.text}${ex.data ? (ex.data.why === 'target' ? ` — reached the ${ex.data.targetName} liquidity.` : ex.data.why === 'break-even' ? ' — back to the entry after taking half: no loss on the rest.' : ex.data.why === 'stop' ? ' — the stop was hit before the liquidity draw.' : ex.data.why === '12:00 flat' ? ' — the 12:00 time rule closed it before the liquidity draw.' : '') : ''}`));
@@ -3924,10 +3938,13 @@ function bannerFor(st, evs, nowM, ageMin) {
   const cn = evs.find(e => e.type === 'cancel'), od = evs.find(e => e.type === 'order');
   if (cn) return ['wait', 'Order expired unfilled: no trade today', od ? `${od.hm} ${od.text}; price never came back to the entry before 11:00.` : ''];
   if (st.rejected) return ['wait', 'Setup skipped: stop too wide', st.rejected];
-  if (nowM < 570) return ['wait', 'Pre-market: levels are set', 'The rules start watching for a sweep at 9:30.'];
-  if (nowM < 590) return ['wait', 'Manipulation window (9:30–9:50): no entries', evs.some(e => e.type === 'sweep') ? 'A sweep has happened; watching for a BOS and FVG.' : 'Watching for a sweep.'];
-  if (nowM < 610) return ['wait', 'Entry window open (9:50–10:10)', evs.some(e => e.type === 'fvg') ? 'Setup complete: order goes in on this candle close.' : 'No complete setup yet.'];
-  return ['wait', 'No trade today under these rules', 'The setup did not complete before 10:10.'];
+  const hasS = evs.some(e => e.type === 'sweep'), hasB = evs.some(e => e.type === 'bos'), hasG = evs.some(e => e.type === 'fvg');
+  const prog = hasG ? 'Sweep, break and gap are all in place.' : hasB ? 'Sweep and break of structure done; waiting for a gap (FVG).' : hasS ? 'Sweep done; waiting for a break of structure.' : 'Waiting for a sweep.';
+  if (nowM < WIN().watchStart) return ['wait', 'Pre-market: levels are set', `The rules start watching for a sweep at ${WIN().wTxt}.`];
+  if (nowM < 570) return ['wait', `Watching from ${WIN().wTxt}: no entries before 9:50`, prog];
+  if (nowM < WIN().entryStart) return ['wait', 'Manipulation window (9:30–9:50): no entries', prog + (hasG ? ' The order goes in at 9:50.' : '')];
+  if (nowM < WIN().entryEnd) return ['wait', `Entry window open (${WIN().eTxt})`, hasG ? 'Setup complete: order goes in on this candle close.' : prog];
+  return ['wait', 'No trade today under these rules', `The setup did not complete before ${WIN().endTxt}.`];
 }
 function edgeHtml(r0) {
   const r = viaExit(r0), s = r.stats, h = r.halves, x = r.stress.stats, rob = isRobust(r);
@@ -4092,14 +4109,15 @@ function rpPlay() {
 function rpDraw() {
   if (!rpBars.length || !window.TJR) return;
   const E = window.TJR, r = labCfg(), upto = rpBars.slice(0, rpIdx + 1);
-  const res = E.run([...rpPre, ...upto], labSym, engCfg(r), { seed: rpSeed, seedFrom: rpPre.length, keepOpen: true });
+  const res = E.run([...rpPre, ...upto], labSym, engCfg(r), { seed: rpSeed, seedFrom: rpPre.length, keepOpen: true, snapshots: true });
   const st = res.state, evs = res.events, b = upto[upto.length - 1];
   const [cls, title, sub] = bannerFor(st, evs, b.m, null);
   const ban = document.getElementById('rp-banner');
   ban.className = 'live-banner ' + cls; ban.innerHTML = `${b.hm} ET · ${esc(title)}<span class="sub">${esc(sub)}</span>`;
   const hide = document.getElementById('rp-hide').checked;
   drawSetupChart(document.getElementById('rp-chart'), hide ? upto : rpBars, st, evs, { slots: rpBars.length });
-  document.getElementById('rp-events').innerHTML = stepsHtml(st, evs, b.m);
+  document.getElementById('rp-events').innerHTML = stepsHtml(st, evs, b.m) + rpNotesHtml(upto, res.snapshots, evs, upto.length - 1, labSym);
+  const nl = document.getElementById('rpn-list'); if (nl) nl.scrollTop = nl.scrollHeight;
 }
 
 // ============================================================
@@ -4230,8 +4248,8 @@ function readiness(sym) {
   const myBias = jb.state === 'bull' ? 'bullish' : jb.state === 'bear' ? 'bearish' : null;
   add('Your daily bias', !myBias || !dirWord ? 'na' : myBias === dirWord ? 'ok' : 'bad', myBias ? `You set ${myBias}` : 'Not set: pick it on the Daily Bias tab');
   const evts = T.sameDay ? todaysEvents().map(e => ({ ...e, name: e.title, impact: e.impact === 'High' ? 'HIGH' : 'MED' })) : [];
-  const clash = evts.find(e => e.impact !== 'LOW' && e.m >= 590 - 30 && e.m <= 610 + 30);
-  add('News clear', clash ? 'bad' : 'ok', clash ? `${clash.name} at ${clash.time}: inside 30 min of the entry window` : evts.length ? `${evts.map(e => e.name.split('(')[0].trim() + ' ' + e.time).join(', ')}: clear of 9:50–10:10` : 'No events loaded for today');
+  const clash = evts.find(e => e.impact !== 'LOW' && e.m >= WIN().entryStart - 30 && e.m <= WIN().entryEnd + 30);
+  add('News clear', clash ? 'bad' : 'ok', clash ? `${clash.name} at ${clash.time}: inside 30 min of the entry window` : evts.length ? `${evts.map(e => e.name.split('(')[0].trim() + ' ' + e.time).join(', ')}: clear of ${WIN().eTxt}` : 'No events loaded for today');
   if (order) { const rr = Math.abs(order.target - (order.limit ?? order.entry)) / stopPts;
     add('Reward : risk', rr >= risk.rr ? 'ok' : 'bad', `${rr.toFixed(2)}R vs your minimum ${risk.rr}R`); }
 
@@ -4254,9 +4272,9 @@ function readiness(sym) {
   else if (st.rejected) v = ['off', '⚪ Setup skipped today', st.rejected];
   else if (hardBad && hardBad.label === 'Track record') v = ['bad', '🔴 Stand aside today', hardBad.text];
   else if (nowM < 570) v = ['prep', '⏳ Prepare', `Entry window opens ${nextWindowText()}. ${ready} of ${counted} conditions already in place.`];
-  else if (nowM < 590) v = ['watch', '👀 Watch only (9:30–9:50)', st.sslSwept || st.bslSwept ? `Sweep seen (${st.sslSwept ? st.sslName : st.bslName}). Waiting for a break of structure and a gap.` : 'Waiting for price to sweep a level. No entries yet.'];
-  else if (nowM < 610) v = ['watch', '⏳ Entry window open: waiting for the setup', `${[st.sslSwept || st.bslSwept, st.bosUp || st.bosDn, !Number.isNaN(st.fvgMidL) || !Number.isNaN(st.fvgMidS)].filter(Boolean).length} of 3 steps done (sweep, break, gap)`];
-  else v = ['off', '⚪ No setup today', 'The rules didn\'t complete a setup by 10:10. Nothing to do.'];
+  else if (nowM < 590) v = ['watch', '👀 Watch only (9:30–9:50)', st.sslSwept || st.bslSwept ? `Sweep seen (${st.sslSwept ? st.sslName : st.bslName}).${st.bosUp || st.bosDn ? ' Break of structure done' + (!Number.isNaN(st.fvgMidL) || !Number.isNaN(st.fvgMidS) ? ' and a gap formed: the order goes in at 9:50.' : '; waiting for a gap.') : ' Waiting for a break of structure and a gap.'}` : 'Waiting for price to sweep a level. No entries yet.'];
+  else if (nowM < WIN().entryEnd) v = ['watch', `⏳ Entry window open (${WIN().eTxt}): waiting for the setup`, `${[st.sslSwept || st.bslSwept, st.bosUp || st.bosDn, !Number.isNaN(st.fvgMidL) || !Number.isNaN(st.fvgMidS)].filter(Boolean).length} of 3 steps done (sweep, break, gap)`];
+  else v = ['off', '⚪ No setup today', `The rules didn't complete a setup by ${WIN().endTxt}. Nothing to do.`];
   return { T, r, checks, verdict: v, order, ready, counted, I };
 }
 
@@ -4264,9 +4282,9 @@ function sessionBar(nowM) {
   // 7:00–12:30 ET with the TJR windows marked
   const a = 420, b = 750, X = mm => ((Math.min(b, Math.max(a, mm)) - a) / (b - a) * 100).toFixed(2) + '%';
   const seg = (s, e, cls, lbl) => `<div class="sb-seg ${cls}" style="left:${X(s)};width:calc(${X(e)} - ${X(s)})" title="${lbl}"><span>${lbl}</span></div>`;
-  return `<div class="sb">${seg(420, 510, 'sb-ldn', 'London')}${seg(510, 570, 'sb-pre', 'NY open')}${seg(570, 590, 'sb-man', 'No entries')}${seg(590, 610, 'sb-mac', 'Entry')}${seg(610, 660, 'sb-rest', 'Order rests')}${seg(660, 720, 'sb-mng', 'Manage')}
+  return `<div class="sb">${seg(420, 510, 'sb-ldn', 'London')}${seg(510, 570, 'sb-pre', 'NY open')}${seg(570, 590, 'sb-man', 'No entries')}${seg(590, WIN().entryEnd, 'sb-mac', 'Entry window')}${seg(WIN().entryEnd, WIN().restEnd, 'sb-rest', 'Order rests')}${seg(WIN().restEnd, 720, 'sb-mng', 'Manage')}
     ${nowM >= a && nowM <= b ? `<div class="sb-now" style="left:${X(nowM)}"></div>` : ''}</div>
-    <div class="sb-ticks">${[[420, '7:00'], [570, '9:30'], [610, '10:10'], [720, '12:00']].map(([mm, t]) => `<span style="left:${X(mm)}">${t}</span>`).join('')}</div>`;
+    <div class="sb-ticks">${[[420, '7:00'], [570, '9:30'], [WIN().entryEnd, WIN().endTxt], [720, '12:00']].map(([mm, t]) => `<span style="left:${X(mm)}">${t}</span>`).join('')}</div>`;
 }
 
 function renderReadiness() {
@@ -4319,7 +4337,7 @@ function renderPlaybook() {
   });
   el.innerHTML = cards.join('');
   const c = document.getElementById('pb-clock');
-  if (c) c.innerHTML = `${sessionBar(etNow().m)}<div class="fs-12 text-2" style="margin-top:8px">Asian 6 pm–3 am · London 3–8:30 am · NY open 8:30–9:30 · <b style="color:var(--bear)">No entries 9:30–9:50</b> · <b style="color:var(--bull)">Entry window 9:50–10:10</b> · unfilled orders cancel 11:00 · flat by 12:00</div>`;
+  if (c) c.innerHTML = `${sessionBar(etNow().m)}<div class="fs-12 text-2" style="margin-top:8px">Asian 6 pm–3 am · London 3–8:30 am · NY open 8:30–9:30 · <b style="color:var(--bear)">No entries 9:30–9:50</b> · sweeps count from ${WIN().wTxt} · <b style="color:var(--bull)">entries ${WIN().eTxt}</b> · unfilled orders cancel ${WIN().cancelTxt} · flat by 12:00</div>`;
 }
 
 // ============================================================
@@ -4388,7 +4406,7 @@ function renderHighlights() {
         <line x1="150" x2="200" y1="50" y2="50" stroke="var(--blue)"/><text x="150" y="62" class="mtf-ax">2 break</text>
         <rect x="200" y="36" width="34" height="12" fill="var(--bull)" opacity="0.3"/><text x="200" y="30" class="mtf-ax">3 gap: entry</text>
         <circle cx="300" cy="10" r="5" fill="var(--bull)"/><text x="248" y="22" class="mtf-ax">4 target</text></svg>
-      <div class="fs-13">1. Price <span class="gl" data-g="sweep">sweeps</span> a low. 2. It <span class="gl" data-g="bos">breaks structure</span> back up. 3. Enter at the <span class="gl" data-g="fvg">gap</span> between 9:50 and 10:10. 4. Take profit at the next high. Details in the Playbook tab.</div>`, share: false },
+      <div class="fs-13">1. Price <span class="gl" data-g="sweep">sweeps</span> a low. 2. It <span class="gl" data-g="bos">breaks structure</span> back up. 3. Enter at the <span class="gl" data-g="fvg">gap</span> between ${WIN().eTxt}. 4. Take profit at the next high. Details in the Playbook tab.</div>`, share: false },
   ];
   el.innerHTML = HL_POSTS.map(p => `
     <article class="hl-post">
@@ -4454,7 +4472,7 @@ function defaultExitFor(r) {
 }
 function labSetExit(ex) { labExit = ex; try { localStorage.setItem('jct_lab_exit', ex); } catch(e) {} labRenderPick(); labRerender(); readyCycle(false); }
 const EXIT_LABEL = { rules: 'Exit: rules target', liq: 'Exit: first liquidity ≥ 1R', scale: 'Exit: half at liquidity, rest runs' };
-const engCfg = r => ({ ...window.TJR.BASE, ...r, exitMode: labExit || 'rules' });
+const engCfg = r => { const m = (BT && BT.struct) || {}; return { ...window.TJR.BASE, ...r, ...(m.watchStart ? { bosMode: m.bosMode, watchStart: m.watchStart, watchEnd: m.watchEnd, entryStart: m.entryStart, entryEnd: m.entryEnd, restEnd: m.restEnd, maxTrades: m.maxTrades } : {}), exitMode: labExit || 'rules' }; };
 
 // ============================================================
 // LIQUIDITY EXIT PLAN — session + higher-timeframe liquidity beyond the entry
@@ -4586,9 +4604,9 @@ function buildScenario(sym, td, r) {
   else {
     cat = 'none'; headline = 'No setup';
     const swept = evs.some(e => e.type === 'sweep'), broke = evs.some(e => e.type === 'bos'), gap = evs.some(e => e.type === 'fvg');
-    lesson = !swept ? 'No level was swept between 9:30 and 10:10, so there was nothing to trade. Waiting is part of the strategy.'
+    lesson = !swept ? `No level was swept between ${WIN().wTxt} and ${WIN().endTxt}, so there was nothing to trade. Waiting is part of the strategy.`
       : !broke ? 'A level was swept, but structure never broke back the other way. No confirmation, no trade.'
-      : !gap ? 'Sweep and break happened, but no clean gap formed for an entry before 10:10.' : 'The steps came too late for the 9:50–10:10 entry window.';
+      : !gap ? `Sweep and break happened, but no clean gap formed for an entry before ${WIN().endTxt}.` : `The steps came too late for the ${WIN().eTxt} entry window.`;
   }
   return { td, sym, cat, headline, pnl, S, P, lesson, extra, levels: L, nm };
 }
@@ -4835,9 +4853,9 @@ function renderAnalysis() {
   const rows = [
     row('🔀', smtTf ? (C[smtTf].smt.v === 'bull' ? 'ok' : 'bad') : '', 'SMT', smtTf ? `${CONF_TFLBL[smtTf]}: ${esc(C[smtTf].smt.why)}` : `No divergence: ${nm} and ${window.TJR.INSTR[other].name} are moving together.`),
     row('🗓', htfAgree >= 2 ? 'ok' : htfAgree === 0 && lean !== 'NEUTRAL' ? 'bad' : '', 'Higher timeframes', `Daily ${B(lab('1d'))} · 4H ${B(lab('4h'))} · 1H ${B(lab('1h'))}${lean !== 'NEUTRAL' ? ` (${htfAgree} of 3 agree with the ${lean.toLowerCase()} lean)` : ''}.`),
-    row('1', sweep || took.length ? 'ok' : '', nowM >= 610 ? 'Potential · this morning' : 'Potential: liquidity sweep', sweep ? `${sweep.hm} ${esc(sweep.text.split(' (')[0])}.` : took.length ? `Overnight: ${took.join('; ')}. ${nowM < 570 ? 'Watching for a sweep after 9:30.' : 'No new sweep after 9:30 yet.'}` : 'No sweep yet.'),
-    row('2', bos || C['15m']?.bos?.v ? 'ok' : '', nowM >= 610 ? 'Confirmation · morning + now' : 'Confirmation: break of structure', `${bos ? `${bos.hm} ${esc(bos.text)}. ` : ''}${C['15m']?.bos?.v ? `${bos ? 'Now: ' : ''}15m structure is ${B(C['15m'].bos.v === 'bull' ? 'bullish' : 'bearish')} (${esc(C['15m'].bos.why)}).` : bos ? '' : 'No break of structure yet.'}`),
-    row('3', fvg ? 'ok' : '', nowM >= 610 ? 'Continuation · this morning' : 'Continuation: FVG entry', ord ? `${ord.hm} ${esc(ord.text)}.` : fvg ? `${fvg.hm} ${esc(fvg.text)}.` : C['5m']?.fvg?.v ? `5m: ${esc(C['5m'].fvg.why)}.` : 'No gap to enter from yet.'),
+    row('1', sweep || took.length ? 'ok' : '', nowM >= WIN().entryEnd ? 'Potential · this morning' : 'Potential: liquidity sweep', sweep ? `${sweep.hm} ${esc(sweep.text.split(' (')[0])}.` : took.length ? `Overnight: ${took.join('; ')}. ${nowM < 570 ? 'Watching for a sweep after 9:30.' : 'No new sweep after 9:30 yet.'}` : 'No sweep yet.'),
+    row('2', bos || C['15m']?.bos?.v ? 'ok' : '', nowM >= WIN().entryEnd ? 'Confirmation · morning + now' : 'Confirmation: break of structure', `${bos ? `${bos.hm} ${esc(bos.text)}. ` : ''}${C['15m']?.bos?.v ? `${bos ? 'Now: ' : ''}15m structure is ${B(C['15m'].bos.v === 'bull' ? 'bullish' : 'bearish')} (${esc(C['15m'].bos.why)}).` : bos ? '' : 'No break of structure yet.'}`),
+    row('3', fvg ? 'ok' : '', nowM >= WIN().entryEnd ? 'Continuation · this morning' : 'Continuation: FVG entry', ord ? `${ord.hm} ${esc(ord.text)}.` : fvg ? `${fvg.hm} ${esc(fvg.text)}.` : C['5m']?.fvg?.v ? `5m: ${esc(C['5m'].fvg.why)}.` : 'No gap to enter from yet.'),
     row('4', draw ? 'ok' : '', 'Draw on liquidity', draw ? `${B(f2(draw.p))} ${draw.n}${draw.htf ? ' (HTF)' : ''}, ${B(Math.abs(draw.p - px).toFixed(2))} pts away.` : `Lean is neutral. Above: ${above ? `${f2(above.p)} ${above.n}` : '–'} · below: ${below ? `${f2(below.p)} ${below.n}` : '–'}.`),
     row('✋', 'bad', 'Invalidation', bull ? `A move below ${B(f2(Math.min(st.sweepLow || lowAll, below ? below.p : lowAll)))} (${below ? below.n : "today's low"}) breaks the bullish idea.` : bear ? `A move above ${B(f2(Math.max(st.sweepHigh || highAll, above ? above.p : highAll)))} (${above ? above.n : "today's high"}) breaks the bearish idea.` : `Wait for one side to be swept and structure to break before leaning.`),
     row('📊', rob ? 'ok' : 'bad', 'From your backtest', `${nm}, best-tested settings: ${r.stats.trades} trades, ${Math.round(r.stats.winRate * 100)}% won, ${btMoney(r.stats.expectancy)} per trade ${rob ? '(passed all 3 checks)' : '(no proven edge)'}.${best ? ` Confluence history: ${CONF_TFLBL[best.tf]} alignment won ${Math.round(best.s.signal5.winRate * 100)}% vs ${Math.round(best.s.baseline * 100)}% random.` : ''}`),
@@ -5045,6 +5063,106 @@ function mcQuick(r, kind, cnt, days = 30, paths = 2000) {
   const P = getPlan(), R = { ...P.base.eval, ...(P.stage === 'eval' ? P.rules : {}) };
   const out = simAccount(simSource(r, true), window.TJR.INSTR[r.sym].pointValue, R, kind, cnt, days, paths, false, 'eval');
   return { pass: out.pass, fail: out.fail, plan: P.base.name };
+}
+
+// ============================================================
+// STRUCTURE MODEL WINDOWS — from backtest.json (scripts/backtest.mjs MODEL); Pine windows until it loads
+// ============================================================
+function WIN() {
+  const s = (typeof BT !== 'undefined' && BT && BT.struct) || { watchStart: 570, watchEnd: 610, entryStart: 590, entryEnd: 610, restEnd: 660, label: 'Pine windows' };
+  const f = m => `${Math.floor(m / 60) % 12 || 12}:${String(m % 60).padStart(2, '0')}`;
+  return { ...s, f, eTxt: `${f(s.entryStart)}–${f(s.entryEnd)}`, wTxt: f(s.watchStart), endTxt: f(s.entryEnd), cancelTxt: f(s.restEnd) };
+}
+
+// ============================================================
+// REPLAY PLAY-BY-PLAY — one structured note per 5-minute candle
+// ============================================================
+function rpNotesHtml(bars, snaps, events, upto, sym) {
+  const W = WIN(), out = [], cfg = engCfg(labCfg());
+  const KEY = { 'Asian high': 'aH', 'Asian low': 'aL', 'London high': 'lH', 'London low': 'lL', 'Prior-day high': 'pdH', 'Prior-day low': 'pdL' };
+  const watches = n => cfg.sweepLvl === 'Any' || (cfg.sweepLvl === 'Asian H/L' && /Asian/.test(n)) || (cfg.sweepLvl === 'London H/L' && /London/.test(n)) || (cfg.sweepLvl === 'PDH/PDL' && /Prior-day/.test(n));
+  // when each level was first traded through (after its session ended), from the candles shown
+  const takenAt = {};
+  for (let k = 1; k < bars.length && k <= upto; k++) { const L = snaps[k] && snaps[k].levels; if (!L) continue;
+    for (const [n, key] of Object.entries(KEY)) { if (takenAt[n]) continue; const lv = L[{ aH: 'asianH', aL: 'asianL', lH: 'londonH', lL: 'londonL', pdH: 'pdH', pdL: 'pdL' }[key]];
+      if (snaps[k].taken && snaps[k].taken[key] && !(snaps[k - 1] && snaps[k - 1].taken && snaps[k - 1].taken[key])) takenAt[n] = bars[k].hm; } }
+  const preTaken = n => { const s0 = snaps[0]; return s0 && s0.taken && s0.taken[KEY[n]]; };
+  const takenNote = (n, k) => { const at = takenAt[n]; if (preTaken(n)) return 'already taken before 7:30'; return at && bars.findIndex(b => b.hm === at) < k ? `already taken at ${at}` : ''; };
+  const start = Math.max(1, bars.findIndex(b => b.m >= W.watchStart - 5));
+  let avg = 0; { const rs = bars.slice(0, start).map(b => b.h - b.l); avg = rs.length ? rs.reduce((a, v) => a + v, 0) / rs.length : 0; }
+  const f2 = v => v.toFixed(2);
+  for (let k = start; k <= upto; k++) {
+    const b = bars[k], p = bars[k - 1], s = snaps[k], ps = snaps[k - 1] || s; if (!s) continue;
+    const L = s.levels, notes = [];
+    const rng = b.h - b.l, body = Math.abs(b.c - b.o), up = b.c >= b.o;
+    const big = avg && rng > 2 * avg;
+    notes.push(`<span class="${up ? 'bull' : 'bear'}">${up ? 'Bullish' : 'Bearish'} candle</span> · O ${f2(b.o)} H ${f2(b.h)} L ${f2(b.l)} C ${f2(b.c)} · range ${rng.toFixed(2)} pts${big ? ` <b>(${(rng / avg).toFixed(1)}× normal — displacement)</b>` : ''}`);
+    // liquidity this candle touched
+    for (const [n, lv, isHigh] of [['Prior-day high', L.pdH, 1], ['Asian high', L.asianH, 1], ['London high', L.londonH, 1], ['Prior-day low', L.pdL, 0], ['Asian low', L.asianL, 0], ['London low', L.londonL, 0], ['Midnight open', L.mOpen, null]]) {
+      if (lv == null || Number.isNaN(lv) || !(b.h >= lv && b.l <= lv)) continue;
+      if (isHigh === null) { notes.push(`Traded through the midnight open ${f2(lv)} (closed ${b.c > lv ? 'above' : 'below'}).`); continue; }
+      const back = isHigh ? b.c < lv : b.c > lv, tk = takenNote(n, k), fresh = !tk;
+      notes.push((isHigh ? `Traded through the <b>${n} ${f2(lv)}</b> (high ${f2(b.h)}) and ${back ? `<b>closed back below it</b> at ${f2(b.c)}` : `closed above it (accepting higher)`}`
+        : `Traded through the <b>${n} ${f2(lv)}</b> (low ${f2(b.l)}) and ${back ? `<b>closed back above it</b> at ${f2(b.c)}` : `closed below it (accepting lower)`}`) +
+        (fresh ? (back ? ` → <b>fresh ${isHigh ? 'buy' : 'sell'}-side liquidity taken and rejected</b>.` : '.') : ` — <span class="text-2">${tk}, so little liquidity was left there</span>.`) + (watches(n) ? '' : ` <span class="text-2">(not a level this setting trades)</span>`));
+    }
+    // what the strategy logged on this candle
+    for (const e of events.filter(e => e.t === b.t)) {
+      if (e.type === 'sweep') { const nm = Object.keys(KEY).find(n => e.text.includes(n)), tk = nm ? takenNote(nm, k) : '';
+        notes.push(`✓ <b>Step 1, sweep:</b> ${esc(e.text)}. The rules now look ${/Sell-side/.test(e.text) ? '<b>up</b> (for longs)' : '<b>down</b> (for shorts)'}.${tk ? ` <span class="cf-s">Fact check: this level was ${tk}; the rules count it because price is beyond it inside the window, not because it was a fresh sweep.</span>` : ''}`); }
+      else if (e.type === 'bos') notes.push(`✓ <b>Step 2, break of structure:</b> ${esc(e.text)}${e.data && Math.abs(e.data.close - e.data.level) ? ` — by ${Math.abs(e.data.close - e.data.level).toFixed(2)} pts` : ''}.`);
+      else if (e.type === 'fvg') notes.push(`✓ <b>Step 3, fair value gap:</b> ${esc(e.text)}. That midpoint is where the limit order goes.`);
+      else if (e.type === 'order') notes.push(`📌 <b>Order placed at this close:</b> ${esc(e.text)}. Risk ${e.data ? Math.abs(e.data.limit - e.data.stop).toFixed(1) : '?'} pts${e.data && e.data.tp1 != null ? ` · ½ off at ${e.data.tp1Name} ${f2(e.data.tp1)}` : ''}.`);
+      else if (e.type === 'fill') notes.push(`🔵 <b>Filled</b> ${esc(e.text.replace('Filled ', ''))}.`);
+      else if (e.type === 'scale') notes.push(`🟢 <b>Half out</b> at the liquidity: ${esc(e.text)}.`);
+      else if (e.type === 'exit') notes.push(`${e.data && e.data.pts >= 0 ? '🟢' : '🔴'} <b>Exit:</b> ${esc(e.text)}${e.data ? ` (${e.data.why})` : ''}.`);
+      else if (e.type === 'cancel') notes.push(`⚪ <b>Order cancelled</b> — price never came back to the entry.`);
+    }
+    // what we are waiting for next (structure levels from the engine)
+    const swept = s.sslSwept || s.bslSwept, bos = s.bosUp || s.bosDn, gap = !Number.isNaN(s.fvgMidL) || !Number.isNaN(s.fvgMidS);
+    const inWatch = b.m >= W.watchStart && b.m < W.watchEnd;
+    if (inWatch && !s.pending && !s.pos && !s.traded) {
+      if (!swept) {
+        const lv = [['Asian high', L.asianH, 1], ['London high', L.londonH, 1], ['Prior-day high', L.pdH, 1], ['Asian low', L.asianL, 0], ['London low', L.londonL, 0], ['Prior-day low', L.pdL, 0]].filter(x => x[1] != null && !Number.isNaN(x[1]) && watches(x[0]));
+        const above = lv.filter(x => x[2] && x[1] > b.c).sort((a, c) => a[1] - c[1])[0], below = lv.filter(x => !x[2] && x[1] < b.c).sort((a, c) => c[1] - a[1])[0];
+        const tag = x => { const tk = takenNote(x[0], k + 1); return tk ? ` <span class="text-2">(${tk})</span>` : ' <span class="cf-b">(fresh)</span>'; };
+        notes.push(`Waiting for a sweep of the ${esc(cfg.sweepLvl === 'Any' ? 'session levels' : cfg.sweepLvl)}: ${above ? `buy-side ${above[0]} ${f2(above[1])} (+${(above[1] - b.c).toFixed(1)})${tag(above)}` : ''}${above && below ? ' or ' : ''}${below ? `sell-side ${below[0]} ${f2(below[1])} (−${(b.c - below[1]).toFixed(1)})${tag(below)}` : ''}${!above && !below ? 'price is already beyond every level this setting trades' : ''}.`);
+      } else if (!bos) {
+        const lng = s.sslSwept && !s.bslSwept, lvl = lng ? s.refH : s.refL;
+        if (!Number.isNaN(lvl)) notes.push(`Waiting for the break: a close ${lng ? 'above' : 'below'} <b>${f2(lvl)}</b> (${s.bosMode === 'swing' ? 'last swing' : '5-candle'} ${lng ? 'high' : 'low'}), ${Math.abs(lvl - b.c).toFixed(1)} pts away.`);
+      } else if (!gap) notes.push(`Break done. Waiting for a gap: a candle that leaves space between itself and the candle two back (${s.bosDn ? 'bearish' : 'bullish'}).`);
+    }
+    if (b.m >= 570 && b.m < W.entryStart && gap && !s.pending && !s.traded) notes.push(`Setup complete, but 9:30–9:50 is the manipulation window: the order goes in from 9:50.`);
+    else if (b.m >= 570 && b.m < W.entryStart && b.m === 570) notes.push(`9:30 open: manipulation window until 9:50 — no entries.`);
+    if (s.pending) notes.push(`Order working: ${s.pending.dir === 'long' ? 'buy' : 'sell'} limit ${f2(s.pending.limit)}, ${Math.abs(b.c - s.pending.limit).toFixed(1)} pts from price.`);
+    if (s.pos) { const op = s.pos.dir === 'long' ? b.c - s.pos.entry : s.pos.entry - b.c; notes.push(`In the trade: <span class="${op >= 0 ? 'bull' : 'bear'}">${op >= 0 ? '+' : ''}${op.toFixed(1)} pts open</span> · stop ${f2(s.pos.stop)} · ${s.pos.tp1 != null && !s.pos.scaled ? `½ at ${f2(s.pos.tp1)} (${Math.abs(s.pos.tp1 - b.c).toFixed(1)} away) · ` : ''}target ${f2(s.pos.target)} (${Math.abs(s.pos.target - b.c).toFixed(1)} away).`); }
+    out.push(`<div class="rpn${k === upto ? ' rpn-now' : ''}"><div class="rpn-t">${b.hm}</div><div>${notes.map(n => `<div>${n}</div>`).join('')}</div></div>`);
+  }
+  return `<div class="fs-12 fw-600 text-2" style="margin:12px 0 6px">CANDLE BY CANDLE · ${esc(WIN().label || '')}</div><div class="rpn-list" id="rpn-list">${out.join('')}</div>`;
+}
+
+// ============================================================
+// STRUCTURE STUDY (Lab)
+// ============================================================
+let STRUCT = null;
+async function renderStructStudy() {
+  const el = document.getElementById('lab-ss'); if (!el) return;
+  if (!STRUCT) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">Loading the structure study…</div></div>'; STRUCT = await loadJSON('structure.json'); if (!STRUCT) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">structure.json not available here.</div></div>'; return; } }
+  const model = (BT && BT.struct && BT.struct.id) || '';
+  const tbl = sym => { const S = STRUCT.syms[sym]; return `<table class="bt-table"><tr><th>Structure</th><th>Avg trades</th><th>Robust</th><th>Profitable</th><th>Best robust setting</th></tr>${STRUCT.variants.map(V => { const x = S.variants[V.id], b = x.best;
+    return `<tr class="${V.id === model ? 'bt-row on' : ''}"><td>${V.id === model ? '▶ ' : ''}${esc(V.label)}</td><td>${x.avgTrades}</td><td class="${x.robust / x.of >= 0.5 ? 'bull' : x.robust ? '' : 'bear'}">${x.robust}/${x.of}</td><td>${x.positive}/${x.of}</td><td>${b ? `${btMoney(b.net)} · ${b.n} trades · halves ${btMoney(b.h1)} / ${btMoney(b.h2)}` : '–'}</td></tr>`; }).join('')}</table>`; };
+  el.innerHTML = `<div class="card mb-md"><div class="card-body fs-13" style="line-height:1.55">
+    <div class="fw-600" style="font-size:16px;margin-bottom:6px">Are we missing trades? Every structure variant, tested</div>
+    Each row re-runs the strategy with a different structure rule across all 25 stop/level settings and two exits (50 runs), with the same checks: profitable overall, in both halves, and under the stress test. ${STRUCT.syms['NQ=F'].sessions} sessions, ${STRUCT.syms['NQ=F'].from} → ${STRUCT.syms['NQ=F'].to}.
+    <ul style="margin:8px 0 0 18px;display:flex;flex-direction:column;gap:4px">
+      <li><b>On NQ1! the window mattered most.</b> Counting sweeps from the 8:30 open and allowing entries until 11:00 gave ~75% more trades, and 46 of 50 runs passed every check (vs 23 with the original window).</li>
+      <li><b>A stricter swing-based break of structure took away trades and edge</b> on 5-minute NQ; the 5-candle close break worked better.</li>
+      <li><b>A second setup per day didn't help.</b> ES1! has no robust structure in this sample.</li>
+      <li><b>Counting only fresh levels</b> (ones not already taken earlier, e.g. an Asian high London already ran) <b>cut trades and edge sharply</b>: with the original window NQ averaged 1.3 trades in 10 weeks. The working edge is the rules' looser version: price already beyond a session level, then a break of structure the other way and a gap. The Replay notes flag which sweeps were fresh and which levels were already taken.</li>
+      <li>The Lab, Replay and Readiness now use the ▶ row. 9:30–9:50 stays a no-entry window.</li>
+    </ul><div class="fs-12 text-2" style="margin-top:6px">Twenty-four variants were tried on ~10 weeks of data, so the best row is optimistic; the broad improvement across settings is the stronger evidence. Rules-based research, not a recommendation.</div></div></div>
+    <div class="card mb-md"><div class="card-body"><div class="fs-13 fw-600 mb-sm">NQ1!</div>${tbl('NQ=F')}</div></div>
+    <div class="card mb-md"><div class="card-body"><div class="fs-13 fw-600 mb-sm">ES1!</div>${tbl('ES=F')}</div></div>`;
 }
 
 // One refresh for everything that reads today's candles
