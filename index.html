@@ -1956,7 +1956,7 @@ let nqLevels = [];
 // CLOUD SYNC + PRICE API — Cloudflare Worker (cloudflare/worker.js)
 // Empty JC_API = sync off, prices from the GitHub Actions prices.json
 // ============================================================
-const JC_API = '';
+const JC_API = 'https://jc-trading.jacobcarpenterodell.workers.dev';
 const SYNC_KEYS = ['jct_bias','jct_bt_chat','jct_checklist','jct_dash_notes','jct_edge_notes',
   'jct_journal','jct_levels','jct_trades','tjr_bias','jct_risk','jct_plan'];
 
@@ -2724,7 +2724,9 @@ async function loadPrices() {
         if (res.ok) {
           pricesSnap = await res.json();
           pricesLoadedAt = Date.now();
-          lastPriceFetch = new Date(pricesSnap.updated * 1000);
+          // age of the market data itself (Yahoo CME quotes run ~10 min behind), not of our download
+          const qt = ['ES=F', 'NQ=F'].map(k => pricesSnap.quotes?.[k]?.time).filter(Boolean);
+          lastPriceFetch = new Date((qt.length ? Math.max(...qt) : pricesSnap.updated) * 1000);
         }
       } catch(e) {}
       pricesLoading = null;
@@ -4673,7 +4675,9 @@ async function loadContext() {
     loadJSON(JC_API ? JC_API + '/news' : DATA_URL + 'news.json?t=' + m),
     loadJSON(JC_API ? JC_API + '/sectors' : DATA_URL + 'sectors.json?t=' + m),
     window.confStats ? Promise.resolve(window.confStats) : loadJSON('confstats.json')]);
-  if (n) window.newsData = n; if (s) window.sectorData = s; if (c) window.confStats = c;
+  // Forex Factory blocks Cloudflare, so an empty calendar from the Worker falls back to the GitHub copy
+  let news = n; if (JC_API && (!news || !news.events || !news.events.length)) news = (await loadJSON(DATA_URL + 'news.json?t=' + m)) || news;
+  if (news) window.newsData = news; if (s) window.sectorData = s; if (c) window.confStats = c;
   renderEvents(); if (typeof renderConfluences === 'function') renderConfluences(); renderAnalysis();
 }
 // today's events in ET, with minutes after midnight
