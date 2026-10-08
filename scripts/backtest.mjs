@@ -8,7 +8,7 @@
 // Usage: node scripts/backtest.mjs              write both files
 //        node scripts/backtest.mjs --validate   print the ES v4 trade list (compare with TradingView) and check replay seeding
 import { writeFileSync } from 'node:fs';
-import { INSTR, COMMISSION, SLIP_TICKS, BASE, configs, et, run, stats } from './tjr-engine.mjs';
+import { INSTR, COMMISSION, SLIP_TICKS, BASE, EXITS, configs, et, run, stats } from './tjr-engine.mjs';
 
 const VALIDATE = process.argv.includes('--validate');
 const here = p => new URL('../' + p, import.meta.url);
@@ -46,8 +46,17 @@ for (const sym of Object.keys(INSTR)) {
     const halves = [r.trades.filter(t => t.td < mid), r.trades.filter(t => t.td >= mid)].map(ts => slim(stats(ts)));
     // execution stress test: limit fills only after trading 2 ticks through; 3 ticks slippage on stops and market exits
     const cons = run(bars, sym, { ...c, fillThrough: 2, slipTicks: 3 });
+    // exit rules compared: same entries, different ways out (each with the same robustness checks)
+    const exits = {};
+    for (const ex of Object.keys(EXITS)) {
+      if (ex === 'rules') continue;
+      const re = run(bars, sym, { ...c, exitMode: ex }), se = run(bars, sym, { ...c, exitMode: ex, fillThrough: 2, slipTicks: 3 });
+      exits[ex] = { trades: re.trades.map(({ td, dir, entryTime, entry, exitTime, exit, stop, target, tp1, scaled, risk, r, mfe, mae, mfeR, maeR, mins, pts, pnl, why }) => ({ td, dir, entryTime, entry, exitTime, exit, stop, target, tp1, scaled, risk, r, mfe, mae, mfeR, maeR, mins, pts, pnl, why })),
+        stats: slim(stats(re.trades)), halves: [re.trades.filter(t => t.td < mid), re.trades.filter(t => t.td >= mid)].map(ts => slim(stats(ts))),
+        stress: { stats: slim(stats(se.trades)), trades: se.trades.map(t => ({ td: t.td, pts: t.pts, pnl: t.pnl, r: t.r })) } };
+    }
     out.runs.push({ sym, name: I.name, ...cfg, trades: r.trades, funnel: r.funnel, skipped: r.skipped, stats: slim(st), equity: st.equity,
-      halves, stress: { stats: slim(stats(cons.trades)), trades: cons.trades.map(t => ({ td: t.td, pts: t.pts, pnl: t.pnl, r: t.r })) } });
+      halves, stress: { stats: slim(stats(cons.trades)), trades: cons.trades.map(t => ({ td: t.td, pts: t.pts, pnl: t.pnl, r: t.r })) }, exits });
   }
 
   // replay data: levels as of the 07:25 bar (from a full run), then candles 07:30–12:30
@@ -57,7 +66,7 @@ for (const sym of Object.keys(INSTR)) {
     const idx = bars.findIndex(b => b.td === td && b.m === 445); // 07:25
     if (idx < 0) continue;
     const s = full.snapshots[idx];
-    const seed = { aH: s.levels.asianH, aL: s.levels.asianL, lH: s.levels.londonH, lL: s.levels.londonL, pdH: s.levels.pdH, pdL: s.levels.pdL, dH: s.levels.dH, dL: s.levels.dL };
+    const seed = { aH: s.levels.asianH, aL: s.levels.asianL, lH: s.levels.londonH, lL: s.levels.londonL, pdH: s.levels.pdH, pdL: s.levels.pdL, dH: s.levels.dH, dL: s.levels.dL, mOpen: s.levels.mOpen };
     const day = bars.filter((b, i) => i > idx && b.td === td && b.m <= 750); // 07:30–12:30
     // 20 candles before 07:30 for the displacement average and the 5-bar BOS lookback
     const pre = bars.slice(Math.max(0, idx - 19), idx + 1);
@@ -70,8 +79,8 @@ for (const sym of Object.keys(INSTR)) {
     if (sym === 'ES=F') for (const t of v4.trades) console.log('  ', t.dir.padEnd(5), t.entryTime, t.entry, '->', t.exitTime, t.exit, t.why.padEnd(10), t.pnl);
     // replay seeding must reproduce the full-history run exactly, for every setting
     let bad = 0;
-    for (const cfg of configs(sym)) {
-      const c = { ...BASE, ...cfg }, ref = out.runs.find(r => r.sym === sym && r.id === cfg.id).trades;
+    for (const ex of Object.keys(EXITS)) for (const cfg of configs(sym)) {
+      const c = { ...BASE, ...cfg, exitMode: ex }, ref = ex === 'rules' ? out.runs.find(r => r.sym === sym && r.id === cfg.id).trades : run(bars, sym, c).trades;
       for (const [td, d] of Object.entries(replay.days[sym])) {
         const { toBars } = await import('./tjr-engine.mjs');
         const rb = toBars([...d.pre, ...d.bars]);

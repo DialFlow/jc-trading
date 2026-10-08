@@ -275,6 +275,23 @@ body {
 .gl { border-bottom: 1px dotted var(--blue); cursor: help; }
 .gl-pop { position: absolute; z-index: 50; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
 
+/* Lab menu: swipe sideways on phones; pickers full width */
+#lab-nav { overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+#lab-nav .mtf-seg { white-space: nowrap; flex-shrink: 0; }
+@media (max-width: 600px) { .lab-pick, .lab-pick select { width: 100%; } .lab-pick select { min-width: 0; } }
+
+/* Scenarios + exit plan */
+.sc-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; }
+.sc-chips { flex-wrap: wrap; }
+.sc-pnl { margin-left: auto; font-weight: 800; font-size: 18px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.sc-steps { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.sc-steps li { display: grid; grid-template-columns: 46px 1fr; gap: 8px; font-size: 14px; line-height: 1.45; }
+.sc-t { font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--blue); padding-top: 2px; }
+.sc-lesson { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--fill); font-size: 13px; line-height: 1.45; }
+.sc-win { border-left: 4px solid var(--bull); } .sc-loss { border-left: 4px solid var(--bear); } .sc-missed { border-left: 4px solid var(--warn); }
+.ready-exit { padding: 0 16px 12px; }
+.exit-tbl td { font-size: 12px; }
+
 /* Lab highlights feed */
 .hl-feed { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
 .hl-post { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; }
@@ -1759,11 +1776,13 @@ select { cursor: pointer; }
       <button class="mtf-seg" data-v="live" onclick="labView('live')">Today's setup</button>
       <button class="mtf-seg" data-v="bt" onclick="labView('bt')">Results</button>
       <button class="mtf-seg" data-v="sim" onclick="labView('sim')">Account sim</button>
+      <button class="mtf-seg" data-v="sc" onclick="labView('sc')">Scenarios</button>
       <button class="mtf-seg" data-v="replay" onclick="labView('replay')">Replay</button>
     </div>
     <div class="lab-pick">
       <div class="mtf-segs" id="lab-sym"></div>
       <select id="lab-cfg" onchange="labSetCfg(this.value)" aria-label="Strategy settings"></select>
+      <select id="lab-exit" onchange="labSetExit(this.value)" aria-label="Exit rule"></select>
     </div>
   </div>
 
@@ -1806,6 +1825,9 @@ select { cursor: pointer; }
     </div></div>
     <div id="sim-out"></div>
   </div>
+
+  <!-- SCENARIOS -->
+  <div class="lab-view" id="lab-sc" hidden></div>
 
   <!-- REPLAY -->
   <div class="lab-view" id="lab-replay" hidden>
@@ -3681,7 +3703,8 @@ const usd = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { 
 
 function labView(v) {
   document.querySelectorAll('#lab-nav .mtf-seg').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  for (const id of ['hl', 'live', 'bt', 'sim', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  for (const id of ['hl', 'live', 'bt', 'sim', 'sc', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  if (v === 'sc') renderScenarios(false);
   document.querySelector('.lab-pick').style.visibility = v === 'hl' ? 'hidden' : '';
   if (v === 'hl') renderHighlights();
   try { localStorage.setItem('jct_lab_view', v); } catch(e) {}
@@ -3703,20 +3726,27 @@ function labRenderPick() {
     `<button class="mtf-seg${s === labSym ? ' on' : ''}" onclick="labSetSym('${s}')">${n}</button>`).join('');
   const runs = labRuns().slice().sort((a, b) => (isRobust(b) - isRobust(a)) || (b.stats.net - a.stats.net));
   document.getElementById('lab-cfg').innerHTML = runs.map(r => `<option value="${r.id}"${r.id === labCfgId ? ' selected' : ''}>${isRobust(r) ? '✔ ' : '✗ '}${esc(btLabel(r))}</option>`).join('');
+  const cr = labCfg();
+  const ex = document.getElementById('lab-exit');
+  if (ex) ex.innerHTML = ['rules', 'liq', 'scale'].map(k => { const v = viaExit(cr, k); return `<option value="${k}"${k === (labExit || 'rules') ? ' selected' : ''}>${v && isRobust(v) ? '✔ ' : '✗ '}${EXIT_LABEL[k]} (${btMoney(v.stats.net)})</option>`; }).join('');
 }
-function labSetSym(s) { labSym = s; labCfgId = labDefaultCfg(); labRenderPick(); labRerender(); }
-function labSetCfg(id) { labCfgId = id; labRenderPick(); labRerender(); }
+function labSetSym(s) { labSym = s; labCfgId = labDefaultCfg(); labExit = defaultExitFor(labCfg()); labRenderPick(); labRerender(); }
+function labSetCfg(id) { labCfgId = id; labExit = defaultExitFor(labCfg()); labRenderPick(); labRerender(); }
 function labRerender() {
   const v = document.querySelector('#lab-nav .mtf-seg.on')?.dataset.v || 'live';
   if (v === 'live') liveRefresh(true);
   if (v === 'sim') simRun();
   if (v === 'replay') rpLoad();
+  if (v === 'sc') renderScenarios(true);
 }
 function labInit() {
   if (!BT) return;
-  labCfgId = labDefaultCfg(); labRenderPick();
+  labCfgId = labDefaultCfg();
+  try { labExit = localStorage.getItem('jct_lab_exit'); } catch(e) {}
+  if (!['rules', 'liq', 'scale'].includes(labExit)) labExit = defaultExitFor(labCfg());
+  labRenderPick();
   let v = 'hl'; try { v = localStorage.getItem('jct_lab_view') || 'hl'; } catch(e) {}
-  labView(['hl', 'live', 'bt', 'sim', 'replay'].includes(v) ? v : 'hl');
+  labView(['hl', 'live', 'bt', 'sim', 'sc', 'replay'].includes(v) ? v : 'hl');
   readyCycle(false);
 }
 
@@ -3783,6 +3813,7 @@ function stepsHtml(st, evs, nowM) {
   else if (st.rejected) out.push(row('bad', '✗', 'Setup skipped', st.rejected));
   else out.push(row('no', '○', 'Order', nowM < 590 ? 'Orders only go in from 9:50 to 10:10' : nowM >= 610 ? 'No order today' : 'Waiting for all three steps'));
   if (has('fill')) out.push(row('ok', '✓', '4 · Filled', `${fl.hm} ${fl.text}`));
+  if (has('scale')) { const sc = evText('scale'); out.push(row('ok', '✓', 'Half out at liquidity', `${sc.hm} ${sc.text}`)); }
   if (has('exit')) out.push(row(/Target/.test(ex.text) ? 'ok' : 'bad', /Target/.test(ex.text) ? '✓' : '✗', '4 · Exit', `${ex.hm} ${ex.text}`));
   if (has('cancel')) out.push(row('no', '○', 'Order expired', `${cn.hm} ${cn.text}`));
   return out.join('');
@@ -3802,8 +3833,9 @@ function bannerFor(st, evs, nowM, ageMin) {
   if (nowM < 610) return ['wait', 'Entry window open (9:50–10:10)', evs.some(e => e.type === 'fvg') ? 'Setup complete: order goes in on this candle close.' : 'No complete setup yet.'];
   return ['wait', 'No trade today under these rules', 'The setup did not complete before 10:10.'];
 }
-function edgeHtml(r) {
-  const s = r.stats, h = r.halves, x = r.stress.stats, rob = isRobust(r);
+function edgeHtml(r0) {
+  const r = viaExit(r0), s = r.stats, h = r.halves, x = r.stress.stats, rob = isRobust(r);
+  const cmp = ['rules', 'liq', 'scale'].map(k => { const v = viaExit(r0, k); return `<tr><td>${k === (labExit || 'rules') ? '▶ ' : ''}${EXIT_LABEL[k].replace('Exit: ', '')}</td><td class="${btCls(v.stats.net)}">${isRobust(v) ? '✔ ' : ''}${btMoney(v.stats.net)}</td></tr>`; }).join('');
   return `<table class="tkt">
     <tr><td>Trades (${BT.instruments[r.sym].nySessions} sessions)</td><td>${s.trades}</td></tr>
     <tr><td>Win rate (90% range)</td><td>${Math.round(s.winRate * 100)}% (${Math.round(s.winRateLo * 100)}–${Math.round(s.winRateHi * 100)}%)</td></tr>
@@ -3812,6 +3844,7 @@ function edgeHtml(r) {
     <tr><td>Stress test (worse fills)</td><td class="${btCls(x.net)}">${btMoney(x.net)}</td></tr>
     <tr><td>Max drawdown (1 contract)</td><td class="bear">−$${s.maxDD.toLocaleString('en-US')}</td></tr>
   </table>
+  <div class="fs-12 fw-600 text-2" style="margin:12px 0 4px">SAME ENTRIES, DIFFERENT EXITS</div><table class="tkt">${cmp}</table>
   <div class="fs-12" style="margin-top:8px">${rob ? '<span class="cf-b">✔ Robust:</span> profitable overall, in both halves and under stress. Weak evidence: only ' + s.trades + ' trades.' : '<span class="cf-s">✗ Not robust:</span> fails at least one check (overall, either half, or stress). The rules can fire, but history doesn\'t back them.'}</div>`;
 }
 function ticketHtml(st, r) {
@@ -3837,7 +3870,7 @@ async function liveRefresh(useCache) {
     const rows = labRaw?.bars?.[labSym]?.['5m'];
     if (!rows || rows.length < 100) { document.getElementById('live-banner').textContent = 'Today\'s candles are not available yet.'; return; }
     const bars = E.toBars(rows);
-    const res = E.run(bars, labSym, { ...E.BASE, ...r }, { keepOpen: true });
+    const res = E.run(bars, labSym, engCfg(r), { keepOpen: true });
     const st = res.state, td = st.td, evs = res.events.filter(e => e.td === td);
     const now = getCurrentETTime(), nowM = now.getHours() * 60 + now.getMinutes();
     const lastBar = bars[bars.length - 1], ageMin = (Date.now() / 1000 - lastBar.t - 300) / 60;
@@ -3847,7 +3880,7 @@ async function liveRefresh(useCache) {
     document.getElementById('live-banner').className = 'live-banner ' + cls;
     document.getElementById('live-banner').innerHTML = `${esc(title)}<span class="sub">${esc(sub)}${sub ? ' · ' : ''}${esc(r.name)} · ${esc(btLabel(r))} · session ${td} · last candle ${lastBar.hm} ET${sameDay ? '' : ' (market closed: showing the last session)'}</span>`;
     document.getElementById('live-steps').innerHTML = stepsHtml(st, evs, effM);
-    document.getElementById('live-ticket').innerHTML = ticketHtml(st, r);
+    document.getElementById('live-ticket').innerHTML = ticketHtml(st, r) + exitPlanHtml(labSym, st.pending || st.pos, st, r);
     document.getElementById('live-edge').innerHTML = edgeHtml(r);
     const dayBars = bars.filter(b => b.td === td && b.m >= 450 && b.m <= 750);
     drawSetupChart(document.getElementById('live-chart'), dayBars, st, evs, { slots: 61 });
@@ -3867,7 +3900,7 @@ function liveMiniOld(st, evs, nowM, ageMin, r, title) {
 const pctS = v => v > 0 && v < 0.005 ? '<1%' : Math.round(v * 100) + '%';
 function simRun() {
   if (!BT) return;
-  const r = labCfg(), I = { 'ES=F': { pv: 50 }, 'NQ=F': { pv: 20 } }[r.sym];
+  const r = viaExit(labCfg()), I = { 'ES=F': { pv: 50 }, 'NQ=F': { pv: 20 } }[r.sym];
   const kind = document.getElementById('sim-kind').value, n = Math.max(1, +document.getElementById('sim-n').value || 1);
   const target = +document.getElementById('sim-target').value, ddLim = +document.getElementById('sim-dd').value, dll = +document.getElementById('sim-dll').value;
   const days = Math.max(5, +document.getElementById('sim-days').value || 30), lock = document.getElementById('sim-lock').checked, stress = document.getElementById('sim-stress').checked;
@@ -3963,7 +3996,7 @@ function rpPlay() {
 function rpDraw() {
   if (!rpBars.length || !window.TJR) return;
   const E = window.TJR, r = labCfg(), upto = rpBars.slice(0, rpIdx + 1);
-  const res = E.run([...rpPre, ...upto], labSym, { ...E.BASE, ...r }, { seed: rpSeed, seedFrom: rpPre.length, keepOpen: true });
+  const res = E.run([...rpPre, ...upto], labSym, engCfg(r), { seed: rpSeed, seedFrom: rpPre.length, keepOpen: true });
   const st = res.state, evs = res.events, b = upto[upto.length - 1];
   const [cls, title, sub] = bannerFor(st, evs, b.m, null);
   const ban = document.getElementById('rp-banner');
@@ -4042,7 +4075,7 @@ function todayRun(sym) {
   const E = window.TJR, rows = labRaw?.bars?.[sym]?.['5m'];
   if (!E || !rows || rows.length < 100 || !BT) return null;
   const r = cfgFor(sym), bars = E.toBars(rows);
-  const res = E.run(bars, sym, { ...E.BASE, ...r }, { keepOpen: true });
+  const res = E.run(bars, sym, engCfg(r), { keepOpen: true });
   const st = res.state, td = st.td, last = bars[bars.length - 1];
   const midnight = bars.find(b => b.td === td && b.m === 0);
   return { r, st, td, bars, last, evs: res.events.filter(e => e.td === td), midnightOpen: midnight ? midnight.o : NaN,
@@ -4076,15 +4109,16 @@ function readiness(sym) {
   const add = (label, state, text, hard) => checks.push({ label, state, text, hard });
 
   // hard gates
-  add('Track record', isRobust(r) ? 'ok' : 'bad', isRobust(r)
-    ? `These settings passed all 3 history checks (${r.stats.trades} trades, +$${Math.round(r.stats.expectancy)} per trade)`
+  const rv = viaExit(r);
+  add('Track record', isRobust(rv) ? 'ok' : 'bad', isRobust(rv)
+    ? `These settings passed all 3 history checks (${rv.stats.trades} trades, +$${Math.round(rv.stats.expectancy)} per trade, ${EXIT_LABEL[labExit || 'rules'].toLowerCase()})`
     : `No setting for ${I.name} passed the history checks: the rules can fire, but there's no proven edge`, true);
   const dataNeeded = live && nowM >= 540 && nowM < 720;
   add('Fresh data', !dataNeeded ? 'na' : T.ageMin <= 15 ? 'ok' : 'bad',
     !dataNeeded ? `Last candle ${T.last.hm} ET` : T.ageMin <= 15 ? `Last candle ${T.last.hm} ET` : `Candles are ${Math.round(T.ageMin)} min old: use your TradingView chart`, true);
   const pv = I.pointValue;
   const stopPts = order ? Math.abs((order.limit ?? order.entry) - order.stop)
-    : r.stopMode === 'Fixed points' ? r.fixedStop : (r.trades.length ? r.trades.reduce((a, t) => a + t.risk, 0) / r.trades.length : r.maxRisk);
+    : r.stopMode === 'Fixed points' ? r.fixedStop : (r.trades && r.trades.length ? r.trades.reduce((a, t) => a + t.risk, 0) / r.trades.length : r.maxRisk);
   const microRisk = stopPts * pv / 10 + 1.5, fullRisk = stopPts * pv + 5, maxMicro = Math.floor(risk.trade / microRisk);
   add('Risk fits your limit', maxMicro >= 1 ? 'ok' : 'bad',
     `${order ? '' : 'Typical '}stop ${stopPts.toFixed(1)} pts = $${Math.round(microRisk)} per ${I.micro}, $${Math.round(fullRisk)} per ${I.name.replace('1!', '')}. Your limit $${risk.trade}: ${maxMicro >= 1 ? `up to ${maxMicro} ${I.micro}${fullRisk <= risk.trade ? ` or ${Math.floor(risk.trade / fullRisk)} ${I.name.replace('1!', '')}` : ''}` : `even 1 ${I.micro} is over it`}`, true);
@@ -4142,6 +4176,7 @@ function renderReadiness() {
   const el = document.getElementById('ready-wrap'); if (!el) return;
   if (!BT || !window.TJR || !labRaw) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">Trade Readiness is loading…</div></div>'; return; }
   const both = [['NQ=F', 'NQ1!'], ['ES=F', 'ES1!']].map(([s, n]) => ({ s, n, R: readiness(s) }));
+  for (const x of both) if (x.R) maybeAlert(x.s, x.n, x.R.verdict);
   const cur = both.find(x => x.s === readySym)?.R;
   if (!cur) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">Waiting for today\'s candles…</div></div>'; return; }
   const dot = c => ({ go: 'var(--bull)', caution: 'var(--warn)', bad: 'var(--bear)', watch: 'var(--blue)', prep: 'var(--blue)' }[c] || 'var(--text3)');
@@ -4150,12 +4185,13 @@ function renderReadiness() {
   el.innerHTML = `
   <div class="ready card mb-md">
     <div class="ready-top">
-      <div class="fs-12 fw-600 text-2" style="letter-spacing:.06em">TRADE READINESS · PER YOUR RULES</div>
+      <div class="fs-12 fw-600 text-2" style="letter-spacing:.06em">TRADE READINESS · PER YOUR RULES <button class="btn btn-secondary btn-xs" style="margin-left:6px" onclick="toggleAlerts()">${alertsOn() ? '🔔 Alerts on' : '🔕 Alerts off'}</button></div>
       <div class="mtf-segs">${both.map(x => `<button class="mtf-seg${x.s === readySym ? ' on' : ''}" onclick="readySetSym('${x.s}')"><span class="ready-dot" style="background:${x.R ? dot(x.R.verdict[0]) : 'var(--text3)'}"></span>${x.n}</button>`).join('')}</div>
     </div>
     <div class="ready-hero ready-${cls}"><div class="ready-title">${esc(title)}</div><div class="ready-sub">${esc(sub)}</div></div>
     ${sessionBar(etNow().m)}
     <div class="ready-checks">${checks.map(c => `<div class="rc rc-${c.state}"><span class="rc-ic">${ic[c.state]}</span><div><div class="rc-l">${c.label}${c.hard ? ' <span class="rc-must">must pass</span>' : ''}</div><div class="rc-t">${esc(c.text)}</div></div></div>`).join('')}</div>
+    ${cur.order ? `<div class="ready-exit">${exitPlanHtml(readySym, cur.order, cur.T.st, r)}</div>` : ''}
     <div class="ready-foot">
       <span class="fs-12 text-2">${I.name} · ${esc(btLabel(r))} · ${cur.ready} of ${cur.counted} conditions met · candles ${cur.T.last.hm} ET</span>
       <button class="btn btn-secondary btn-sm" onclick="showPage('backtest');labSetSym('${readySym}');labView('live')">Full ticket &amp; chart</button>
@@ -4236,6 +4272,10 @@ function renderHighlights() {
       <div><b class="${nq.halves[0].net > 0 && nq.halves[1].net > 0 ? 'bull' : 'bear'}">${nq.halves[0].net > 0 && nq.halves[1].net > 0 ? '✓' : '✗'}</b> Made money in <span class="gl" data-g="halves">both halves</span> <span class="text-2">${btMoney(nq.halves[0].net)} / ${btMoney(nq.halves[1].net)}</span></div>
       <div><b class="${nq.stress.stats.net > 0 ? 'bull' : 'bear'}">${nq.stress.stats.net > 0 ? '✓' : '✗'}</b> Survived the <span class="gl" data-g="stress">stress test</span> <span class="text-2">${btMoney(nq.stress.stats.net)}</span></div></div>
       <div class="fs-13">The same rules on ES1! lost money in every version (${btMoney(es.stats.net)} for the closest one). Same idea, different market: that's why we test.</div>`, caveat },
+    { id: 'exits', kicker: 'Smarter exits', big: (() => { const a = nq.stats.net, b = Math.max(viaExit(nq, 'liq').stats.net, viaExit(nq, 'scale').stats.net); return `${b >= a ? '+' : ''}${Math.round((b - a) / Math.abs(a) * 100)}% <span class="hl-small">by exiting at liquidity</span>`; })(),
+      title: 'Same entries, better exits: take profit where the liquidity is', body: `
+      <div class="hl-bars">${['rules', 'liq', 'scale'].map(k => { const v = viaExit(nq, k), mx = Math.max(...['rules', 'liq', 'scale'].map(z => viaExit(nq, z).stats.net)); return `<div class="hl-bar"><span>${{ rules: 'Far target', liq: 'At liquidity', scale: 'Half + runner' }[k]}</span><div><i style="width:${Math.max(2, v.stats.net / mx * 100).toFixed(0)}%;background:${k === 'rules' ? 'var(--text3)' : 'var(--bull)'}"></i></div><b>${btMoney(v.stats.net)}</b></div>`; }).join('')}</div>
+      <div class="fs-13">${Math.round((nq.stats.reach || [])[1]?.pct * 100 || 0)}% of trades went +1R in our favour, but only ${Math.round((nq.stats.reach || [])[3]?.pct * 100 || 0)}% reached +2R. Taking profit at the first pool of liquidity (a session high/low) catches the move before it fades.</div>`, caveat },
     { id: 'survival', kicker: 'Account survival · 30 days', big: `${Math.round(mcMicro.fail * 100)}% <span class="hl-small">blow-up risk with 3 MNQ</span>`, title: `vs ${Math.round(mcFull.fail * 100)}% with 1 full NQ`, body: `
       <div class="hl-bars"><div class="hl-bar"><span>3 × MNQ</span><div><i style="width:${(mcMicro.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcMicro.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcMicro.pass * 100)}% pass</b></div>
       <div class="hl-bar"><span>1 × NQ</span><div><i style="width:${(mcFull.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcFull.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcFull.pass * 100)}% pass</b></div></div>
@@ -4296,6 +4336,194 @@ async function hlShare(id) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   try { await navigator.clipboard.writeText(caption); showToast('Image saved · caption copied'); } catch(e) { showToast('Image saved'); }
 }
+
+// ============================================================
+// EXIT RULES — same entries, different ways out (scripts/tjr-engine.mjs EXITS)
+// ============================================================
+let labExit = null;
+// A run as seen through one exit rule: stats, halves, stress and trades for that exit
+function viaExit(r, ex) {
+  ex = ex || labExit || 'rules';
+  if (!r || ex === 'rules' || !r.exits || !r.exits[ex]) return r;
+  const e = r.exits[ex];
+  return { ...r, stats: e.stats, halves: e.halves, stress: e.stress, trades: e.trades, equity: null, exitMode: ex };
+}
+// Default exit for a setting: the robust exit whose weaker half is strongest
+function defaultExitFor(r) {
+  if (!r) return 'rules';
+  const opts = ['rules', 'liq', 'scale'].map(ex => ({ ex, v: viaExit(r, ex) })).filter(o => o.v && o.v.halves);
+  const rob = opts.filter(o => isRobust(o.v)).sort((a, b) => Math.min(b.v.halves[0].net, b.v.halves[1].net) - Math.min(a.v.halves[0].net, a.v.halves[1].net));
+  return (rob[0] || opts[0]).ex;
+}
+function labSetExit(ex) { labExit = ex; try { localStorage.setItem('jct_lab_exit', ex); } catch(e) {} labRenderPick(); labRerender(); readyCycle(false); }
+const EXIT_LABEL = { rules: 'Exit: rules target', liq: 'Exit: first liquidity ≥ 1R', scale: 'Exit: half at liquidity, rest runs' };
+const engCfg = r => ({ ...window.TJR.BASE, ...r, exitMode: labExit || 'rules' });
+
+// ============================================================
+// LIQUIDITY EXIT PLAN — session + higher-timeframe liquidity beyond the entry
+// ============================================================
+function htfPools(sym) {
+  const out = [], tfs = window.mtfScan?.syms?.[sym]?.tfs || {};
+  for (const tf of ['1h', '4h']) {
+    const d = tfs[tf]; if (!d) continue;
+    const bars = d.bars.slice(-80), pv = pivots(bars, 2);
+    for (const i of pv.hi.slice(-6)) out.push({ n: `${tf.toUpperCase()} swing high`, p: bars[i].h, htf: tf, side: 'BSL' });
+    for (const i of pv.lo.slice(-6)) out.push({ n: `${tf.toUpperCase()} swing low`, p: bars[i].l, htf: tf, side: 'SSL' });
+    for (const g of d.gaps.filter(g => g.i >= d.bars.length - 120 && g.status !== 'disrespected').slice(-8))
+      out.push({ n: `${tf.toUpperCase()} ${g.dir === 'bull' ? 'bullish' : 'bearish'} FVG`, p: g.dir === 'bull' ? g.hi : g.lo, htf: tf, side: g.dir === 'bull' ? 'SSL' : 'BSL' });
+  }
+  return out;
+}
+function exitPlanHtml(sym, o, st, r) {
+  if (!o) return '';
+  const lng = o.dir === 'long', ent = o.limit ?? o.entry, risk = Math.abs(ent - (o.stop0 ?? o.stop));
+  const L = st.levels;
+  const pools = [['Asian high', L.asianH], ['Asian low', L.asianL], ['London high', L.londonH], ['London low', L.londonL], ['Prior-day high', L.pdH], ['Prior-day low', L.pdL],
+    ['Midnight open', L.mOpen], ['NY high', L.nyH], ['NY low', L.nyL]].filter(x => x[1] != null && !Number.isNaN(x[1])).map(([n, p]) => ({ n, p, htf: '' }))
+    .concat(htfPools(sym))
+    .filter(x => lng ? x.p > ent + risk * 0.25 : x.p < ent - risk * 0.25)
+    .sort((a, b) => lng ? a.p - b.p : b.p - a.p);
+  const seen = new Set(), ladder = [];
+  for (const x of pools) { const k = Math.round(x.p); if (seen.has(k)) continue; seen.add(k); ladder.push(x); if (ladder.length >= 7) break; }
+  const v = viaExit(r), reach = v.stats.reach || [];
+  const pct = k => { const z = reach.find(x => x.r === k); return z ? Math.round(z.pct * 100) : null; };
+  const rows = ladder.map(x => {
+    const R = (Math.abs(x.p - ent) / risk), mark = o.tp1 != null && Math.abs(x.p - o.tp1) < 0.5 ? '◀ take half here' : Math.abs(x.p - o.target) < 0.5 ? '◀ final target' : '';
+    return `<tr><td>${x.n}${x.htf ? ' <span class="badge badge-purple" style="font-size:10px">HTF</span>' : ''}</td><td>${x.p.toFixed(2)}</td><td>${R.toFixed(1)}R</td><td class="fs-12 cf-b">${mark}</td></tr>`;
+  }).join('');
+  return `<div class="fs-12 fw-600 text-2" style="margin:14px 0 6px">EXIT PLAN · LIQUIDITY ${lng ? 'ABOVE' : 'BELOW'} THE ENTRY</div>
+    <table class="tkt exit-tbl"><tr><td class="text-2 fs-12">Pool</td><td class="text-2 fs-12">Price</td><td class="text-2 fs-12">Reward</td><td></td></tr>${rows || '<tr><td colspan="4" class="text-2">No liquidity found beyond the entry.</td></tr>'}</table>
+    <div class="fs-12" style="margin-top:8px;line-height:1.5">
+      <b>What history says</b> (${v.stats.trades} trades, these settings): price went <b>+1R</b> in your favour on ${pct(1)}% of trades, <b>+2R</b> on ${pct(2)}%, <b>+3R</b> on ${pct(3)}%. Median time in a trade: ${v.stats.medMins || '–'} min. Flat by 12:00 regardless.
+      ${(labExit || 'rules') === 'rules' ? '<br><span class="cf-s">Tip:</span> liquidity exits did better on NQ1! in testing; switch the exit rule above to compare.' : ''}
+    </div>`;
+}
+
+// ============================================================
+// ALERTS — notify when the verdict changes (works while the page is open)
+// ============================================================
+let lastVerdict = {};
+function alertsOn() { try { return localStorage.getItem('jct_alerts') === '1'; } catch(e) { return false; } }
+async function toggleAlerts() {
+  if (!alertsOn()) {
+    if ('Notification' in window && Notification.permission !== 'granted') { try { await Notification.requestPermission(); } catch(e) {} }
+    try { localStorage.setItem('jct_alerts', '1'); } catch(e) {}
+    showToast('Alerts on: keep this page open');
+  } else { try { localStorage.setItem('jct_alerts', '0'); } catch(e) {} showToast('Alerts off'); }
+  renderReadiness();
+}
+function beep() { try { const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.15, a.currentTime); o.start(); o.stop(a.currentTime + 0.25); } catch(e) {} }
+function maybeAlert(sym, name, verdict) {
+  const key = verdict[0] + '|' + verdict[1];
+  if (lastVerdict[sym] && lastVerdict[sym] !== key && alertsOn()) {
+    const important = ['go', 'caution', 'watch', 'done'].includes(verdict[0]);
+    if (important) {
+      try { if ('Notification' in window && Notification.permission === 'granted') new Notification(`${name}: ${verdict[1].replace(/^\S+\s/, '')}`, { body: verdict[2], tag: 'jc-' + sym }); } catch(e) {}
+      try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch(e) {}
+      beep(); showToast(`${name}: ${verdict[1]}`);
+    }
+  }
+  lastVerdict[sym] = key;
+}
+
+// ============================================================
+// SCENARIOS — play-by-play of every past session, simple or detailed
+// ============================================================
+let scFilter = 'all', scDepth = 'simple', scCache = null;
+const SC_CAT = { win: '✅ Win', loss: '❌ Loss', missed: '⏳ Order never filled', skipped: '✋ Skipped (stop too wide)', none: '💤 No setup' };
+function scSet(k, v) { if (k === 'f') scFilter = v; else scDepth = v; renderScenarios(false); }
+function scWhenReady(cb) { if (rpData) cb(); else rpInit().then(() => rpData && cb()); }
+function buildScenario(sym, td, r) {
+  const E = window.TJR, d = rpData.days[sym][td]; if (!d) return null;
+  const pre = E.toBars(d.pre), bars = E.toBars(d.bars), all = [...pre, ...bars];
+  const opts = { seed: d.seed, seedFrom: pre.length };
+  const res = E.run(all, sym, engCfg(r), opts), I = E.INSTR[sym], st = res.state, evs = res.events, t = res.trades[0];
+  const L = d.seed, nm = I.name, fx = v => v.toFixed(2);
+  const S = [], P = [];   // simple steps, pro notes
+  const at = e => e.hm;
+  for (const e of evs) {
+    if (e.type === 'sweep') {
+      const sell = /Sell-side/.test(e.text), lvl = e.text.split(': ')[1].split(' (')[0];
+      S.push([at(e), `Price ${sell ? 'dipped below' : 'pushed above'} the ${lvl}. Lots of traders had stop orders there, and they got triggered. That's the <b>sweep</b> (step 1), and it points to a move ${sell ? 'up' : 'down'}.`]);
+      P.push([e.hm, esc(e.text)]);
+    } else if (e.type === 'bos') {
+      const up = /Bullish/.test(e.text);
+      S.push([at(e), `A candle closed ${up ? 'above the highs' : 'below the lows'} of the last 5 candles. The ${up ? 'drop' : 'rally'} is broken: <b>break of structure</b> (step 2).`]);
+      P.push([e.hm, esc(e.text)]);
+    } else if (e.type === 'fvg') {
+      const m = e.text.match(/FVG ([\d.]+)–([\d.]+), midpoint ([\d.]+)/);
+      S.push([at(e), `The move left a <b>gap</b> between ${m[1]} and ${m[2]} (step 3). The entry goes in the middle, ${m[3]}.`]);
+      P.push([e.hm, esc(e.text)]);
+    } else if (e.type === 'order') {
+      const o = evs.find(x => x === e) && res.state; // order details come from the text
+      S.push([at(e), `Order placed: ${e.text.replace('Buy limit', 'buy at').replace('Sell limit', 'sell at')}. It only fills if price comes back to it.`]);
+      P.push([e.hm, esc(e.text)]);
+    } else if (e.type === 'fill') { S.push([at(e), `Price came back and the order <b>filled</b>: ${e.text.replace('Filled ', '')}.`]); P.push([e.hm, esc(e.text)]); }
+    else if (e.type === 'scale') { S.push([at(e), `Price reached the first pool of liquidity. <b>Half the position was closed</b> for a profit and the stop moved to the entry, so the rest can't lose.`]); P.push([e.hm, esc(e.text)]); }
+    else if (e.type === 'exit') {
+      const why = /Target/.test(e.text) ? 'hit the <b>target</b>' : /Stopped/.test(e.text) ? (t && t.scaled ? 'came back to the entry (break-even stop)' : 'hit the <b>stop</b>') : 'was closed at 12:00 (time limit)';
+      S.push([at(e), `The trade ${why}: ${e.text.split(' at ')[1]}.`]); P.push([e.hm, esc(e.text)]);
+    } else if (e.type === 'cancel') { S.push([at(e), `Price never came back to the entry, so the order was <b>cancelled</b> at 11:00. No trade.`]); P.push([e.hm, esc(e.text)]); }
+  }
+  let cat, headline, pnl = t ? t.pnl : 0, lesson, extra = '';
+  if (t) {
+    cat = t.pnl > 0 ? 'win' : 'loss';
+    headline = `${t.dir === 'long' ? 'Long' : 'Short'} ${t.pts >= 0 ? '+' : ''}${t.pts} pts · ${btMoney(t.pnl)}`;
+    if (t.pnl > 0 && t.why === 'target') lesson = 'Textbook: every step lined up and price reached the liquidity target.';
+    else if (t.pnl > 0) lesson = t.scaled ? 'Taking half at the first liquidity locked in profit; the rest added more.' : 'A winner, closed by the time rule at 12:00 before it reached the target.';
+    else if (t.why === 'break-even') lesson = 'Half came off at liquidity, then price reversed to the entry. Small result instead of a full loss: that is what scaling out is for.';
+    else if (t.mfeR >= 1) lesson = `Price went +${t.mfeR}R in your favour first, then turned and stopped out. A liquidity exit (half off at the first pool) would have paid here.`;
+    else if (t.mfeR < 0.5 && t.why === 'stop') lesson = 'The setup failed almost straight away. The stop did its job: a planned −1R loss, nothing worse.';
+    else lesson = 'The move never got going, and the 12:00 time limit closed it.';
+    P.push(['', `Risk ${t.risk} pts · result ${t.r}R · best ${t.mfeR}R (${t.mfe} pts) · worst −${t.maeR}R · ${t.mins} min in the trade`]);
+  } else if (evs.some(e => e.type === 'cancel')) {
+    cat = 'missed'; headline = 'Order never filled';
+    // what if the order had stayed open until 12:00?
+    const w = E.run(all, sym, { ...engCfg(r), restEnd: 720 }, opts).trades[0];
+    const ord = evs.find(e => e.type === 'order'), lim = parseFloat(ord.text.match(/limit ([\d.]+)/)[1]), lng = /Buy/.test(ord.text);
+    const after = bars.filter(b => b.t > ord.t && b.m < 660), best = lng ? Math.max(...after.map(b => b.h)) - lim : lim - Math.min(...after.map(b => b.l));
+    extra = `Without us, price ran ${Math.round(best)} pts in the right direction before 11:00. ` +
+      (w ? `If the order had stayed open until 12:00 it would have filled at ${w.entryTime.slice(11)} and ended ${w.pts >= 0 ? '+' : ''}${w.pts} pts (${btMoney(w.pnl)}), so the 11:00 cancel ${w.pnl < 0 ? 'saved money' : 'cost a winner'}.` : 'Even left open until 12:00, it never filled.');
+    lesson = best > 0 ? 'The read was right, but the entry at the gap\'s middle was too deep that day. The 11:00 cancel stops you chasing a late, faded fill.' : 'No fill and no move: nothing missed.';
+  } else if (st.rejected) { cat = 'skipped'; headline = 'Skipped: stop too wide'; lesson = `The stop would have been ${st.rejected.match(/stop ([\d.]+)/)?.[1] || '?'} pts, more than the ${r.maxRisk}-pt maximum. Skipping protects the account.`; }
+  else {
+    cat = 'none'; headline = 'No setup';
+    const swept = evs.some(e => e.type === 'sweep'), broke = evs.some(e => e.type === 'bos'), gap = evs.some(e => e.type === 'fvg');
+    lesson = !swept ? 'No level was swept between 9:30 and 10:10, so there was nothing to trade. Waiting is part of the strategy.'
+      : !broke ? 'A level was swept, but structure never broke back the other way. No confirmation, no trade.'
+      : !gap ? 'Sweep and break happened, but no clean gap formed for an entry before 10:10.' : 'The steps came too late for the 9:50–10:10 entry window.';
+  }
+  return { td, sym, cat, headline, pnl, S, P, lesson, extra, levels: L, nm };
+}
+function renderScenarios(rebuild = true) {
+  const el = document.getElementById('lab-sc'); if (!el || !BT) return;
+  if (!window.TJR || !rpData) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">Loading past sessions…</div></div>'; scWhenReady(() => whenTJR(() => renderScenarios(true))); return; }
+  const r = labCfg();
+  const key = labSym + '|' + r.id + '|' + (labExit || 'rules');
+  if (rebuild || !scCache || scCache.key !== key)
+    scCache = { key, list: Object.keys(rpData.days[labSym] || {}).sort().reverse().map(td => buildScenario(labSym, td, r)).filter(Boolean) };
+  const list = scCache.list, count = c => list.filter(x => x.cat === c).length;
+  const shown = list.filter(x => scFilter === 'all' || x.cat === scFilter || (scFilter === 'loss' && x.cat === 'loss'));
+  const chip = (v, l) => `<button class="mtf-seg${scFilter === v ? ' on' : ''}" onclick="scSet('f','${v}')">${l}</button>`;
+  el.innerHTML = `
+    <div class="sc-head">
+      <div class="mtf-segs sc-chips">${chip('all', `All ${list.length}`)}${chip('win', `Wins ${count('win')}`)}${chip('loss', `Losses ${count('loss')}`)}${chip('missed', `Not filled ${count('missed')}`)}${chip('none', `No setup ${count('none') + count('skipped')}`)}</div>
+      <div class="mtf-segs"><button class="mtf-seg${scDepth === 'simple' ? ' on' : ''}" onclick="scSet('d','simple')">Simple</button><button class="mtf-seg${scDepth === 'pro' ? ' on' : ''}" onclick="scSet('d','pro')">Detailed</button></div>
+    </div>
+    <div class="fs-12 text-2" style="margin:6px 2px 12px">${esc(r.name)} · ${esc(btLabel(r))} · ${EXIT_LABEL[labExit || 'rules']}. Every session the rules saw, written as it happened.</div>
+    <div class="hl-feed">${shown.filter(x => scFilter !== 'none' || x.cat === 'none' || x.cat === 'skipped').map(x => `
+      <article class="hl-post sc-${x.cat}">
+        <header><div class="hl-av">${x.nm.replace('1!', '')}</div><div><div class="fw-600 fs-13">${new Date(x.td + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</div><div class="fs-12 text-2">${SC_CAT[x.cat]}</div></div>
+          <div class="sc-pnl ${btCls(x.pnl)}">${x.pnl ? btMoney(x.pnl) : ''}</div></header>
+        <div class="hl-title">${esc(x.headline)}</div>
+        ${x.S.length ? `<ol class="sc-steps">${(scDepth === 'pro' ? x.P : x.S).map(([tm, txt]) => `<li><span class="sc-t">${tm}</span><span>${txt}</span></li>`).join('')}</ol>` : ''}
+        ${x.extra ? `<div class="fs-13" style="margin-top:8px">${esc(x.extra)}</div>` : ''}
+        <div class="sc-lesson"><b>Lesson:</b> ${esc(x.lesson)}</div>
+        ${scDepth === 'pro' ? `<div class="fs-12 text-2" style="margin-top:6px">Levels: PDH ${fx2(x.levels.pdH)} · PDL ${fx2(x.levels.pdL)} · Asia ${fx2(x.levels.aH)}/${fx2(x.levels.aL)} · London ${fx2(x.levels.lH)}/${fx2(x.levels.lL)}</div>` : ''}
+        <footer><button class="btn btn-secondary btn-sm" onclick="scReplay('${x.td}')">▶ Replay this day</button></footer>
+      </article>`).join('') || '<div class="fs-13 text-2">No sessions in this group.</div>'}</div>`;
+}
+function scReplay(td) { labView('replay'); setTimeout(() => { const s = document.getElementById('rp-day'); if (s) { s.value = td; rpLoad(); } }, 50); }
 
 // One refresh for everything that reads today's candles
 async function readyCycle(force) {

@@ -29,6 +29,15 @@ The site will be shared with a few of Jacob's friends (beginners): keep wording 
 ## Playbook tab (Oct 8)
 - Auto levels per contract (PDH/PDL, Asia, London, midnight open, marked "swept today"), TJR 4 steps in plain English with glossary terms, a session clock, Jacob's own levels (`jct_levels`), rules (rewritten to TJR; the old ORB/VWAP template text was removed), and editable risk limits (`jct_risk`, synced). The old hardcoded "reference levels" (ES ATH 5878…) were placeholder data and are gone.
 
+## Exits, scenarios, alerts (Oct 8, late)
+- **Engine exit modes** (`cfg.exitMode`, `EXITS`): `rules` (Pine target, the default; TradingView parity intact), `liq` (all out at the first liquidity pool ≥1R: session H/L, midnight open, NY high/low since 9:30), `scale` (half out there, stop to break-even, rest to the rules target). Trades now carry MFE/MAE (`mfeR`, `maeR`), `mins` and `scaled`. `stats().reach` = % of trades that reached 0.5/1/1.5/2/3R. `cfg.restEnd` (default 660 = 11:00) lets scenarios ask "what if the order had stayed open to 12:00".
+- **Evidence (Jul 30–Oct 8):** on NQ, liquidity exits raise the sum of net across all 25 settings by ~30% (137k → 179k) and robust settings 11 → 12. Default NQ setting: rules +$7,705 · liq +$9,820 · scale +$9,438 (most even halves 4,470/4,968). 80% of trades reach +1R but only 20% reach +2R. ES: no exit helps (0 robust).
+- `backtest.json` has `exits.{liq,scale}` per run (trades, stats, halves, stress); about 780 KB. `--validate` checks replay = full run for every exit mode × setting.
+- **Lab:** an exit picker (`labExit`, default = robust exit with the strongest weaker half; `jct_lab_exit`). `viaExit(r)` gives a run's stats under the chosen exit, and `engCfg(r)` feeds every engine call (live, readiness, replay, scenarios).
+- **Exit plan** (`exitPlanHtml`): a liquidity ladder beyond the entry, combining session pools with 1H/4H swing highs/lows and unfilled HTF FVG edges from the MTF scan, in R, with TP1/target marked and the historical reach %. Shown in the Live ticket and in Readiness when an order exists. Oct 8 check: it listed the 1H swing high 31369.75, which was the exact top.
+- **Scenarios** (Lab): every replay session written as a play-by-play (Simple = plain English, Detailed = engine events + R/MFE/MAE). Categories: win/loss/missed/skipped/none, each with a lesson. Missed orders get the what-if (Oct 8: a fill at 11:25 would have lost $920, so the cancel saved money). "Replay this day" opens the replay.
+- **Alerts:** a 🔔 toggle on Readiness (`jct_alerts`). Notification + vibrate + beep when the verdict changes to watch/go/caution/done. Only while the page is open; real-time also depends on fresh candles (Cloudflare).
+
 ## Lab Highlights (Oct 8)
 - Default Lab view: a feed of post cards (today's verdict, result + equity spark, win rate vs win size, robustness checks, account survival via `mcQuick`, best/worst trade, 4-step diagram). Every results card carries the sample-size caveat.
 - `.gl` terms open a plain-English `GLOSSARY` popover. `hlShare(id)` draws a 1080×1350 PNG on a canvas and uses the Web Share sheet, else downloads it and copies the caption.

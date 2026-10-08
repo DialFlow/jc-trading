@@ -11,7 +11,11 @@ export const INSTR = {
 export const COMMISSION = 2.5; // per contract per side
 export const SLIP_TICKS = 1;   // market and stop orders only (Pine doesn't slip limit orders)
 // rollGap: a session-open jump this large is treated as a contract roll (no PDH/PDL that day).
-export const BASE = { rr: 2, dispLen: 20, dispMult: 1.5, rollGap: 0.02, fillThrough: 0, slipTicks: SLIP_TICKS };
+// restEnd: ET minute when an unfilled order is cancelled (rules: 11:00). Scenarios use 12:00 for "what if it had stayed open".
+// exitMode: 'rules' = Pine target (default, TradingView parity) · 'liq' = all out at the first liquidity ≥ 1R ·
+//           'scale' = half out at that liquidity, stop to break-even, rest to the rules target
+export const BASE = { rr: 2, dispLen: 20, dispMult: 1.5, rollGap: 0.02, fillThrough: 0, slipTicks: SLIP_TICKS, restEnd: 660, exitMode: 'rules' };
+export const EXITS = { rules: 'Rules target', liq: 'First liquidity ≥ 1R', scale: 'Half at liquidity, rest runs' };
 
 // v4 + the 24 v5 combinations from CLAUDE.md's "Next backtest ideas"
 export function configs(sym) {
@@ -54,7 +58,7 @@ export function run(bars, sym, cfg, opts = {}) {
   const st = { aH: NaN, aL: NaN, lH: NaN, lL: NaN, pdH: NaN, pdL: NaN, dH: NaN, dL: NaN,
     sslSwept: false, bslSwept: false, sweepLow: NaN, sweepHigh: NaN, traded: false,
     sslCount: 0, bslCount: 0, wasBelow: false, wasAbove: false, ssl2Low: NaN, bsl2High: NaN,
-    bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rejected: '' };
+    bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rejected: '', mOpen: NaN, nyH: NaN, nyL: NaN };
   const fun = { days: 0, sweep: 0, bos: 0, fvg: 0, orders: 0 };
   let c = { sweep: false, bos: false, fvg: false, risk: false };
   let pending = null, pos = null, flatNext = false;
@@ -71,16 +75,28 @@ export function run(bars, sym, cfg, opts = {}) {
   };
   const nearest = (a, isHigh) => a.length ? a.reduce((m, x) => (isHigh ? x.p < m.p : x.p > m.p) ? x : m) : null;
   const target = (a, isHigh, edge) => { const f = a.filter(x => isHigh ? x.p >= edge : x.p <= edge); return f.length ? nearest(f, isHigh) : null; };
+  // nearest liquidity pool at or beyond `edge` in the trade's direction (all session levels, midnight open, NY high/low)
+  const liquidity = (isLong, edge) => {
+    const pools = [['Asian high', st.aH], ['Asian low', st.aL], ['London high', st.lH], ['London low', st.lL], ['Prior-day high', st.pdH], ['Prior-day low', st.pdL],
+      ['Midnight open', st.mOpen], ['NY high', st.nyH], ['NY low', st.nyL]].filter(([, p]) => !Number.isNaN(p) && (isLong ? p >= edge : p <= edge));
+    return pools.length ? pools.map(([n, p]) => ({ n, p })).reduce((m, x) => (isLong ? x.p < m.p : x.p > m.p) ? x : m) : null;
+  };
   const stopFor = (isLong, entry) => {
     if (cfg.stopMode === 'Fixed points') return isLong ? entry - cfg.fixedStop : entry + cfg.fixedStop;
     if (cfg.stopMode === 'Second sweep' && (isLong ? st.sslCount >= 2 : st.bslCount >= 2))
       return isLong ? st.ssl2Low - tick : st.bsl2High + tick;
     return isLong ? st.sweepLow - tick : st.sweepHigh + tick;
   };
+  // excursion tracking: how far the trade went for (MFE) and against (MAE) you while open
+  const track = p => { pos.best = pos.dir === 'long' ? Math.max(pos.best, p) : Math.min(pos.best, p); pos.worst = pos.dir === 'long' ? Math.min(pos.worst, p) : Math.max(pos.worst, p); };
   const close = (b, price, why) => {
-    const pts = pos.dir === 'long' ? price - pos.entry : pos.entry - price, risk = Math.abs(pos.entry - pos.stop);
+    track(price);
+    const rest = pos.dir === 'long' ? price - pos.entry : pos.entry - price, risk = Math.abs(pos.entry - pos.stop0);
+    const pts = pos.scaled ? (pos.half + rest) / 2 : rest;
+    const mfe = Math.abs(pos.best - pos.entry), mae = Math.abs(pos.worst - pos.entry);
     trades.push({ dir: pos.dir, entryTime: pos.entryT, entry: pos.entry, exitTime: `${b.date} ${b.hm}`, exit: price,
-      stop: pos.stop, target: pos.target, risk: +risk.toFixed(2), r: risk ? +(pts / risk).toFixed(2) : 0,
+      stop: pos.stop0, target: pos.target, tp1: pos.tp1, scaled: !!pos.scaled, risk: +risk.toFixed(2), r: risk ? +(pts / risk).toFixed(2) : 0,
+      mfe: +mfe.toFixed(2), mae: +mae.toFixed(2), mfeR: risk ? +(mfe / risk).toFixed(2) : 0, maeR: risk ? +(mae / risk).toFixed(2) : 0, mins: Math.round((b.t - pos.fillT) / 60),
       pts: +pts.toFixed(2), pnl: +(pts * I.pointValue - 2 * COMMISSION).toFixed(2), why, td: pos.td });
     ev(b, 'exit', `${why === 'target' ? 'Target' : why === 'stop' ? 'Stopped out' : 'Closed'} at ${price.toFixed(2)} (${pts >= 0 ? '+' : ''}${pts.toFixed(2)} pts)`);
     pos = null;
@@ -99,7 +115,7 @@ export function run(bars, sym, cfg, opts = {}) {
         const hit = p.dir === 'long' ? (first && a <= T) || (down && z <= T && a >= T) : (first && a >= T) || (!down && z >= T && a <= T);
         if (hit) {
           const px = first && (p.dir === 'long' ? a <= L : a >= L) ? (p.dir === 'long' ? Math.min(a, L) : Math.max(a, L)) : L;
-          pos = { dir: p.dir, entry: px, stop: p.stop, target: p.target, entryT: `${b.date} ${b.hm}`, td: b.td };
+          pos = { dir: p.dir, entry: px, stop: p.stop, target: p.target, entryT: `${b.date} ${b.hm}`, td: b.td, fillT: b.t, best: px, worst: px, targetName: p.targetName, stop0: p.stop, tp1: p.tp1, tp1Name: p.tp1Name };
           pending = null;
           ev(b, 'fill', `Filled ${p.dir} at ${px.toFixed(2)}`);
           a = ft ? T : px; // the rest of this leg can still reach the stop/target
@@ -111,7 +127,11 @@ export function run(bars, sym, cfg, opts = {}) {
                             : (first && a >= pos.stop) || (!down && z >= pos.stop && a <= pos.stop);
         const tgtHit = lng ? (first && a >= pos.target) || (!down && z >= pos.target && a <= pos.target)
                            : (first && a <= pos.target) || (down && z <= pos.target && a >= pos.target);
-        if (stopHit) { const gap = lng ? a < pos.stop : a > pos.stop; const raw = gap && first ? a : pos.stop; close(b, lng ? raw - cfg.slipTicks * tick : raw + cfg.slipTicks * tick, 'stop'); return; }
+        if (stopHit) { const gap = lng ? a < pos.stop : a > pos.stop; const raw = gap && first ? a : pos.stop; close(b, lng ? raw - cfg.slipTicks * tick : raw + cfg.slipTicks * tick, pos.scaled ? 'break-even' : 'stop'); return; }
+        if (pos.tp1 != null && !pos.scaled) {
+          const t1 = lng ? (first && a >= pos.tp1) || (!down && z >= pos.tp1 && a <= pos.tp1) : (first && a <= pos.tp1) || (down && z <= pos.tp1 && a >= pos.tp1);
+          if (t1) { pos.scaled = true; pos.half = Math.abs(pos.tp1 - pos.entry); pos.stop = pos.entry; ev(b, 'scale', `Half out at ${pos.tp1.toFixed(2)} (${pos.tp1Name}); stop to break-even ${pos.entry.toFixed(2)}`); }
+        }
         if (tgtHit) { const gap = lng ? a > pos.target : a < pos.target; close(b, gap && first ? a : pos.target, 'target'); return; }
       }
       first = false;
@@ -126,6 +146,7 @@ export function run(bars, sym, cfg, opts = {}) {
     if (flatNext && pos) { const lng = pos.dir === 'long'; close(b, lng ? b.o - cfg.slipTicks * tick : b.o + cfg.slipTicks * tick, '12:00 flat'); }
     flatNext = false;
     if (pending || pos) emulate(b);
+    if (pos) { if (pos.fillT === b.t) track(b.c); else { track(b.h); track(b.l); } }
 
     // 2. script logic on this bar's close
     if (b.td !== prevTd) {
@@ -137,6 +158,9 @@ export function run(bars, sym, cfg, opts = {}) {
     const pb = bars[i - 1], pm = pb ? pb.m : -1;
     if (asian && !(pb && inWin(pm, ...SESS.asian))) { st.aH = b.h; st.aL = b.l; } else if (asian) { st.aH = Math.max(st.aH, b.h); st.aL = Math.min(st.aL, b.l); }
     if (london && !(pb && inWin(pm, ...SESS.london))) { st.lH = b.h; st.lL = b.l; } else if (london) { st.lH = Math.max(st.lH, b.h); st.lL = Math.min(st.lL, b.l); }
+    if (m === 0) st.mOpen = b.o;
+    if (b.td !== (pb && pb.td)) st.mOpen = NaN;
+    if (m >= 570 && m < 720) { st.nyH = (pb && pb.td === b.td && pm >= 570) ? Math.max(st.nyH, b.h) : b.h; st.nyL = (pb && pb.td === b.td && pm >= 570) ? Math.min(st.nyL, b.l) : b.l; }
     const startWatch = watch && !(pb && inWin(pm, ...SESS.watch) && pb.td === b.td);
     if (startWatch) {
       Object.assign(st, { sslSwept: false, bslSwept: false, traded: false, sweepLow: b.l, sweepHigh: b.h, sslCount: 0, bslCount: 0,
@@ -187,20 +211,27 @@ export function run(bars, sym, cfg, opts = {}) {
       const tgt = lt ? lt.p : (lng ? entry + risk * cfg.rr : entry - risk * cfg.rr);
       // TradingView rounds limit prices to the tick: longs down, shorts up (matches its v4 trade list)
       const lim = lng ? Math.floor(entry / tick) * tick : Math.ceil(entry / tick) * tick;
-      pending = { dir, limit: lim, stop, target: Math.round(tgt / tick) * tick, targetName: lt ? lt.n : `${cfg.rr}R`, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, td: b.td };
+      let tgtP = Math.round(tgt / tick) * tick, targetName = lt ? lt.n : `${cfg.rr}R`, tp1 = null, tp1Name = null;
+      if (cfg.exitMode === 'liq' || cfg.exitMode === 'scale') {
+        const L = liquidity(lng, lim + (lng ? risk : -risk));
+        const p1 = L ? L.p : lim + (lng ? risk : -risk), n1 = L ? L.n : '1R';
+        if (cfg.exitMode === 'liq') { tgtP = Math.round(p1 / tick) * tick; targetName = n1; }
+        else if (lng ? p1 < tgtP : p1 > tgtP) { tp1 = Math.round(p1 / tick) * tick; tp1Name = n1; }
+      }
+      pending = { dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, td: b.td };
       st.traded = true; st.rejected = '';
       ev(b, 'order', `${lng ? 'Buy' : 'Sell'} limit ${lim.toFixed(2)} · stop ${stop.toFixed(2)} · target ${pending.target.toFixed(2)} (${pending.targetName})`);
       if (!c.risk) { c.risk = true; fun.orders++; }
     };
     if (canTrade && !Number.isNaN(st.fvgMidL)) place('long', st.fvgMidL);
     if (canTrade && !st.traded && !Number.isNaN(st.fvgMidS)) place('short', st.fvgMidS);
-    if (!inWin(m, ...SESS.rest) && !pos && pending) { ev(b, 'cancel', 'Unfilled order cancelled (11:00)'); pending = null; }
+    if (!inWin(m, SESS.rest[0], cfg.restEnd || SESS.rest[1]) && !pos && pending) { ev(b, 'cancel', `Unfilled order cancelled (${Math.floor((cfg.restEnd || 660) / 60)}:${String((cfg.restEnd || 660) % 60).padStart(2, '0')})`); pending = null; }
     if (inWin(m, ...SESS.flat) && pos) flatNext = true;
     if (opts.snapshots) snaps.push(snapshot(b));
   }
   function snapshot(b) {
     return { t: b.t, td: b.td, hm: b.hm, m: b.m, close: b.c,
-      levels: { asianH: st.aH, asianL: st.aL, londonH: st.lH, londonL: st.lL, pdH: st.pdH, pdL: st.pdL, dH: st.dH, dL: st.dL },
+      levels: { asianH: st.aH, asianL: st.aL, londonH: st.lH, londonL: st.lL, pdH: st.pdH, pdL: st.pdL, dH: st.dH, dL: st.dL, mOpen: st.mOpen, nyH: st.nyH, nyL: st.nyL },
       sslSwept: st.sslSwept, bslSwept: st.bslSwept, sslName: st.sslName, bslName: st.bslName, sweepLow: st.sweepLow, sweepHigh: st.sweepHigh,
       sslCount: st.sslCount, bslCount: st.bslCount, bosUp: st.bosUp, bosDn: st.bosDn, fvgMidL: st.fvgMidL, fvgMidS: st.fvgMidS,
       traded: st.traded, rejected: st.rejected, pending: pending && { ...pending }, pos: pos && { ...pos }, skipped: skipped.has(b.td) };
@@ -222,6 +253,8 @@ export function stats(trades) {
   const z = 1.645, den = 1 + z * z / n, ctr = (wr + z * z / (2 * n)) / den, half = n ? z * Math.sqrt(wr * (1 - wr) / n + z * z / (4 * n * n)) / den : 0;
   return { trades: n, wins: wins.length, net: +eq.toFixed(2), winRate: wr, winRateLo: n ? Math.max(0, ctr - half) : 0, winRateHi: n ? Math.min(1, ctr + half) : 0,
     pf: gl ? +(gw / gl).toFixed(2) : (gw ? null : 0), expectancy: n ? +(eq / n).toFixed(2) : 0,
+    reach: [0.5, 1, 1.5, 2, 3].map(k => ({ r: k, pct: n ? trades.filter(t => (t.mfeR ?? 0) >= k).length / n : 0 })),
+    medMins: n ? trades.map(t => t.mins ?? 0).sort((a, b) => a - b)[n >> 1] : 0,
     avgR: n ? +(trades.reduce((a, t) => a + t.r, 0) / n).toFixed(2) : 0,
     avgWin: wins.length ? +(gw / wins.length).toFixed(2) : 0, avgLoss: losses.length ? +(-gl / losses.length).toFixed(2) : 0, maxDD: +dd.toFixed(2), equity };
 }
