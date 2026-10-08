@@ -7,7 +7,8 @@
 //
 // Routes:
 //   GET /prices?symbols=ES=F,NQ=F,...  → { updated, source, quotes: { sym: {price, prev, time} } }
-//   GET /sync                          → { key: { v, t } }        (header X-Sync-Key required)
+//   GET /bars                          → { updated, bars: { "ES=F": { "5m": [[t,o,h,l,c]…], "15m", "1h", "1d" }, "NQ=F": … } }
+//   GET /sync                         → { key: { v, t } }        (header X-Sync-Key required)
 //   PUT /sync   body { key: { v, t } } → merged state, newest t wins per key
 
 const CORS = {
@@ -29,6 +30,7 @@ export default {
     const url = new URL(req.url);
     try {
       if (url.pathname === '/prices' && req.method === 'GET') return await prices(url, ctx);
+      if (url.pathname === '/bars' && req.method === 'GET') return await bars(ctx);
       if (url.pathname === '/sync') return await sync(req, env);
       return json({ error: 'not found' }, 404);
     } catch (e) {
@@ -64,6 +66,37 @@ async function prices(url, ctx) {
   }
   const body = JSON.stringify({ updated: Math.floor(Date.now() / 1000), source: 'Yahoo Finance via Worker', quotes });
   ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Cache-Control': 'max-age=15' } })));
+  return new Response(body, { headers: { 'Content-Type': 'application/json', ...CORS } });
+}
+
+// Candles for the multi-timeframe FVG scan (same shape as bars.json from GitHub Actions)
+const BAR_SPECS = [
+  { tf: '5m',  interval: '5m',  range: '5d',  keep: 300 },
+  { tf: '15m', interval: '15m', range: '10d', keep: 300 },
+  { tf: '1h',  interval: '60m', range: '3mo', keep: 1300 }, // 4h is built from these in the page
+  { tf: '1d',  interval: '1d',  range: '1y',  keep: 250 },
+];
+async function bars(ctx) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.local/bars');
+  const hit = await cache.match(cacheKey);
+  if (hit) return new Response(hit.body, { headers: { 'Content-Type': 'application/json', ...CORS } });
+  const out = {};
+  await Promise.all(['ES=F', 'NQ=F'].flatMap(sym => BAR_SPECS.map(async s => {
+    const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${s.interval}&range=${s.range}&includePrePost=true`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) return;
+    const r = (await res.json())?.chart?.result?.[0], q = r?.indicators?.quote?.[0];
+    if (!r || !q) return;
+    const rows = [];
+    r.timestamp.forEach((t, i) => {
+      if ([q.open[i], q.high[i], q.low[i], q.close[i]].some(v => v == null)) return;
+      rows.push([t, q.open[i], q.high[i], q.low[i], q.close[i]].map((v, j) => j ? Math.round(v * 100) / 100 : v));
+    });
+    (out[sym] ||= {})[s.tf] = rows.slice(-s.keep);
+  })));
+  const body = JSON.stringify({ updated: Math.floor(Date.now() / 1000), source: 'Yahoo Finance via Worker', bars: out });
+  ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Cache-Control': 'max-age=60' } })));
   return new Response(body, { headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 

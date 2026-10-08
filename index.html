@@ -227,6 +227,19 @@ body {
 .an-inval b { color: var(--bear); }
 .an-old { opacity: 0.6; }
 
+/* Multi-timeframe FVG scan */
+.mtf-head, .mtf-row { display: grid; grid-template-columns: 52px 1fr; gap: 4px 8px; align-items: center; }
+.mtf-head { font-size: 11px; font-weight: 600; color: var(--text2); padding-bottom: 4px; }
+.mtf-row { padding: 7px 0; border-top: 1px solid var(--border); }
+.mtf-tf { font-size: 13px; font-weight: 700; }
+.mtf-cells { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mtf-sub { grid-column: 2; font-size: 11px; color: var(--text2); line-height: 1.4; }
+.mtf-segs { display: inline-flex; background: var(--fill); border-radius: 8px; padding: 2px; }
+.mtf-seg { border: 0; background: transparent; color: var(--text2); font: 600 12px/1 inherit; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.mtf-seg.on { background: var(--surface); color: var(--text1, inherit); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+.mtf-svg { width: 100%; height: auto; display: block; background: var(--fill); border-radius: 10px; }
+.mtf-ax { font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--text2); }
+
 /* Freshness pill */
 .freshness-pill {
   display: flex; align-items: center; gap: 5px;
@@ -1137,6 +1150,9 @@ select { cursor: pointer; }
   <!-- Morning Analysis (analysis.json) -->
   <div id="analysis-wrap"></div>
 
+  <!-- Multi-timeframe FVG scan -->
+  <div id="mtf-wrap"></div>
+
   <!-- Session Bar -->
   <div class="session-bar mb-md">
     <div class="flex items-center justify-between mb-sm">
@@ -2008,6 +2024,228 @@ async function loadAnalysis() {
       <span class="fs-13 fw-600 flex-1">${esc(e.name)}</span><span class="fs-12 text-2 mono">${esc(e.time)}</span></div>`).join('');
   }
   refreshAISignal(); // signal uses today's sweep/SMT
+}
+
+// ============================================================
+// MULTI-TIMEFRAME FVG SCAN — 5m / 15m / 1H / 4H / Daily
+// Candles: Worker /bars (JC_API) or bars.json from GitHub Actions
+// ============================================================
+const BARS_URL = 'https://raw.githubusercontent.com/DialFlow/jc-trading/data/bars.json';
+const MTF_TFS = ['5m', '15m', '1h', '4h', '1d'];
+const MTF_LABEL = { '5m': '5m', '15m': '15m', '1h': '1H', '4h': '4H', '1d': 'Daily' };
+const MTF_WEIGHT = { '5m': 0.5, '15m': 1, '1h': 2, '4h': 2.5, '1d': 3 };
+const MTF_SYMS = [['ES=F', 'ES'], ['NQ=F', 'NQ']];
+let mtf = null, mtfLoadedAt = 0, mtfView = { sym: 'ES=F', tf: '1h' };
+
+const _etFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit',
+  day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+function etParts(t) {
+  const p = {}; for (const x of _etFmt.formatToParts(new Date(t * 1000))) p[x.type] = x.value;
+  return { y: +p.year, mo: +p.month, d: +p.day, h: +p.hour, mi: +p.minute };
+}
+function etLabel(t, withDate) {
+  const p = etParts(t), hm = `${String(p.h).padStart(2,'0')}:${String(p.mi).padStart(2,'0')}`;
+  return withDate ? `${p.mo}/${p.d} ${hm}` : hm;
+}
+
+// 4H candles anchored to the 6 pm ET futures open (18, 22, 2, 6, 10, 14), like TradingView on CME
+function to4h(h1) {
+  const out = []; let cur = null, curKey = null;
+  for (const b of h1) {
+    const p = etParts(b.t), mins = p.h * 60 + p.mi;
+    const sess = new Date(Date.UTC(p.y, p.mo - 1, p.d + (p.h >= 18 ? 1 : 0))).toISOString().slice(0, 10);
+    const key = sess + ':' + Math.floor(((mins - 1080 + 1440) % 1440) / 240);
+    if (key !== curKey) { if (cur) out.push(cur); cur = { ...b }; curKey = key; }
+    else { cur.h = Math.max(cur.h, b.h); cur.l = Math.min(cur.l, b.l); cur.c = b.c; }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+// FVG = 3-candle gap. Status after it forms:
+//   disrespected — a later candle CLOSED through the far side (it is now an inverse FVG)
+//   respected    — price traded into it but never closed through
+//   untested     — price hasn't come back to it
+function scanFVGs(bars) {
+  const gaps = [];
+  for (let i = 2; i < bars.length; i++) {
+    let tr = 0, n = 0;
+    for (let k = Math.max(1, i - 13); k <= i; k++) { tr += Math.max(bars[k].h, bars[k-1].c) - Math.min(bars[k].l, bars[k-1].c); n++; }
+    const minSize = 0.3 * (tr / n); // ignore gaps smaller than 0.3× ATR(14)
+    const a = bars[i - 2], c = bars[i];
+    if (c.l > a.h && c.l - a.h >= minSize) gaps.push({ dir: 'bull', lo: a.h, hi: c.l, i });
+    else if (c.h < a.l && a.l - c.h >= minSize) gaps.push({ dir: 'bear', lo: c.h, hi: a.l, i });
+  }
+  for (const g of gaps) {
+    g.status = 'untested'; g.at = null;
+    for (let j = g.i + 1; j < bars.length; j++) {
+      const b = bars[j];
+      if (g.dir === 'bull' ? b.c < g.lo : b.c > g.hi) {
+        g.status = 'disrespected'; g.at = j;
+        // the inverse FVG is void once price closes back through it the other way
+        for (let k = j + 1; k < bars.length; k++) if (g.dir === 'bull' ? bars[k].c > g.hi : bars[k].c < g.lo) { g.invEnd = k; break; }
+        break;
+      }
+      if (g.status === 'untested' && (g.dir === 'bull' ? b.l <= g.hi : b.h >= g.lo)) { g.status = 'respected'; g.at = j; }
+    }
+  }
+  return gaps;
+}
+
+// Bias from the 5 most recent respect/disrespect events in the last 60 candles (newest weighs most)
+function tfBias(bars, gaps, tf) {
+  const n = bars.length, last = bars[n - 1].c;
+  const events = gaps.filter(g => g.at != null && g.at >= n - 60).sort((x, y) => y.at - x.at).slice(0, 5);
+  const W = [1, 0.8, 0.6, 0.4, 0.2];
+  let s = 0, wsum = 0;
+  events.forEach((g, k) => {
+    const v = (g.dir === 'bull') === (g.status === 'respected') ? 1 : -1; // bull held or bear broken = bullish
+    s += W[k] * v; wsum += W[k];
+  });
+  const score = wsum ? s / wsum : 0;
+  // nearest active support / resistance gaps (an inverted gap flips sides)
+  const act = gaps.filter(g => g.i >= n - 200 && g.invEnd == null);
+  const supp = act.filter(g => ((g.dir === 'bull' && g.status !== 'disrespected') || (g.dir === 'bear' && g.status === 'disrespected')) && g.hi <= last)
+    .sort((x, y) => y.hi - x.hi)[0];
+  const res = act.filter(g => ((g.dir === 'bear' && g.status !== 'disrespected') || (g.dir === 'bull' && g.status === 'disrespected')) && g.lo >= last)
+    .sort((x, y) => x.lo - y.lo)[0];
+  const e = events[0];
+  const lastEvent = e ? `${e.dir === 'bull' ? 'Bullish' : 'Bearish'} FVG ${e.lo.toFixed(2)}–${e.hi.toFixed(2)} ${e.status} @ ${tf === '1d' ? new Date(bars[e.at].t * 1000).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'numeric', day: 'numeric' }) : etLabel(bars[e.at].t, true)}` : 'No recent FVG events';
+  return { score, label: score >= 0.3 ? 'Bullish' : score <= -0.3 ? 'Bearish' : 'Neutral', supp, res, lastEvent, events: events.length };
+}
+
+async function loadMTF(force) {
+  if (!force && mtf && Date.now() - mtfLoadedAt < 60000) return mtf;
+  try {
+    const url = JC_API ? JC_API + '/bars' : BARS_URL + '?t=' + Math.floor(Date.now() / 60000);
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return mtf;
+    const raw = await res.json();
+    const out = { updated: raw.updated, syms: {} };
+    for (const [sym] of MTF_SYMS) {
+      const src = raw.bars?.[sym]; if (!src) continue;
+      const toB = rows => (rows || []).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
+      const tfBars = { '5m': toB(src['5m']), '15m': toB(src['15m']), '1h': toB(src['1h']).slice(-300), '4h': to4h(toB(src['1h'])).slice(-300), '1d': toB(src['1d']) };
+      const tfs = {}; let num = 0, den = 0;
+      for (const tf of MTF_TFS) {
+        const bars = tfBars[tf]; if (!bars || bars.length < 20) continue;
+        const gaps = scanFVGs(bars), bias = tfBias(bars, gaps, tf);
+        tfs[tf] = { bars, gaps, bias };
+        num += MTF_WEIGHT[tf] * bias.score; den += MTF_WEIGHT[tf];
+      }
+      const score = den ? num / den : 0;
+      out.syms[sym] = { tfs, score, label: score >= 0.25 ? 'Bullish' : score <= -0.25 ? 'Bearish' : 'Mixed' };
+    }
+    mtf = out; mtfLoadedAt = Date.now(); window.mtfScan = out;
+  } catch(e) {}
+  renderMTF();
+  if (typeof refreshAISignal === "function") refreshAISignal();
+  return mtf;
+}
+
+const biasBadge = (label, score) => {
+  const cls = label === 'Bullish' ? 'badge-bull' : label === 'Bearish' ? 'badge-bear' : 'badge-neutral';
+  return `<span class="badge ${cls}">${label} ${score >= 0 ? '+' : ''}${score.toFixed(2)}</span>`;
+};
+
+function renderMTF() {
+  const wrap = document.getElementById('mtf-wrap');
+  if (!wrap || !mtf) return;
+  const asOf = mtf.updated ? new Date(mtf.updated * 1000).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) + ' ET' : '';
+  const es = mtf.syms['ES=F'], nq = mtf.syms['NQ=F'];
+  const split = es && nq && es.label !== nq.label;
+  const rows = MTF_TFS.map(tf => {
+    const cells = MTF_SYMS.map(([sym]) => {
+      const b = mtf.syms[sym]?.tfs[tf]?.bias;
+      return b ? biasBadge(b.label, b.score) : '<span class="text-2 fs-12">–</span>';
+    }).join('');
+    const eb = es?.tfs[tf]?.bias;
+    const sr = eb ? `${eb.supp ? 'Support FVG ' + eb.supp.lo.toFixed(2) + '–' + eb.supp.hi.toFixed(2) : 'No support FVG'} · ${eb.res ? 'Resistance FVG ' + eb.res.lo.toFixed(2) + '–' + eb.res.hi.toFixed(2) : 'No resistance FVG'}` : '';
+    return `<div class="mtf-row"><span class="mtf-tf">${MTF_LABEL[tf]}</span><span class="mtf-cells">${cells}</span>
+      <div class="mtf-sub">ES: ${esc(eb ? eb.lastEvent : '')}<br>${esc(sr)}</div></div>`;
+  }).join('');
+  const seg = (items, cur, fn) => items.map(([v, l]) => `<button class="mtf-seg${v === cur ? ' on' : ''}" onclick="${fn}('${v}')">${l}</button>`).join('');
+  wrap.innerHTML = `
+  <div class="section-label">Multi-Timeframe FVG Scan · candles as of ${esc(asOf)}</div>
+  <div class="card mb-md"><div class="card-body">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+      ${MTF_SYMS.map(([s, n]) => mtf.syms[s] ? `<span class="fs-13 fw-600">${n}</span>${biasBadge(mtf.syms[s].label, mtf.syms[s].score)}` : '').join('<span style="width:6px"></span>')}
+      ${split ? '<span class="badge badge-warn">ES/NQ disagree, watch for SMT</span>' : ''}
+    </div>
+    <div class="mtf-head"><span class="mtf-tf"></span><span class="mtf-cells"><span>ES</span><span>NQ</span></span></div>
+    ${rows}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 6px;">
+      <div class="mtf-segs">${seg(MTF_SYMS.map(([s, n]) => [s, n]), mtfView.sym, 'mtfSetSym')}</div>
+      <div class="mtf-segs">${seg(MTF_TFS.map(t => [t, MTF_LABEL[t]]), mtfView.tf, 'mtfSetTf')}</div>
+    </div>
+    <div id="mtf-chart"></div>
+    <div class="fs-12 text-2" style="margin-top:6px;">Boxes: <span style="color:var(--bull)">green</span> bullish FVG, <span style="color:var(--bear)">red</span> bearish FVG. Solid edge = respected, dashed = untested. A grey box ends where a candle closed through it; the dashed box after it is the inverse FVG.</div>
+    <details class="fs-12 text-2" style="margin-top:6px;"><summary>How the bias is scored</summary>
+      Each timeframe looks at its 5 most recent FVG events in the last 60 candles, newest weighted most. A bullish FVG that holds or a bearish FVG that gets closed through counts bullish; the reverse counts bearish. Score ≥ +0.3 = Bullish, ≤ −0.3 = Bearish. Overall weights: Daily 3, 4H 2.5, 1H 2, 15m 1, 5m 0.5. Gaps smaller than 0.3× ATR(14) are ignored. Candles are Yahoo futures data (delayed). Rules-based, not a trade recommendation.
+    </details>
+  </div></div>`;
+  drawMTFChart();
+}
+function mtfSetSym(s) { mtfView.sym = s; renderMTF(); }
+function mtfSetTf(t) { mtfView.tf = t; renderMTF(); }
+
+function drawMTFChart() {
+  const el = document.getElementById('mtf-chart');
+  const d = mtf?.syms[mtfView.sym]?.tfs[mtfView.tf];
+  if (!el || !d) { if (el) el.innerHTML = '<div class="fs-12 text-2">No candles for this timeframe.</div>'; return; }
+  const W = 600, H = 320, PR = 62, PT = 8, PB = 22, N = 70;
+  const all = d.bars, start = Math.max(0, all.length - N), bars = all.slice(start);
+  let lo = Math.min(...bars.map(b => b.l)), hi = Math.max(...bars.map(b => b.h));
+  const pad = (hi - lo) * 0.04; lo -= pad; hi += pad;
+  const cw = (W - PR) / bars.length;
+  const x = i => (i - start) * cw + cw / 2;
+  const y = p => PT + (hi - p) / (hi - lo) * (H - PT - PB);
+  const clipY = p => Math.max(PT, Math.min(H - PB, y(p)));
+  const right = W - PR;
+  let svg = '';
+  // FVG boxes still relevant to this window: the 8 nearest to price
+  const lastC = all[all.length - 1].c;
+  const show = d.gaps.filter(g => {
+    const end = g.invEnd != null ? g.invEnd : g.status === 'disrespected' ? g.at : all.length - 1;
+    return end >= start && g.hi >= lo && g.lo <= hi && (g.invEnd == null || g.invEnd >= start);
+  }).sort((p, q) => Math.abs((p.lo + p.hi) / 2 - lastC) - Math.abs((q.lo + q.hi) / 2 - lastC)).slice(0, 8);
+  for (const g of show) {
+    const x0 = Math.max(0, x(g.i - 2) - cw / 2), y0 = clipY(g.hi), y1 = clipY(g.lo);
+    if (y1 - y0 < 0.5) continue;
+    const col = g.dir === 'bull' ? 'var(--bull)' : 'var(--bear)';
+    if (g.status === 'disrespected') {
+      const xe = x(g.at);
+      if (xe > x0) svg += `<rect x="${x0}" y="${y0}" width="${xe - x0}" height="${y1 - y0}" fill="var(--text3)" fill-opacity="0.18" stroke="var(--text3)" stroke-width="0.6"/>`;
+      const inv = g.dir === 'bull' ? 'var(--bear)' : 'var(--bull)';
+      const xi = g.invEnd != null ? x(g.invEnd) : right;
+      svg += `<rect x="${Math.max(0, xe)}" y="${y0}" width="${Math.max(0, xi - Math.max(0, xe))}" height="${y1 - y0}" fill="${inv}" fill-opacity="0.08" stroke="${inv}" stroke-width="0.8" stroke-dasharray="3 3"/>`;
+    } else {
+      svg += `<rect x="${x0}" y="${y0}" width="${right - x0}" height="${y1 - y0}" fill="${col}" fill-opacity="0.15" stroke="${col}" stroke-width="0.8"${g.status === 'untested' ? ' stroke-dasharray="3 3"' : ''}/>`;
+    }
+  }
+  // candles
+  bars.forEach((b, k) => {
+    const i = start + k, up = b.c >= b.o, col = up ? 'var(--bull)' : 'var(--bear)';
+    const bx = x(i), bw = Math.max(1, cw * 0.62);
+    svg += `<line x1="${bx}" x2="${bx}" y1="${y(b.h)}" y2="${y(b.l)}" stroke="${col}" stroke-width="1"/>`;
+    svg += `<rect x="${bx - bw / 2}" y="${y(Math.max(b.o, b.c))}" width="${bw}" height="${Math.max(0.8, Math.abs(y(b.o) - y(b.c)))}" fill="${col}"/>`;
+  });
+  // price axis, last price, time labels
+  for (let k = 0; k <= 4; k++) {
+    const p = lo + (hi - lo) * k / 4;
+    svg += `<line x1="0" x2="${right}" y1="${y(p)}" y2="${y(p)}" stroke="var(--border)" stroke-width="0.5"/><text x="${right + 4}" y="${y(p) + 3}" class="mtf-ax">${p.toFixed(2)}</text>`;
+  }
+  const last = bars[bars.length - 1];
+  svg += `<line x1="0" x2="${right}" y1="${y(last.c)}" y2="${y(last.c)}" stroke="var(--blue)" stroke-width="0.8" stroke-dasharray="2 2"/>
+    <rect x="${right + 1}" y="${y(last.c) - 8}" width="${PR - 2}" height="16" rx="3" fill="var(--blue)"/><text x="${right + 4}" y="${y(last.c) + 4}" class="mtf-ax" fill="#fff" style="fill:#fff">${last.c.toFixed(2)}</text>`;
+  const daily = mtfView.tf === '1d';
+  [0, Math.floor(bars.length / 2), bars.length - 1].forEach(k => {
+    const t = bars[k].t, lbl = daily ? new Date(t * 1000).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }) : etLabel(t, true);
+    svg += `<text x="${Math.min(right - 40, Math.max(0, x(start + k) - 20))}" y="${H - 6}" class="mtf-ax">${lbl}</text>`;
+  });
+  const sym = MTF_SYMS.find(([s]) => s === mtfView.sym)[1];
+  el.innerHTML = `<div class="fs-12 fw-600" style="margin-bottom:4px;">${sym} · ${MTF_LABEL[mtfView.tf]} · last ${bars.length} candles · ${daily ? '' : 'ET'}</div>
+    <svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="${sym} ${MTF_LABEL[mtfView.tf]} chart with fair value gaps">${svg}</svg>`;
 }
 
 // ============================================================
@@ -2938,6 +3176,16 @@ function computeAISignal() {
   if (htf === 'bullish') { bullPts += 0.5; factors.push({ icon:'🗓️', text:'HTF daily structure: Bullish — supports longs' + anTag('htf'), cls:'' }); }
   else if (htf === 'bearish') { bearPts += 0.5; factors.push({ icon:'🗓️', text:'HTF daily structure: Bearish — supports shorts' + anTag('htf'), cls:'' }); }
 
+  // 8. Multi-timeframe FVG scan (5m–Daily)
+  const ms = window.mtfScan && window.mtfScan.syms;
+  if (ms && ms['ES=F']) {
+    const e = ms['ES=F'], n = ms['NQ=F'];
+    const txt = 'Multi-TF FVG scan: ES ' + e.label + ' (' + e.score.toFixed(2) + ')' + (n ? ', NQ ' + n.label + ' (' + n.score.toFixed(2) + ')' : '');
+    if (e.label === 'Bullish') { bullPts += 1; factors.push({ icon:'🧭', text: txt, cls:'strong' }); }
+    else if (e.label === 'Bearish') { bearPts += 1; factors.push({ icon:'🧭', text: txt, cls:'strong' }); }
+    else factors.push({ icon:'🧭', text: txt + ': no clear HTF lean', cls:'' });
+  }
+
   // Final direction
   const net = bullPts - bearPts;
   let direction, dirColor, arrow, tjrStep = 1;
@@ -2967,7 +3215,7 @@ async function refreshAll() {
   const btn = document.getElementById('ai-refresh-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
   pricesLoadedAt = 0; // bypass the price cache
-  try { await Promise.all([autoFetchHeader(), loadAnalysis()]); } catch(e) {}
+  try { await Promise.all([autoFetchHeader(), loadAnalysis(), loadMTF(true)]); } catch(e) {}
   refreshAISignal();
   if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
   const asOf = lastPriceFetch ? lastPriceFetch.toLocaleTimeString('en-US', { timeZone:'America/New_York', hour:'numeric', minute:'2-digit' }) + ' ET' : 'unavailable';
@@ -3124,6 +3372,7 @@ function init() {
   initTradeLogDate();
   initBacktestChat();
   loadAnalysis();
+  loadMTF();
 
   // AI signal — run immediately then every 60s
   setTimeout(refreshAISignal, 500);
