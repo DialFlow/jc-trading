@@ -1025,6 +1025,15 @@ select { cursor: pointer; }
 .bt-bubble .mono { font-size: 13px; }
 .bt-who { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 3px; }
 .bt-msg.me .bt-who { color: rgba(255,255,255,0.75); }
+.bt-controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 12px; color: var(--text2); }
+.bt-controls label { display: flex; align-items: center; gap: 6px; }
+.bt-controls select { width: auto; font-size: 12px; padding: 5px 8px; }
+.bt-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+.bt-table th { text-align: left; font-weight: 600; color: var(--text2); padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.bt-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.bt-table td.bull { color: var(--bull); } .bt-table td.bear { color: var(--bear); }
+.bt-row { cursor: pointer; } .bt-row:hover, .bt-row.on { background: var(--fill); }
+@media (max-width: 600px) { .bt-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .bt-shot { margin-top: 10px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: #0e0e10; }
 .bt-shot img { display: block; width: 100%; height: auto; }
 .bt-shot figcaption { font-size: 12px; color: var(--text2); background: var(--surface2); padding: 7px 12px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
@@ -1764,48 +1773,32 @@ select { cursor: pointer; }
   <div class="bt-wrap">
     <div class="flex items-center justify-between flex-wrap gap-sm">
       <div>
-        <div class="section-label" style="padding-top:4px;padding-bottom:2px;">Backtesting with AI</div>
-        <div class="fs-12 text-2">TJR rules coded in Pine Script · run in TradingView's Strategy Tester</div>
+        <div class="section-label" style="padding-top:4px;padding-bottom:2px;">Backtesting · real ES1! / NQ1! data</div>
+        <div class="fs-12 text-2" id="bt-sub">Loading results…</div>
       </div>
-      <span class="badge badge-bear">Not profitable as coded</span>
+      <span class="badge badge-blue" id="bt-badge">Port verified against TradingView</span>
     </div>
 
-    <div class="bt-summary">
-      <div class="stat-tile"><div class="stat-eyebrow">Net P&amp;L</div><div class="stat-value bear mono">−$2,760</div><div class="stat-sub">−5.52% of $50K</div></div>
-      <div class="stat-tile"><div class="stat-eyebrow">Win rate</div><div class="stat-value bear">0 / 7</div><div class="stat-sub">Profit factor 0</div></div>
-      <div class="stat-tile"><div class="stat-eyebrow">Sessions</div><div class="stat-value">38</div><div class="stat-sub">Aug 16 – Oct 7, 2026</div></div>
-      <div class="stat-tile"><div class="stat-eyebrow">Market</div><div class="stat-value">ES1!</div><div class="stat-sub">5-min · 1 contract</div></div>
+    <div class="card"><div class="card-body fs-13" id="bt-about"></div></div>
+
+    <div class="bt-controls">
+      <div class="mtf-segs" id="bt-sym"></div>
+      <label>Stop <select id="bt-stop" onchange="btPick()"></select></label>
+      <label>Sweep level <select id="bt-lvl" onchange="btPick()"></select></label>
+      <label>Displacement <select id="bt-disp" onchange="btPick()"><option value="0">Off</option><option value="1">On (1.5× body)</option></select></label>
+      <button class="btn btn-secondary btn-sm" onclick="btPickV4()">v4 settings</button>
     </div>
 
-    <div class="bt-day">Wed Oct 7, 2026</div>
+    <div class="bt-summary" id="bt-tiles"></div>
+    <div class="card"><div class="card-body"><div class="fs-12 fw-600 mb-sm" id="bt-eq-title">Equity curve</div><div id="bt-equity"></div><div class="fs-12 text-2" id="bt-funnel" style="margin-top:8px;"></div></div></div>
 
-    <div class="bt-msg me"><div class="bt-avatar">JC</div><div class="bt-bubble"><div class="bt-who">Jacob</div><p>For the strategy that we now know, go backtest it on TradingView and see if this is actually real. Screenshot it and show proof.</p></div></div>
+    <div class="section-label" style="padding-bottom:2px;">Every trade</div>
+    <div class="card"><div style="overflow-x:auto"><table class="bt-table" id="bt-trades"></table></div></div>
 
-    <div class="bt-msg ai"><div class="bt-avatar">AI</div><div class="bt-bubble"><div class="bt-who">Claude</div><p>I coded your TJR steps as a TradingView strategy so it trades the same way every day:</p>
-<ul>
-<li><strong>Potential:</strong> after 9:30, price sweeps the Asian, London or prior-day high/low.</li>
-<li><strong>Confirmation:</strong> a break of structure the other way, then a fair value gap.</li>
-<li><strong>Continuation:</strong> limit order at the FVG midpoint (EQ), placed only in the 9:50–10:10 macro. No entries 9:30–9:50.</li>
-<li><strong>Exit:</strong> stop 1 tick past the sweep wick (max 15 pts), target the next liquidity level or 2R, flat by 12:00.</li>
-</ul>
-<p>Costs are included: $2.50 commission per side and 1 tick of slippage. TJR is discretionary, so this tests the rules as written, not your read of the chart.</p></div></div>
+    <div class="section-label" style="padding-bottom:2px;">All settings compared</div>
+    <div class="card"><div style="overflow-x:auto"><table class="bt-table" id="bt-grid"></table></div></div>
 
-    <div class="bt-msg ai"><div class="bt-avatar">AI</div><div class="bt-bubble"><div class="bt-who">Claude</div><p>The first three runs placed zero trades. I added a counter on the chart to see where setups drop out.</p><figure class="bt-shot"><img src="bt/01-zero-trades-debug.jpg" alt="Strategy Tester showing no trades and a setup funnel table" loading="lazy" width="1400"><figcaption><span>Run 2 · setup funnel and the empty report</span><a href="bt/01-zero-trades-debug.jpg" target="_blank" rel="noopener">Open full size</a></figcaption></figure><p>The rules did fire: 12 orders in 38 sessions. They were rejected because Pine v6 assumes 100% margin, so a $50K account couldn't afford one ES contract. Setting normal futures margin fixed it.</p></div></div>
-
-    <div class="bt-msg ai"><div class="bt-avatar">AI</div><div class="bt-bubble"><div class="bt-who">Claude</div><p><strong>The result: 7 trades, 0 winners, −$2,760.</strong></p><figure class="bt-shot"><img src="bt/02-key-stats.jpg" alt="TradingView key stats: total PnL −2,760 USD, 0 of 7 profitable" loading="lazy" width="1400"><figcaption><span>Key stats and equity curve</span><a href="bt/02-key-stats.jpg" target="_blank" rel="noopener">Open full size</a></figcaption></figure></div></div>
-
-    <div class="bt-msg ai"><div class="bt-avatar">AI</div><div class="bt-bubble"><div class="bt-who">Claude</div><p>Here is every trade. Losses ran from 3.75 to 14 points.</p><figure class="bt-shot"><img src="bt/03-trade-list.jpg" alt="List of 7 trades from the Strategy Tester" loading="lazy" width="1400"><figcaption><span>List of trades · ET</span><a href="bt/03-trade-list.jpg" target="_blank" rel="noopener">Open full size</a></figcaption></figure></div></div>
-
-    <div class="bt-msg ai"><div class="bt-avatar">AI</div><div class="bt-bubble"><div class="bt-who">Claude</div><p>Sep 14 shows the pattern best. The direction was right, but the stop sat just under the sweep and got taken out before ES ran 40 points.</p><figure class="bt-shot"><img src="bt/04-sep14-example.jpg" alt="Sep 14 ES chart: long at 9:55 stopped at 10:25, then a rally to 7,650" loading="lazy" width="1400"><figcaption><span>Sep 14 · the −$692.50 trade</span><a href="bt/04-sep14-example.jpg" target="_blank" rel="noopener">Open full size</a></figcaption></figure></div></div>
-
-    <div class="bt-msg ai"><div class="bt-avatar">AI</div><div class="bt-bubble"><div class="bt-who">Claude</div><div class="bt-verdict"><p><strong>Is it real?</strong> As coded, no. It lost on every trade over 7 weeks.</p>
-<p>That doesn't settle TJR itself. 7 trades is too few to judge any strategy, and a free TradingView plan only loads about 7 weeks of 5-minute data.</p></div>
-<p>What the test does show:</p>
-<ul>
-<li>A "sweep" happened on 37 of 38 days, so a sweep alone filters out almost nothing. The setup needs a stricter definition of which level matters.</li>
-<li>Stops right behind the sweep wick get hit by normal noise. Most losers were stopped before the move.</li>
-</ul>
-<p>Next tests worth running: a wider stop (20–25 pts) or a stop under the second sweep, requiring a displacement candle for the break of structure, and the same rules on NQ with a scaled stop.</p></div></div>
+    <div class="bt-msg ai"><div class="bt-avatar">AI</div><div class="bt-bubble"><div class="bt-who">Claude · Oct 8</div><div id="bt-verdict"></div></div></div>
 
     <div id="bt-live"></div>
 
@@ -3493,13 +3486,101 @@ setInterval(refreshAISignal, 60000); // auto-refresh every 60s
 // ============================================================
 // BACKTESTING WITH AI — live follow-up chat
 // ============================================================
-const BT_CONTEXT = `You are Claude, helping Jacob (a futures day trader on a MyFundedFutures $50K funded account) review a backtest of his TJR-style strategy.
+const BT_CONTEXT_OLD = `You are Claude, helping Jacob (a futures day trader on a MyFundedFutures $50K funded account) review a backtest of his TJR-style strategy.
 Rules as coded in Pine Script (ES1!, 5-minute, ET): after 9:30, price sweeps the Asian (6pm-3am), London (3am-8:30am) or prior-day high/low; then a break of structure (close beyond the 5-bar high/low) and a fair value gap; limit entry at the FVG midpoint placed only 9:50-10:10 and resting until 11:00; no entries 9:30-9:50; stop 1 tick past the sweep extreme, max 15 points; target the next liquidity level beyond 1R, else 2R; flat by 12:00. 1 contract, $2.50/side commission, 1 tick slippage, 5% margin.
 Results Aug 16 - Oct 7, 2026 (38 sessions): sweep on 37 days, BOS on 20, FVG on 16, 12 orders placed, 7 filled. 7 trades, 0 winners, net -$2,760 (-5.52%), profit factor 0. Trades: Aug 19 short -192.50; Aug 20 long -267.50; Aug 26 long -380 (flat at 12:05); Sep 3 short -705; Sep 4 long -230; Sep 14 long 7614.25 -> 7600.50 -692.50 then ES rallied to ~7650; Sep 16 short -292.50.
 Answer briefly and plainly (2-5 sentences). Be honest that 7 trades is a tiny sample. You are not a financial advisor; discuss the strategy and testing, not personal investment advice.`;
 
 let btHistory = [];
-try { btHistory = JSON.parse(localStorage.getItem('jct_bt_chat') || '[]'); } catch(e) { btHistory = []; }
+try {
+  // Oct 8: the v4 screenshot thread was replaced by real-data results; old follow-up chat refers to it
+  if (localStorage.getItem('jct_bt_ver') !== '2') { localStorage.removeItem('jct_bt_chat'); localStorage.setItem('jct_bt_ver', '2'); }
+  btHistory = JSON.parse(localStorage.getItem('jct_bt_chat') || '[]');
+} catch(e) { btHistory = []; }
+
+// ---------- real-data backtest results (backtest.json from scripts/backtest.mjs) ----------
+let BT = null, btSym = 'ES=F';
+const btMoney = v => (v < 0 ? '−$' : '+$') + Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const btCls = v => v > 0 ? 'bull' : v < 0 ? 'bear' : '';
+async function loadBacktest() {
+  try { const r = await fetch('backtest.json', { cache: 'no-store' }); if (r.ok) BT = await r.json(); } catch(e) {}
+  if (!BT) { const el = document.getElementById('bt-sub'); if (el) el.textContent = 'Results file not available here (open the hosted site).'; return; }
+  const es = BT.instruments['ES=F'], nq = BT.instruments['NQ=F'];
+  const fmtD = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('bt-sub').textContent = `5-min CME futures · ${fmtD(es.from)} – ${fmtD(es.to)} · ${es.nySessions} NY sessions · 1 contract · $${BT.costs.commissionPerSide.toFixed(2)}/side + ${BT.costs.slippageTicks} tick slippage`;
+  const v4 = BT.runs.find(r => r.sym === 'ES=F' && r.id === 'v4');
+  document.getElementById('bt-about').innerHTML = `<p><strong>What this is:</strong> your strategy (<span class="mono">jc_tjr_backtest_v5.pine</span>) re-run bar by bar on real ES1! and NQ1! 5-minute candles (${esc(es.contract)} / ${esc(nq.contract)}, CME front month). Same sessions, sweep, BOS, FVG-midpoint limit entry in the 9:50–10:10 macro, stop, target and 12:00 flat as the Pine script.</p>
+    <p style="margin-top:6px;"><strong>Checked against TradingView:</strong> with the v4 settings it reproduces your TradingView Strategy Tester trade list exactly: the same 7 trades from Aug 16 to Oct 7 at the same prices, −$2,760. This run also covers Jul 30 – Aug 15 and Oct 8, which TradingView's free plan didn't load.</p>
+    <p style="margin-top:6px;" class="text-2">NQ1! uses stops scaled 4× (fixed 80 pts, max 100; v4 max 60) because NQ moves about 4× ES in points. Point values: ES $50, NQ $20.</p>`;
+  btRenderSym(); btPickV4();
+  btRenderGrid(); btRenderVerdict();
+}
+function btRenderSym() {
+  document.getElementById('bt-sym').innerHTML = [['ES=F', 'ES1!'], ['NQ=F', 'NQ1!']].map(([s, n]) =>
+    `<button class="mtf-seg${s === btSym ? ' on' : ''}" onclick="btSetSym('${s}')">${n}</button>`).join('');
+  const opts = (id, vals) => { const el = document.getElementById(id); const cur = el.value; el.innerHTML = vals.map(v => `<option>${v}</option>`).join(''); if (vals.includes(cur)) el.value = cur; };
+  opts('bt-stop', ['Sweep wick', 'Fixed points', 'Second sweep']);
+  opts('bt-lvl', ['Any', 'London H/L', 'Asian H/L', 'PDH/PDL']);
+}
+function btSetSym(s) { btSym = s; btRenderSym(); btPick(); btRenderGrid(); }
+function btPickV4() {
+  // v4 = sweep wick, any level, no displacement, max stop 15 (ES) / 60 (NQ)
+  document.getElementById('bt-stop').value = 'Sweep wick'; document.getElementById('bt-lvl').value = 'Any'; document.getElementById('bt-disp').value = '0';
+  btShow(BT.runs.find(r => r.sym === btSym && r.id === 'v4')); }
+function btPick() {
+  const stop = document.getElementById('bt-stop').value, lvl = document.getElementById('bt-lvl').value, disp = document.getElementById('bt-disp').value === '1';
+  btShow(BT.runs.find(r => r.sym === btSym && r.id !== 'v4' && r.stopMode === stop && r.sweepLvl === lvl && r.useDisp === disp));
+}
+function btPickId(sym, id) { btSym = sym; btRenderSym(); const r = BT.runs.find(x => x.sym === sym && x.id === id); if (r.id !== 'v4') { document.getElementById('bt-stop').value = r.stopMode; document.getElementById('bt-lvl').value = r.sweepLvl; document.getElementById('bt-disp').value = r.useDisp ? '1' : '0'; } btShow(r); btRenderGrid(); document.getElementById('bt-tiles').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+function btLabel(r) { return r.id === 'v4' ? 'v4 settings (as run in TradingView)' : `${r.stopMode}${r.stopMode === 'Fixed points' ? ' ' + r.fixedStop + ' pts' : ''} · ${r.sweepLvl} · displacement ${r.useDisp ? 'on' : 'off'} · max stop ${r.maxRisk}`; }
+let btCurrent = null;
+function btShow(r) {
+  if (!r) return; btCurrent = r;
+  const st = r.stats;
+  document.getElementById('bt-tiles').innerHTML = `
+    <div class="stat-tile"><div class="stat-eyebrow">Net P&amp;L</div><div class="stat-value mono ${btCls(st.net)}">${btMoney(st.net)}</div><div class="stat-sub">${(st.net / 500).toFixed(2)}% of $50K</div></div>
+    <div class="stat-tile"><div class="stat-eyebrow">Win rate</div><div class="stat-value">${st.wins} / ${st.trades}</div><div class="stat-sub">${st.trades ? Math.round(st.winRate * 100) : 0}% · PF ${st.pf == null ? '∞' : st.pf}</div></div>
+    <div class="stat-tile"><div class="stat-eyebrow">Avg win / loss</div><div class="stat-value mono" style="font-size:16px;"><span class="bull">${btMoney(st.avgWin)}</span> / <span class="bear">${btMoney(st.avgLoss)}</span></div><div class="stat-sub">per trade, after costs</div></div>
+    <div class="stat-tile"><div class="stat-eyebrow">Max drawdown</div><div class="stat-value mono bear">−$${st.maxDD.toLocaleString('en-US')}</div><div class="stat-sub">peak to trough, closed trades</div></div>`;
+  document.getElementById('bt-eq-title').textContent = `${r.name} · ${btLabel(r)}`;
+  const fu = r.funnel;
+  document.getElementById('bt-funnel').textContent = `Setup funnel: ${fu.days} sessions → sweep ${fu.sweep} → BOS ${fu.bos} → FVG ${fu.fvg} → orders ${fu.orders} → filled ${st.trades}`;
+  btDrawEquity(r);
+  const rows = r.trades.map(t => `<tr><td>${t.entryTime.slice(5)}</td><td class="${t.dir === 'long' ? 'bull' : 'bear'}">${t.dir}</td><td class="mono">${t.entry.toFixed(2)}</td><td class="mono">${t.stop.toFixed(2)}</td><td class="mono">${t.target.toFixed(2)}</td><td>${t.exitTime.slice(11)}</td><td class="mono">${t.exit.toFixed(2)}</td><td>${t.why}</td><td class="mono">${t.pts > 0 ? '+' : ''}${t.pts}</td><td class="mono ${btCls(t.pnl)}">${btMoney(t.pnl)}</td></tr>`).join('');
+  document.getElementById('bt-trades').innerHTML = `<tr><th>Entry (ET)</th><th>Side</th><th>Entry</th><th>Stop</th><th>Target</th><th>Exit</th><th>Exit px</th><th>Reason</th><th>Pts</th><th>P&amp;L</th></tr>${rows || '<tr><td colspan="10" class="text-2">No trades with these settings.</td></tr>'}`;
+  if (BT) btRenderGrid();
+}
+function btDrawEquity(r) {
+  const el = document.getElementById('bt-equity'), eq = [0, ...r.equity];
+  const W = 600, H = 160, P = 30, lo = Math.min(0, ...eq), hi = Math.max(0, ...eq), span = (hi - lo) || 1;
+  const x = i => P + i * (W - P - 8) / Math.max(1, eq.length - 1), y = v => 8 + (hi - v) / span * (H - 24);
+  const pts = eq.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+  const col = eq[eq.length - 1] >= 0 ? 'var(--bull)' : 'var(--bear)';
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="Equity curve">
+    <line x1="${P}" x2="${W - 8}" y1="${y(0)}" y2="${y(0)}" stroke="var(--border)" stroke-dasharray="3 3"/>
+    <text x="2" y="${y(0) + 3}" class="mtf-ax">$0</text><text x="2" y="${y(hi) + 8}" class="mtf-ax">${hi > 0 ? btMoney(hi) : ''}</text><text x="2" y="${y(lo) - 2}" class="mtf-ax">${lo < 0 ? btMoney(lo) : ''}</text>
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2"/>
+    ${eq.slice(1).map((v, i) => `<circle cx="${x(i + 1)}" cy="${y(v)}" r="3" fill="${r.trades[i].pnl > 0 ? 'var(--bull)' : 'var(--bear)'}"/>`).join('')}
+    <text x="${P}" y="${H - 2}" class="mtf-ax">trade 1</text><text x="${W - 60}" y="${H - 2}" class="mtf-ax">trade ${eq.length - 1}</text></svg>`;
+}
+function btRenderGrid() {
+  const runs = BT.runs.filter(r => r.sym === btSym).sort((p, q) => q.stats.net - p.stats.net);
+  document.getElementById('bt-grid').innerHTML = `<tr><th>Settings (tap to view)</th><th>Trades</th><th>Wins</th><th>PF</th><th>Max DD</th><th>Net</th></tr>` +
+    runs.map(r => `<tr class="bt-row${btCurrent && btCurrent.id === r.id && btCurrent.sym === r.sym ? ' on' : ''}" onclick="btPickId('${r.sym}','${r.id}')"><td>${esc(btLabel(r))}</td><td>${r.stats.trades}</td><td>${r.stats.wins}</td><td>${r.stats.pf == null ? '∞' : r.stats.pf}</td><td class="mono">${r.stats.maxDD.toLocaleString('en-US')}</td><td class="mono ${btCls(r.stats.net)}">${btMoney(r.stats.net)}</td></tr>`).join('');
+}
+function btRenderVerdict() {
+  const sum = sym => { const rs = BT.runs.filter(r => r.sym === sym && r.id !== 'v4'); const pos = rs.filter(r => r.stats.net > 0);
+    const nets = rs.map(r => r.stats.net), tr = rs.map(r => r.stats.trades);
+    return { n: rs.length, pos: pos.length, best: Math.max(...nets), worst: Math.min(...nets), minT: Math.min(...tr), maxT: Math.max(...tr), maxDD: Math.max(...rs.map(r => r.stats.maxDD)) }; };
+  const e = sum('ES=F'), q = sum('NQ=F');
+  const v4e = BT.runs.find(r => r.sym === 'ES=F' && r.id === 'v4').stats, v4q = BT.runs.find(r => r.sym === 'NQ=F' && r.id === 'v4').stats;
+  document.getElementById('bt-verdict').innerHTML = `
+    <p><strong>ES1!:</strong> lost money with every setting: ${e.pos} of ${e.n} variations were profitable (best ${btMoney(e.best)}, worst ${btMoney(e.worst)}). v4 settings: ${btMoney(v4e.net)} on ${v4e.trades} trades.</p>
+    <p><strong>NQ1!:</strong> made money with ${q.pos} of ${q.n} variations (${btMoney(q.worst)} to ${btMoney(q.best)}). The v4 settings lost ${btMoney(v4q.net)} because its 60-pt stop cap skipped most setups.</p>
+    <div class="bt-verdict" style="margin-top:8px;"><p><strong>How much to trust it:</strong> each run has only ${Math.min(e.minT, q.minT)}–${Math.max(e.maxT, q.maxT)} trades over about 10 weeks in one market regime, and the best row is the best of 24 tries, which flatters it. That's enough to rank ideas, not to prove an edge. The NQ result is worth re-testing on more history, in TradingView or with a paid data feed.</p></div>
+    <p style="margin-top:8px;"><strong>Account fit:</strong> NQ1! stops here run up to 100 pts = $2,000 per contract, and the worst NQ drawdown was −$${q.maxDD.toLocaleString('en-US')}. Check that against your MyFundedFutures drawdown limit; one full NQ contract may be too large for a $50K account. Micros (MNQ, $2/pt) scale everything to 1/10.</p>
+    <p class="text-2" style="margin-top:8px;">Rules-based test of your strategy, not a trade recommendation.</p>`;
+}
 
 function btEscape(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML.replace(/\n/g, '<br>'); }
 function btBubble(role, html) {
@@ -3517,6 +3598,17 @@ function btRenderHistory() {
 }
 function btSave() { try { localStorage.setItem('jct_bt_chat', JSON.stringify(btHistory.slice(-30))); } catch(e) {} }
 
+// Context for follow-up questions, built from backtest.json once loaded
+function BT_CONTEXT_NOW() {
+  if (!BT) return BT_CONTEXT_OLD;
+  const line = r => `${r.name} | ${btLabel(r)} | trades ${r.stats.trades}, wins ${r.stats.wins}, net ${r.stats.net}, PF ${r.stats.pf}, maxDD ${r.stats.maxDD}`;
+  return `You are Claude, helping Jacob (futures day trader, MyFundedFutures $50K account) review a backtest of his TJR strategy.
+It is a bar-by-bar port of jc_tjr_backtest_v5.pine on real 5-minute ES1!/NQ1! data (${BT.instruments['ES=F'].from} to ${BT.instruments['ES=F'].to}), verified to reproduce his TradingView v4 trade list exactly. 1 contract, $2.50/side, 1 tick slippage. NQ stops are scaled 4x.
+Results:
+${BT.runs.map(line).join('\n')}
+Answer briefly and plainly (2-5 sentences). Be honest about small samples and in-sample selection. You are not a financial advisor; discuss the strategy and testing, not personal investment advice.`;
+}
+
 let btSample = null;
 (async () => {
   try { btSample = window.claude && window.claude.use ? await window.claude.use('sample') : null; } catch(e) { btSample = null; }
@@ -3528,6 +3620,7 @@ let btSample = null;
 
 function initBacktestChat() {
   btRenderHistory();
+  loadBacktest();
   const form = document.getElementById('bt-form');
   const input = document.getElementById('bt-input');
   const send = document.getElementById('bt-send');
@@ -3544,7 +3637,7 @@ function initBacktestChat() {
     const out = btBubble('assistant', '<span class="bt-typing">Thinking…</span>');
     const recent = btHistory.slice(-10);
     const msgs = recent[0] && recent[0].role === 'user' ? recent : recent.slice(1);
-    const convo = [{ role: 'user', content: BT_CONTEXT + '\n\n' + msgs[0].content }].concat(msgs.slice(1));
+    const convo = [{ role: 'user', content: BT_CONTEXT_NOW() + '\n\n' + msgs[0].content }].concat(msgs.slice(1));
     try {
       const res = await btSample(convo, { cache: false, onText: ({ text }) => { out.innerHTML = btEscape(text); } });
       out.innerHTML = btEscape(res.text);

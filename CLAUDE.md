@@ -8,7 +8,8 @@ A single-file personal trading dashboard (`index.html`) for Jacob, who day-trade
 - `jc_tjr_backtest_v4.pine`: the TradingView Pine Script v6 strategy used for the backtest.
 - `jc_tjr_backtest_v5.pine`: v4 plus toggles for stop mode (sweep wick / fixed points / second sweep), sweep level (Any / London / Asian / PDH-PDL) and a displacement filter on the BOS. Not yet run in TradingView. v4 settings reproduce v4 (Sweep wick, max stop 15, Any, displacement off).
 - `.nojekyll`, `.gitignore`: for GitHub Pages. Folder is a git repo on `main`.
-- `bt/`: the 4 annotated TradingView screenshots the Backtesting tab loads (`bt/01-…jpg` to `bt/04-…jpg`).
+- `backtest.json` + `scripts/backtest.mjs`: the real-data backtest shown on the Backtesting tab (see below). The old `bt/` screenshots were removed Oct 8.
+- `.gitattributes`: forces LF line endings (a CRLF checkout once broke multi-line edits).
 
 ## Design system (keep it)
 Apple HIG look: black/white/light gray, Inter, iOS system colors as CSS tokens on `:root` (`--bull`, `--bear`, `--warn`, `--blue`…). Light/dark via `prefers-color-scheme` plus `data-theme`. Cards, segmented controls, pill badges.
@@ -75,6 +76,12 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 1. Prices are delayed, not real-time. GitHub's 5-min schedule only ran ~2×/11 h on Oct 7–8; the Cloudflare Worker above fixes this. For live futures numbers in the page you'd need a paid feed (Polygon/Databento) or a Cloudflare Worker proxy (free, but needs Jacob's account).
 2. GitHub disables scheduled workflows after 60 days with no repo activity. If prices go stale, re-enable it under Actions → Update prices.
 3. Morning Analysis card + Today's Events now come from `analysis.json` (written by Claude on request; card greys out when the date isn't today). The old hardcoded events (CPI, Waller…) were sample data and are gone.
+
+## Real-data backtest (Oct 8)
+- `scripts/backtest.mjs` is a bar-by-bar port of `jc_tjr_backtest_v5.pine` on Yahoo 5m ES=F/NQ=F (60 days max). It includes TradingView's intrabar fill path (open → nearer extreme first), limit prices rounded to the tick (longs down, shorts up), 1 tick slippage on stop/market orders and $2.50/side. **Validated:** v4 settings reproduce the TradingView trade list for Aug 16–Oct 7 exactly (7 trades, −$2,760).
+- Run `node scripts/backtest.mjs` → `backtest.json` (v4 + 24 v5 combos per symbol; NQ stops ×4). `--validate` prints the ES v4 trade list.
+- Results Jul 30–Oct 8 (49 sessions): ES1! 0/24 variations profitable (best −$970; v4 −$1,657.50 on 9 trades). NQ1! 24/24 profitable (+$1,570 to +$11,362.50; v4 −$2,650 because the 60-pt cap skipped setups). 4–21 trades per run, so suggestive only. NQ stops run up to 100 pts = $2,000/contract and the worst DD is ~$5K: check the MFF drawdown limit (MNQ = 1/10).
+- The Backtesting tab renders this: symbol + setting pickers, stat tiles, equity curve, funnel, every trade, a comparison table, and a verdict. The follow-up chat context is built from backtest.json; the old chat was cleared once via `jct_bt_ver`.
 
 ## Next backtest ideas (v5)
 - Wider stop (20–25 pts) or stop under the second sweep.
