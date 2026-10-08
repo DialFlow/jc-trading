@@ -56,6 +56,11 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - `tfBias`: 5 most recent events in the last 60 candles, weights 1/.8/.6/.4/.2. Bull respected or bear disrespected = +1, the reverse = −1. ≥0.3 Bullish, ≤−0.3 Bearish. Overall weights D 3, 4H 2.5, 1H 2, 15m 1, 5m 0.5 (≥0.25 Bullish). It feeds the AI Signal (+1 point to the side) and runs on Refresh.
 - The SVG chart per symbol/TF draws the 8 FVGs nearest price.
 
+## TJR confluence checklist (Dashboard, added Oct 8)
+- A grid of TJR confluences × 1m/5m/15m/30m/1H/4H for ES or NQ, with a bull/bear ✓ per cell and tap-for-detail. Groups follow TJR's own terms (transcripts in `../TJR Path to Profitability/`): Potential = liquidity sweep + SMT; Confirmation = BOS + IFVG; Continuation = FVG + equilibrium. Time (9:50–10:10 macro) is a global row.
+- `confChecks` looks at the last 40 candles per TF and counts only the most recent event per check. Sweep = wick through a 2-bar pivot and close back inside. BOS = latest close through the latest pivot. IFVG = latest disrespected gap not yet voided. FVG = latest gap still holding. EQ = discount/premium of the 40-candle range. SMT (`smtCheck`) = ES vs NQ new low/high in the last 10 candles vs the prior 30.
+- A TF is "aligned" at ≥4 of 6 in one direction. ES alignment adds +1 to the AI Signal when ≥2 TFs align.
+
 ## Cloud sync + price API (built Oct 8, waiting on Jacob's Cloudflare account)
 - `cloudflare/worker.js`: Cloudflare Worker (free plan). `GET /prices?symbols=` (Yahoo spark, 15 s edge cache) and `GET/PUT /sync` (KV binding `JC`, secret `SYNC_KEY`, header `X-Sync-Key`). Stores `{key: {v, t}}`; newest `t` wins per key.
 - `index.html`: `const JC_API = ''`. Empty means sync is off and prices come from the GitHub Actions `prices.json`. Set it to the Worker URL to turn both on. `Sync` patches `Storage.prototype.setItem` so writes to `SYNC_KEYS` are timestamped and pushed (2 s debounce). It pulls before `init()` (3 s cap) and on `visibilitychange`, reloading if data changed. A device's first sync merges `jct_journal` (by date) and `jct_trades` (by id); other keys keep the synced copy and back up the local one to `jct_backup_<key>`. The header "Sync" pill prompts for the key. `jct_tab` is deliberately per-device.

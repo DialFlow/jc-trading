@@ -227,6 +227,20 @@ body {
 .an-inval b { color: var(--bear); }
 .an-old { opacity: 0.6; }
 
+/* TJR confluence checklist */
+.cf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cf-table th { text-align: left; font-weight: 500; padding: 5px 6px 5px 0; }
+.cf-table td { text-align: center; padding: 5px 2px; border-top: 1px solid var(--border); cursor: pointer; font-size: 14px; }
+.cf-table tr > th { border-top: 1px solid var(--border); }
+.cf-table .cf-tf { text-align: center; font-weight: 700; border-top: 0; }
+.cf-grp td { text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); padding-top: 10px; cursor: default; border-top: 0; }
+.cf-score td { font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.cf-score th { font-weight: 700; }
+.cf-time { text-align: left !important; font-size: 12px !important; cursor: default !important; }
+.cf-b { color: var(--bull); font-weight: 700; }
+.cf-s { color: var(--bear); font-weight: 700; }
+.cf-n { color: var(--text3); }
+
 /* Multi-timeframe FVG scan */
 .mtf-head, .mtf-row { display: grid; grid-template-columns: 52px 1fr; gap: 4px 8px; align-items: center; }
 .mtf-head { font-size: 11px; font-weight: 600; color: var(--text2); padding-bottom: 4px; }
@@ -1149,6 +1163,9 @@ select { cursor: pointer; }
 
   <!-- Morning Analysis (analysis.json) -->
   <div id="analysis-wrap"></div>
+
+  <!-- TJR confluence checklist -->
+  <div id="conf-wrap"></div>
 
   <!-- Multi-timeframe FVG scan -->
   <div id="mtf-wrap"></div>
@@ -2125,22 +2142,178 @@ async function loadMTF(force) {
     for (const [sym] of MTF_SYMS) {
       const src = raw.bars?.[sym]; if (!src) continue;
       const toB = rows => (rows || []).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
-      const tfBars = { '5m': toB(src['5m']), '15m': toB(src['15m']), '1h': toB(src['1h']).slice(-300), '4h': to4h(toB(src['1h'])).slice(-300), '1d': toB(src['1d']) };
+      const tfBars = { '1m': toB(src['1m']), '5m': toB(src['5m']), '15m': toB(src['15m']), '30m': toB(src['30m']),
+        '1h': toB(src['1h']).slice(-300), '4h': to4h(toB(src['1h'])).slice(-300), '1d': toB(src['1d']) };
       const tfs = {}; let num = 0, den = 0;
-      for (const tf of MTF_TFS) {
+      for (const tf of Object.keys(tfBars)) {
         const bars = tfBars[tf]; if (!bars || bars.length < 20) continue;
         const gaps = scanFVGs(bars), bias = tfBias(bars, gaps, tf);
         tfs[tf] = { bars, gaps, bias };
-        num += MTF_WEIGHT[tf] * bias.score; den += MTF_WEIGHT[tf];
+        if (MTF_WEIGHT[tf]) { num += MTF_WEIGHT[tf] * bias.score; den += MTF_WEIGHT[tf]; }
       }
       const score = den ? num / den : 0;
       out.syms[sym] = { tfs, score, label: score >= 0.25 ? 'Bullish' : score <= -0.25 ? 'Bearish' : 'Mixed' };
     }
+    out.conf = computeConfluences(out);
     mtf = out; mtfLoadedAt = Date.now(); window.mtfScan = out;
   } catch(e) {}
   renderMTF();
+  renderConfluences();
   if (typeof refreshAISignal === "function") refreshAISignal();
   return mtf;
+}
+
+// ---------- TJR confluence checklist, per timeframe ----------
+// Each check returns 'bull', 'bear', 'both' or '' with a short reason. Recent = last 40 candles.
+const CONF_TFS = ['1m', '5m', '15m', '30m', '1h', '4h'];
+const CONF_TFLBL = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H' };
+const CONF_ROWS = [
+  { key: 'sweep', group: 'Potential',    name: 'Liquidity sweep' },
+  { key: 'smt',   group: 'Potential',    name: 'SMT divergence (ES vs NQ)' },
+  { key: 'bos',   group: 'Confirmation', name: 'Break of structure' },
+  { key: 'ifvg',  group: 'Confirmation', name: 'Inverse FVG' },
+  { key: 'fvg',   group: 'Continuation', name: 'Fair value gap (holding)' },
+  { key: 'eq',    group: 'Continuation', name: 'Equilibrium (discount / premium)' },
+];
+const RECENT = 40;
+const px = v => v.toFixed(2);
+
+function pivots(bars, k = 2) {
+  const hi = [], lo = [];
+  for (let i = k; i < bars.length - k; i++) {
+    let isH = true, isL = true;
+    for (let j = 1; j <= k; j++) {
+      if (bars[i].h <= bars[i-j].h || bars[i].h < bars[i+j].h) isH = false;
+      if (bars[i].l >= bars[i-j].l || bars[i].l > bars[i+j].l) isL = false;
+    }
+    if (isH) hi.push(i); if (isL) lo.push(i);
+  }
+  return { hi, lo };
+}
+
+function confChecks(d) {
+  const bars = d.bars, n = bars.length, from = n - RECENT, last = bars[n - 1].c, k = 2;
+  const pv = pivots(bars, k), out = {};
+  const T = i => etLabel(bars[i].t, true);
+  // Sweep: a candle wicks through a confirmed swing low/high and closes back inside
+  let sb = null, ss = null;
+  for (let j = Math.max(from, 5); j < n; j++) {
+    const pl = pv.lo.filter(i => i + k < j && i >= j - 60).pop(), ph = pv.hi.filter(i => i + k < j && i >= j - 60).pop();
+    if (pl != null && bars[j].l < bars[pl].l && bars[j].c > bars[pl].l) sb = { j, idx: j, lvl: bars[pl].l };
+    if (ph != null && bars[j].h > bars[ph].h && bars[j].c < bars[ph].h) ss = { j, idx: j, lvl: bars[ph].h };
+  }
+  out.sweep = mk(sb, ss, x => `swept low ${px(x.lvl)} @ ${T(x.j)}`, x => `swept high ${px(x.lvl)} @ ${T(x.j)}`);
+  // BOS: the most recent close beyond the latest confirmed swing high/low sets structure direction
+  let bos = null;
+  for (let j = Math.max(from, 5); j < n; j++) {
+    const ph = pv.hi.filter(i => i + k < j).pop(), pl = pv.lo.filter(i => i + k < j).pop();
+    if (ph != null && bars[j].c > bars[ph].h && bars[j-1].c <= bars[ph].h) bos = { dir: 'bull', j, lvl: bars[ph].h };
+    if (pl != null && bars[j].c < bars[pl].l && bars[j-1].c >= bars[pl].l) bos = { dir: 'bear', j, lvl: bars[pl].l };
+  }
+  out.bos = bos ? { v: bos.dir, why: `closed ${bos.dir === 'bull' ? 'above' : 'below'} ${px(bos.lvl)} @ ${T(bos.j)}` } : { v: '', why: 'no break in last 40 candles' };
+  // IFVG: an FVG closed through recently and not yet closed back through
+  const inv = d.gaps.filter(g => g.status === 'disrespected' && g.at >= from && g.invEnd == null).sort((a, b) => b.at - a.at);
+  const tag = (g, idx) => g && Object.assign({}, g, { idx });
+  const ib = tag(inv.find(g => g.dir === 'bear'), inv.find(g => g.dir === 'bear')?.at), is = tag(inv.find(g => g.dir === 'bull'), inv.find(g => g.dir === 'bull')?.at);
+  out.ifvg = mk(ib, is, g => `bearish FVG ${px(g.lo)}–${px(g.hi)} closed above @ ${T(g.at)}`, g => `bullish FVG ${px(g.lo)}–${px(g.hi)} closed below @ ${T(g.at)}`);
+  // FVG: formed recently in that direction and still holding (not closed through)
+  const live = d.gaps.filter(g => g.i >= from && g.status !== 'disrespected').sort((a, b) => b.i - a.i);
+  const fb = tag(live.find(g => g.dir === 'bull'), live.find(g => g.dir === 'bull')?.i), fs = tag(live.find(g => g.dir === 'bear'), live.find(g => g.dir === 'bear')?.i);
+  out.fvg = mk(fb, fs, g => `bullish ${px(g.lo)}–${px(g.hi)} ${g.status}`, g => `bearish ${px(g.lo)}–${px(g.hi)} ${g.status}`);
+  // EQ: where price sits in the last-40-candle dealing range
+  let H = -Infinity, L = Infinity;
+  for (let j = from; j < n; j++) { H = Math.max(H, bars[j].h); L = Math.min(L, bars[j].l); }
+  const eq = (H + L) / 2, pos = (last - L) / (H - L);
+  out.eq = { v: pos < 0.5 ? 'bull' : pos > 0.5 ? 'bear' : '', why: `${pos < 0.5 ? 'discount' : 'premium'}: ${Math.round(pos * 100)}% of range ${px(L)}–${px(H)} (EQ ${px(eq)})` };
+  return out;
+}
+// Only the most recent event counts (idx = candle index); SMT can flag both sides
+function mk(b, s, wb, ws) {
+  if (b && s && b.idx != null && s.idx != null) return b.idx >= s.idx ? { v: 'bull', why: wb(b) + ' (latest)' } : { v: 'bear', why: ws(s) + ' (latest)' };
+  if (b && s) return { v: 'both', why: wb(b) + '; ' + ws(s) };
+  if (b) return { v: 'bull', why: wb(b) };
+  if (s) return { v: 'bear', why: ws(s) };
+  return { v: '', why: 'none in last 40 candles' };
+}
+
+// SMT: in the same window, one index makes a new low (high) and the other doesn't
+function smtCheck(es, nq) {
+  const half = (bars, f) => { const n = bars.length; return [f(bars.slice(n - RECENT, n - 10)), f(bars.slice(n - 10))]; };
+  const lo = a => Math.min(...a.map(x => x.l)), hi = a => Math.max(...a.map(x => x.h));
+  const lowsE = half(es.bars, lo), lowsN = half(nq.bars, lo), highsE = half(es.bars, hi), highsN = half(nq.bars, hi);
+  const llE = lowsE[1] < lowsE[0], llN = lowsN[1] < lowsN[0], hhE = highsE[1] > highsE[0], hhN = highsN[1] > highsN[0];
+  const wb = () => `${llE ? 'ES' : 'NQ'} made a lower low in the last 10 candles, ${llE ? 'NQ' : 'ES'} didn't`;
+  const ws = () => `${hhE ? 'ES' : 'NQ'} made a higher high in the last 10 candles, ${hhE ? 'NQ' : 'ES'} didn't`;
+  return mk(llE !== llN || null, hhE !== hhN || null, wb, ws);
+}
+
+function computeConfluences(scan) {
+  const res = {};
+  for (const [sym] of MTF_SYMS) {
+    res[sym] = {};
+    for (const tf of CONF_TFS) {
+      const d = scan.syms[sym]?.tfs[tf]; if (!d || d.bars.length < RECENT + 5) continue;
+      const c = confChecks(d);
+      const e = scan.syms['ES=F']?.tfs[tf], q = scan.syms['NQ=F']?.tfs[tf];
+      c.smt = e && q ? smtCheck(e, q) : { v: '', why: 'needs ES and NQ' };
+      const has = (v, dir) => v === dir || v === 'both';
+      c.bull = CONF_ROWS.filter(r => has(c[r.key].v, 'bull')).length;
+      c.bear = CONF_ROWS.filter(r => has(c[r.key].v, 'bear')).length;
+      res[sym][tf] = c;
+    }
+    const cells = CONF_TFS.map(tf => res[sym][tf]).filter(Boolean);
+    res[sym].bullTFs = cells.filter(c => c.bull >= 4 && c.bull > c.bear).length;
+    res[sym].bearTFs = cells.filter(c => c.bear >= 4 && c.bear > c.bull).length;
+  }
+  return res;
+}
+
+let confView = 'ES=F';
+function confSetSym(s) { confView = s; renderConfluences(); }
+
+function renderConfluences() {
+  const wrap = document.getElementById('conf-wrap');
+  if (!wrap || !mtf || !mtf.conf) return;
+  const C = mtf.conf[confView] || {};
+  const tfs = CONF_TFS.filter(tf => C[tf]);
+  const mark = v => v === 'bull' ? '<span class="cf-b">✓</span>' : v === 'bear' ? '<span class="cf-s">✓</span>'
+    : v === 'both' ? '<span class="cf-b">✓</span><span class="cf-s">✓</span>' : '<span class="cf-n">·</span>';
+  const now = getCurrentETTime(), mins = now.getHours() * 60 + now.getMinutes();
+  const inMacro = mins >= 590 && mins < 610, inManip = mins >= 570 && mins < 590;
+  let lastGroup = '';
+  const rows = CONF_ROWS.map(r => {
+    const g = r.group !== lastGroup ? `<tr class="cf-grp"><td colspan="${tfs.length + 1}">${r.group}</td></tr>` : '';
+    lastGroup = r.group;
+    return g + `<tr><th>${r.name}</th>${tfs.map(tf => `<td title="${esc(CONF_TFLBL[tf] + ': ' + C[tf][r.key].why)}" onclick="confDetail('${tf}','${r.key}')">${mark(C[tf][r.key].v)}</td>`).join('')}</tr>`;
+  }).join('');
+  const score = `<tr class="cf-score"><th>Bull / Bear count</th>${tfs.map(tf => {
+    const c = C[tf], cls = c.bull >= 4 && c.bull > c.bear ? 'cf-b' : c.bear >= 4 && c.bear > c.bull ? 'cf-s' : '';
+    return `<td class="${cls}">${c.bull}/${c.bear}</td>`; }).join('')}</tr>`;
+  const verdict = C.bullTFs > C.bearTFs ? `<span class="badge badge-bull">Bullish confluence on ${C.bullTFs} of ${tfs.length} timeframes</span>`
+    : C.bearTFs > C.bullTFs ? `<span class="badge badge-bear">Bearish confluence on ${C.bearTFs} of ${tfs.length} timeframes</span>`
+    : `<span class="badge badge-neutral">No timeframe alignment (bull ${C.bullTFs || 0} · bear ${C.bearTFs || 0})</span>`;
+  wrap.innerHTML = `
+  <div class="section-label">TJR Confluence Checklist · 1m → 4H</div>
+  <div class="card mb-md"><div class="card-body">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+      <div class="mtf-segs">${MTF_SYMS.map(([s, n]) => `<button class="mtf-seg${s === confView ? ' on' : ''}" onclick="confSetSym('${s}')">${n}</button>`).join('')}</div>
+      ${verdict}
+    </div>
+    <div style="overflow-x:auto"><table class="cf-table">
+      <tr><th></th>${tfs.map(tf => `<th class="cf-tf">${CONF_TFLBL[tf]}</th>`).join('')}</tr>
+      ${rows}${score}
+      <tr class="cf-grp"><td colspan="${tfs.length + 1}">Time</td></tr>
+      <tr><th>Entry macro 9:50–10:10</th><td colspan="${tfs.length}" class="cf-time">${inMacro ? '<span class="cf-b">✓ in the window now</span>' : inManip ? '<span class="cf-s">✗ manipulation window (9:30–9:50), no trades</span>' : '<span class="cf-n">not in the window</span>'}</td></tr>
+    </table></div>
+    <div id="conf-detail" class="fs-12 text-2" style="margin-top:8px;min-height:16px;">Tap a cell to see what was found.</div>
+    <div class="fs-12 text-2" style="margin-top:6px;"><span class="cf-b">✓</span> bullish · <span class="cf-s">✓</span> bearish · <span class="cf-n">·</span> not present. A timeframe counts as aligned at 4+ of 6 in one direction. Checks look at the last 40 candles of each timeframe; Yahoo data is delayed. Rules-based, not a trade recommendation.</div>
+  </div></div>`;
+}
+function confDetail(tf, key) {
+  const c = mtf?.conf?.[confView]?.[tf]; const el = document.getElementById('conf-detail');
+  if (!c || !el) return;
+  const r = CONF_ROWS.find(x => x.key === key);
+  el.textContent = `${MTF_SYMS.find(([s]) => s === confView)[1]} ${CONF_TFLBL[tf]} · ${r.name}: ${c[key].why}`;
 }
 
 const biasBadge = (label, score) => {
@@ -3184,6 +3357,14 @@ function computeAISignal() {
     if (e.label === 'Bullish') { bullPts += 1; factors.push({ icon:'🧭', text: txt, cls:'strong' }); }
     else if (e.label === 'Bearish') { bearPts += 1; factors.push({ icon:'🧭', text: txt, cls:'strong' }); }
     else factors.push({ icon:'🧭', text: txt + ': no clear HTF lean', cls:'' });
+  }
+
+  // 9. Confluence checklist alignment (ES, 1m–4H)
+  const cf = window.mtfScan && window.mtfScan.conf && window.mtfScan.conf['ES=F'];
+  if (cf) {
+    if (cf.bullTFs > cf.bearTFs && cf.bullTFs >= 2) { bullPts += 1; factors.push({ icon:'✅', text:`TJR confluences aligned bullish on ${cf.bullTFs} timeframes (ES)`, cls:'strong' }); }
+    else if (cf.bearTFs > cf.bullTFs && cf.bearTFs >= 2) { bearPts += 1; factors.push({ icon:'✅', text:`TJR confluences aligned bearish on ${cf.bearTFs} timeframes (ES)`, cls:'strong' }); }
+    else factors.push({ icon:'☑️', text:`TJR confluences not aligned (bull ${cf.bullTFs} TFs, bear ${cf.bearTFs} TFs)`, cls:'' });
   }
 
   // Final direction

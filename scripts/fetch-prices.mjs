@@ -1,6 +1,6 @@
 // Fetches delayed Yahoo data and writes two files into <outdir>:
 //   prices.json — last quote for every symbol in index.html's YAHOO_MAP
-//   bars.json   — ES/NQ candles (5m, 15m, 1h, 1d) for the multi-timeframe FVG scan
+//   bars.json   — ES/NQ candles (1m, 5m, 15m, 30m, 1h, 1d) for the multi-timeframe FVG scan
 // Run by .github/workflows/prices.yml.  Usage: node scripts/fetch-prices.mjs <outdir>
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -43,8 +43,10 @@ writeFileSync(join(outDir, 'prices.json'), JSON.stringify({ updated, source: 'Ya
 
 // ---- bars.json ----  compact rows: [time, open, high, low, close]
 const BAR_SPECS = [
+  { tf: '1m',  interval: '1m',  range: '2d',  keep: 300 },
   { tf: '5m',  interval: '5m',  range: '5d',  keep: 300 },
   { tf: '15m', interval: '15m', range: '10d', keep: 300 },
+  { tf: '30m', interval: '30m', range: '1mo', keep: 300 },
   { tf: '1h',  interval: '60m', range: '3mo', keep: 1300 }, // 4h is built from these in the page
   { tf: '1d',  interval: '1d',  range: '1y',  keep: 250 },
 ];
