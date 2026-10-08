@@ -50,7 +50,7 @@ const BAR_SPECS = [
   { tf: '1h',  interval: '60m', range: '3mo', keep: 1300 }, // 4h is built from these in the page
   { tf: '1d',  interval: '1d',  range: '1y',  keep: 250 },
 ];
-const bars = {};
+const bars = {}, contracts = {};
 for (const sym of ['ES=F', 'NQ=F']) {
   bars[sym] = {};
   for (const s of BAR_SPECS) {
@@ -60,6 +60,7 @@ for (const sym of ['ES=F', 'NQ=F']) {
     const r = (await res.json())?.chart?.result?.[0];
     const q = r?.indicators?.quote?.[0];
     if (!r || !q) continue;
+    if (r.meta?.longName || r.meta?.shortName) contracts[sym] = r.meta.longName || r.meta.shortName; // e.g. "E-Mini S&P 500 Dec 26"
     const rows = [];
     r.timestamp.forEach((t, i) => {
       if ([q.open[i], q.high[i], q.low[i], q.close[i]].some(v => v == null)) return;
@@ -68,4 +69,4 @@ for (const sym of ['ES=F', 'NQ=F']) {
     bars[sym][s.tf] = rows.slice(-s.keep);
   }
 }
-writeFileSync(join(outDir, 'bars.json'), JSON.stringify({ updated, source: 'Yahoo Finance (delayed)', bars }));
+writeFileSync(join(outDir, 'bars.json'), JSON.stringify({ updated, source: 'Yahoo Finance (delayed)', contracts, bars }));

@@ -11,7 +11,7 @@
   },
   "instruments": [
     {
-      "sym": "ES",
+      "sym": "ES1!",
       "last": 7807.75,
       "levels": [
         {
@@ -67,7 +67,7 @@
       ]
     },
     {
-      "sym": "NQ",
+      "sym": "NQ1!",
       "last": 31146.25,
       "levels": [
         {

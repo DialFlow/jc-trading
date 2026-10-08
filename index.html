@@ -227,6 +227,11 @@ body {
 .an-inval b { color: var(--bear); }
 .an-old { opacity: 0.6; }
 
+/* Futures charts (Charts tab) */
+.fc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.fc-head .btn { white-space: nowrap; text-decoration: none; }
+.fc-segs { margin-bottom: 8px; flex-wrap: wrap; }
+
 /* TJR confluence checklist */
 .cf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .cf-table th { text-align: left; font-weight: 500; padding: 5px 6px 5px 0; }
@@ -1054,13 +1059,13 @@ select { cursor: pointer; }
   <div class="header-spacer"></div>
   <div class="header-prices">
     <div class="header-price-item">
-      <span class="price-symbol">ES</span>
+      <span class="price-symbol">ES1!</span>
       <span class="price-value mono" id="hdr-es">–</span>
       <span class="price-change up" id="hdr-es-chg">–</span>
     </div>
     <div class="header-divider"></div>
     <div class="header-price-item">
-      <span class="price-symbol">NQ</span>
+      <span class="price-symbol">NQ1!</span>
       <span class="price-value mono" id="hdr-nq">–</span>
       <span class="price-change up" id="hdr-nq-chg">–</span>
     </div>
@@ -1154,8 +1159,8 @@ select { cursor: pointer; }
 
   <!-- Ticker Row -->
   <div class="ticker-row" id="ticker-row">
-    <div class="ticker-chip"><div class="ticker-sym">ES</div><div class="ticker-price mono" id="tk-es">–</div><div class="ticker-delta up" id="tk-es-d">–</div></div>
-    <div class="ticker-chip"><div class="ticker-sym">NQ</div><div class="ticker-price mono" id="tk-nq">–</div><div class="ticker-delta up" id="tk-nq-d">–</div></div>
+    <div class="ticker-chip"><div class="ticker-sym">ES1!</div><div class="ticker-price mono" id="tk-es">–</div><div class="ticker-delta up" id="tk-es-d">–</div></div>
+    <div class="ticker-chip"><div class="ticker-sym">NQ1!</div><div class="ticker-price mono" id="tk-nq">–</div><div class="ticker-delta up" id="tk-nq-d">–</div></div>
     <div class="ticker-chip"><div class="ticker-sym">VIX</div><div class="ticker-price mono" id="tk-vix">–</div><div class="ticker-delta" id="tk-vix-d">–</div></div>
     <div class="ticker-chip"><div class="ticker-sym">DXY</div><div class="ticker-price mono" id="tk-dxy">–</div><div class="ticker-delta" id="tk-dxy-d">–</div></div>
     <div class="ticker-chip"><div class="ticker-sym">GOLD</div><div class="ticker-price mono" id="tk-gold">–</div><div class="ticker-delta" id="tk-gold-d">–</div></div>
@@ -1182,12 +1187,12 @@ select { cursor: pointer; }
   <!-- Stat Tiles -->
   <div class="grid-4 mb-md">
     <div class="stat-tile">
-      <div class="stat-eyebrow">ES Last</div>
+      <div class="stat-eyebrow">ES1! Last</div>
       <div class="stat-value mono" id="stat-es">–</div>
       <div class="stat-sub" id="stat-es-sub">–</div>
     </div>
     <div class="stat-tile">
-      <div class="stat-eyebrow">NQ Last</div>
+      <div class="stat-eyebrow">NQ1! Last</div>
       <div class="stat-value mono" id="stat-nq">–</div>
       <div class="stat-sub" id="stat-nq-sub">–</div>
     </div>
@@ -1226,45 +1231,27 @@ select { cursor: pointer; }
 <!-- ===== TAB 2: CHARTS ===== -->
 <div class="tab-page" id="page-charts">
 
-  <iframe src="https://www.tradingview.com/embed-widget/ticker-tape/?locale=en#%7B%22symbols%22%3A%5B%7B%22proName%22%3A%22OANDA%3ASPX500USD%22%2C%22title%22%3A%22ES%20proxy%22%7D%2C%7B%22proName%22%3A%22OANDA%3ANAS100USD%22%2C%22title%22%3A%22NQ%20proxy%22%7D%2C%7B%22proName%22%3A%22CAPITALCOM%3AVIX%22%2C%22title%22%3A%22VIX%20proxy%22%7D%2C%7B%22proName%22%3A%22AMEX%3ASPY%22%2C%22title%22%3A%22SPY%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3AQQQ%22%2C%22title%22%3A%22QQQ%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ANVDA%22%2C%22title%22%3A%22NVDA%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ATSLA%22%2C%22title%22%3A%22TSLA%22%7D%2C%7B%22proName%22%3A%22OANDA%3AXAUUSD%22%2C%22title%22%3A%22Gold%22%7D%2C%7B%22proName%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22title%22%3A%22BTC%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%2C%22colorTheme%22%3A%22dark%22%2C%22locale%22%3A%22en%22%7D" style="width:100%;height:46px;border:none;border-radius:12px;margin-top:4px;" loading="lazy" title="TradingView ticker tape"></iframe>
-  <div class="section-label">Index Charts · 5-Minute</div>
-  <div class="fs-12 text-2 mb-sm">CME futures (ES1!/NQ1!) and VIX are blocked in free TradingView embeds, so these use CFD proxies (OANDA SPX500/NAS100, Capital.com VIX). They move with ES/NQ but the price level differs by a few points. Use your TradingView account for exact futures prices.</div>
+  <iframe src="https://www.tradingview.com/embed-widget/ticker-tape/?locale=en#%7B%22symbols%22%3A%5B%7B%22proName%22%3A%22AMEX%3ASPY%22%2C%22title%22%3A%22SPY%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3AQQQ%22%2C%22title%22%3A%22QQQ%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ANVDA%22%2C%22title%22%3A%22NVDA%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ATSLA%22%2C%22title%22%3A%22TSLA%22%7D%2C%7B%22proName%22%3A%22OANDA%3AXAUUSD%22%2C%22title%22%3A%22Gold%22%7D%2C%7B%22proName%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22title%22%3A%22BTC%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%2C%22colorTheme%22%3A%22dark%22%2C%22locale%22%3A%22en%22%7D" style="width:100%;height:46px;border:none;border-radius:12px;margin-top:4px;" loading="lazy" title="TradingView ticker tape"></iframe>
+  <div class="section-label">ES1! · NQ1! Futures Charts</div>
+  <div class="fs-12 text-2 mb-sm">CME E-mini front-month futures, the same contracts as ES1!/NQ1!, drawn from Yahoo futures candles (delayed ~10 min). Boxes are FVGs; dashed lines are prior-day, Asian and London highs/lows. TradingView doesn't allow CME futures in free embeds, so use the buttons for the live chart in your TradingView account.</div>
   <div class="grid-2 mb-md">
     <div>
-      <div class="fs-13 fw-600 text-2 mb-sm">ES proxy · S&P 500 CFD (OANDA)</div>
-      <iframe
-        src="https://s.tradingview.com/widgetembed/?symbol=OANDA%3ASPX500USD&amp;interval=5&amp;theme=dark&amp;style=1&amp;timezone=America%2FNew_York&amp;hidesidetoolbar=0&amp;withdateranges=1&amp;allow_symbol_change=1&amp;locale=en"
-        style="width:100%;height:480px;border:none;border-radius:12px;background:#1c1c1e;"
-        allowfullscreen
-        loading="lazy">
-      </iframe>
+      <div class="fc-head">
+        <div><div class="fs-13 fw-600">ES1! · E-mini S&amp;P 500</div><div class="fs-12 text-2" id="fc-contract-ES1">CME front month</div></div>
+        <a class="btn btn-secondary btn-sm" href="https://www.tradingview.com/chart/?symbol=CME_MINI%3AES1%21" target="_blank" rel="noopener">Open in TradingView ↗</a>
+      </div>
+      <div class="mtf-segs fc-segs" id="fc-segs-ES1"></div>
+      <div id="fc-ES1" class="fc-chart"><div class="fs-12 text-2">Loading candles…</div></div>
     </div>
     <div>
-      <div class="fs-13 fw-600 text-2 mb-sm">NQ proxy · Nasdaq 100 CFD (OANDA)</div>
-      <iframe
-        src="https://s.tradingview.com/widgetembed/?symbol=OANDA%3ANAS100USD&amp;interval=5&amp;theme=dark&amp;style=1&amp;timezone=America%2FNew_York&amp;hidesidetoolbar=0&amp;withdateranges=1&amp;allow_symbol_change=1&amp;locale=en"
-        style="width:100%;height:480px;border:none;border-radius:12px;background:#1c1c1e;"
-        allowfullscreen
-        loading="lazy">
-      </iframe>
+      <div class="fc-head">
+        <div><div class="fs-13 fw-600">NQ1! · E-mini Nasdaq-100</div><div class="fs-12 text-2" id="fc-contract-NQ1">CME front month</div></div>
+        <a class="btn btn-secondary btn-sm" href="https://www.tradingview.com/chart/?symbol=CME_MINI%3ANQ1%21" target="_blank" rel="noopener">Open in TradingView ↗</a>
+      </div>
+      <div class="mtf-segs fc-segs" id="fc-segs-NQ1"></div>
+      <div id="fc-NQ1" class="fc-chart"><div class="fs-12 text-2">Loading candles…</div></div>
     </div>
   </div>
-
-  <div class="section-label">Technical Analysis · SPY 5m (ES proxy)</div>
-  <iframe
-    src="https://www.tradingview.com/embed-widget/technical-analysis/?locale=en#%7B%22interval%22%3A%225m%22%2C%22width%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22height%22%3A%22450%22%2C%22symbol%22%3A%22AMEX%3ASPY%22%2C%22showIntervalTabs%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%7D"
-    style="width:100%;height:450px;border:none;border-radius:12px;background:#1c1c1e;"
-    loading="lazy"
-    class="mb-md">
-  </iframe>
-
-  <div class="section-label">Technical Analysis · QQQ 5m (NQ proxy)</div>
-  <iframe
-    src="https://www.tradingview.com/embed-widget/technical-analysis/?locale=en#%7B%22interval%22%3A%225m%22%2C%22width%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22height%22%3A%22450%22%2C%22symbol%22%3A%22NASDAQ%3AQQQ%22%2C%22showIntervalTabs%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%7D"
-    style="width:100%;height:450px;border:none;border-radius:12px;background:#1c1c1e;"
-    loading="lazy"
-    class="mb-md">
-  </iframe>
 
 </div>
 
@@ -1787,7 +1774,7 @@ select { cursor: pointer; }
       <div class="stat-tile"><div class="stat-eyebrow">Net P&amp;L</div><div class="stat-value bear mono">−$2,760</div><div class="stat-sub">−5.52% of $50K</div></div>
       <div class="stat-tile"><div class="stat-eyebrow">Win rate</div><div class="stat-value bear">0 / 7</div><div class="stat-sub">Profit factor 0</div></div>
       <div class="stat-tile"><div class="stat-eyebrow">Sessions</div><div class="stat-value">38</div><div class="stat-sub">Aug 16 – Oct 7, 2026</div></div>
-      <div class="stat-tile"><div class="stat-eyebrow">Market</div><div class="stat-value">ES</div><div class="stat-sub">5-min · 1 contract</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Market</div><div class="stat-value">ES1!</div><div class="stat-sub">5-min · 1 contract</div></div>
     </div>
 
     <div class="bt-day">Wed Oct 7, 2026</div>
@@ -2049,9 +2036,9 @@ async function loadAnalysis() {
 // ============================================================
 const BARS_URL = 'https://raw.githubusercontent.com/DialFlow/jc-trading/data/bars.json';
 const MTF_TFS = ['5m', '15m', '1h', '4h', '1d'];
-const MTF_LABEL = { '5m': '5m', '15m': '15m', '1h': '1H', '4h': '4H', '1d': 'Daily' };
+const MTF_LABEL = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H', '1d': 'Daily' };
 const MTF_WEIGHT = { '5m': 0.5, '15m': 1, '1h': 2, '4h': 2.5, '1d': 3 };
-const MTF_SYMS = [['ES=F', 'ES'], ['NQ=F', 'NQ']];
+const MTF_SYMS = [['ES=F', 'ES1!'], ['NQ=F', 'NQ1!']]; // Yahoo continuous front month = TradingView ES1!/NQ1!
 let mtf = null, mtfLoadedAt = 0, mtfView = { sym: 'ES=F', tf: '1h' };
 
 const _etFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit',
@@ -2138,7 +2125,7 @@ async function loadMTF(force) {
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return mtf;
     const raw = await res.json();
-    const out = { updated: raw.updated, syms: {} };
+    const out = { updated: raw.updated, contracts: raw.contracts || {}, syms: {} };
     for (const [sym] of MTF_SYMS) {
       const src = raw.bars?.[sym]; if (!src) continue;
       const toB = rows => (rows || []).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
@@ -2159,6 +2146,7 @@ async function loadMTF(force) {
   } catch(e) {}
   renderMTF();
   renderConfluences();
+  renderFuturesCharts();
   if (typeof refreshAISignal === "function") refreshAISignal();
   return mtf;
 }
@@ -2169,7 +2157,7 @@ const CONF_TFS = ['1m', '5m', '15m', '30m', '1h', '4h'];
 const CONF_TFLBL = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H' };
 const CONF_ROWS = [
   { key: 'sweep', group: 'Potential',    name: 'Liquidity sweep' },
-  { key: 'smt',   group: 'Potential',    name: 'SMT divergence (ES vs NQ)' },
+  { key: 'smt',   group: 'Potential',    name: 'SMT divergence (ES1! vs NQ1!)' },
   { key: 'bos',   group: 'Confirmation', name: 'Break of structure' },
   { key: 'ifvg',  group: 'Confirmation', name: 'Inverse FVG' },
   { key: 'fvg',   group: 'Continuation', name: 'Fair value gap (holding)' },
@@ -2242,8 +2230,8 @@ function smtCheck(es, nq) {
   const lo = a => Math.min(...a.map(x => x.l)), hi = a => Math.max(...a.map(x => x.h));
   const lowsE = half(es.bars, lo), lowsN = half(nq.bars, lo), highsE = half(es.bars, hi), highsN = half(nq.bars, hi);
   const llE = lowsE[1] < lowsE[0], llN = lowsN[1] < lowsN[0], hhE = highsE[1] > highsE[0], hhN = highsN[1] > highsN[0];
-  const wb = () => `${llE ? 'ES' : 'NQ'} made a lower low in the last 10 candles, ${llE ? 'NQ' : 'ES'} didn't`;
-  const ws = () => `${hhE ? 'ES' : 'NQ'} made a higher high in the last 10 candles, ${hhE ? 'NQ' : 'ES'} didn't`;
+  const wb = () => `${llE ? 'ES1!' : 'NQ1!'} made a lower low in the last 10 candles, ${llE ? 'NQ1!' : 'ES1!'} didn't`;
+  const ws = () => `${hhE ? 'ES1!' : 'NQ1!'} made a higher high in the last 10 candles, ${hhE ? 'NQ1!' : 'ES1!'} didn't`;
   return mk(llE !== llN || null, hhE !== hhN || null, wb, ws);
 }
 
@@ -2293,7 +2281,7 @@ function renderConfluences() {
     : C.bearTFs > C.bullTFs ? `<span class="badge badge-bear">Bearish confluence on ${C.bearTFs} of ${tfs.length} timeframes</span>`
     : `<span class="badge badge-neutral">No timeframe alignment (bull ${C.bullTFs || 0} · bear ${C.bearTFs || 0})</span>`;
   wrap.innerHTML = `
-  <div class="section-label">TJR Confluence Checklist · 1m → 4H</div>
+  <div class="section-label">TJR Confluence Checklist · ES1! / NQ1! · 1m → 4H</div>
   <div class="card mb-md"><div class="card-body">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
       <div class="mtf-segs">${MTF_SYMS.map(([s, n]) => `<button class="mtf-seg${s === confView ? ' on' : ''}" onclick="confSetSym('${s}')">${n}</button>`).join('')}</div>
@@ -2335,17 +2323,17 @@ function renderMTF() {
     const eb = es?.tfs[tf]?.bias;
     const sr = eb ? `${eb.supp ? 'Support FVG ' + eb.supp.lo.toFixed(2) + '–' + eb.supp.hi.toFixed(2) : 'No support FVG'} · ${eb.res ? 'Resistance FVG ' + eb.res.lo.toFixed(2) + '–' + eb.res.hi.toFixed(2) : 'No resistance FVG'}` : '';
     return `<div class="mtf-row"><span class="mtf-tf">${MTF_LABEL[tf]}</span><span class="mtf-cells">${cells}</span>
-      <div class="mtf-sub">ES: ${esc(eb ? eb.lastEvent : '')}<br>${esc(sr)}</div></div>`;
+      <div class="mtf-sub">ES1!: ${esc(eb ? eb.lastEvent : '')}<br>${esc(sr)}</div></div>`;
   }).join('');
   const seg = (items, cur, fn) => items.map(([v, l]) => `<button class="mtf-seg${v === cur ? ' on' : ''}" onclick="${fn}('${v}')">${l}</button>`).join('');
   wrap.innerHTML = `
-  <div class="section-label">Multi-Timeframe FVG Scan · candles as of ${esc(asOf)}</div>
+  <div class="section-label">Multi-Timeframe FVG Scan · ES1! / NQ1! · candles as of ${esc(asOf)}</div>
   <div class="card mb-md"><div class="card-body">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
       ${MTF_SYMS.map(([s, n]) => mtf.syms[s] ? `<span class="fs-13 fw-600">${n}</span>${biasBadge(mtf.syms[s].label, mtf.syms[s].score)}` : '').join('<span style="width:6px"></span>')}
-      ${split ? '<span class="badge badge-warn">ES/NQ disagree, watch for SMT</span>' : ''}
+      ${split ? '<span class="badge badge-warn">ES1!/NQ1! disagree, watch for SMT</span>' : ''}
     </div>
-    <div class="mtf-head"><span class="mtf-tf"></span><span class="mtf-cells"><span>ES</span><span>NQ</span></span></div>
+    <div class="mtf-head"><span class="mtf-tf"></span><span class="mtf-cells"><span>ES1!</span><span>NQ1!</span></span></div>
     ${rows}
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 6px;">
       <div class="mtf-segs">${seg(MTF_SYMS.map(([s, n]) => [s, n]), mtfView.sym, 'mtfSetSym')}</div>
@@ -2362,11 +2350,30 @@ function renderMTF() {
 function mtfSetSym(s) { mtfView.sym = s; renderMTF(); }
 function mtfSetTf(t) { mtfView.tf = t; renderMTF(); }
 
-function drawMTFChart() {
-  const el = document.getElementById('mtf-chart');
-  const d = mtf?.syms[mtfView.sym]?.tfs[mtfView.tf];
-  if (!el || !d) { if (el) el.innerHTML = '<div class="fs-12 text-2">No candles for this timeframe.</div>'; return; }
-  const W = 600, H = 320, PR = 62, PT = 8, PB = 22, N = 70;
+function drawMTFChart() { drawCandles('mtf-chart', mtfView.sym, mtfView.tf); }
+
+// Prior-day / Asian / London highs and lows from 15m candles (futures day = 6 pm → 5 pm ET)
+function sessionLevels(sym) {
+  const bars = mtf?.syms[sym]?.tfs['15m']?.bars; if (!bars || !bars.length) return [];
+  const key = t => { const p = etParts(t); const d = new Date(Date.UTC(p.y, p.mo - 1, p.d + (p.h >= 18 ? 1 : 0))); return { day: d.toISOString().slice(0, 10), m: p.h * 60 + p.mi }; };
+  const days = [...new Set(bars.map(b => key(b.t).day))];
+  const today = days[days.length - 1], prev = days[days.length - 2];
+  const rng = (f) => { let h = -Infinity, l = Infinity; for (const b of bars) { const k = key(b.t); if (f(k)) { h = Math.max(h, b.h); l = Math.min(l, b.l); } } return isFinite(h) ? [h, l] : null; };
+  const out = [];
+  const pd = prev && rng(k => k.day === prev);
+  const as = rng(k => k.day === today && (k.m >= 1080 || k.m < 180));
+  const ld = rng(k => k.day === today && k.m >= 180 && k.m < 510);
+  if (pd) out.push({ p: pd[0], n: 'PDH' }, { p: pd[1], n: 'PDL' });
+  if (as) out.push({ p: as[0], n: 'Asia H' }, { p: as[1], n: 'Asia L' });
+  if (ld) out.push({ p: ld[0], n: 'Ldn H' }, { p: ld[1], n: 'Ldn L' });
+  return out;
+}
+
+function drawCandles(elId, sym, tf, opts = {}) {
+  const el = document.getElementById(elId);
+  const d = mtf?.syms[sym]?.tfs[tf];
+  if (!el || !d) { if (el) el.innerHTML = '<div class="fs-12 text-2">No candles for this timeframe yet.</div>'; return; }
+  const W = 600, H = opts.h || 320, PR = 62, PT = 8, PB = 22, N = opts.n || 70;
   const all = d.bars, start = Math.max(0, all.length - N), bars = all.slice(start);
   let lo = Math.min(...bars.map(b => b.l)), hi = Math.max(...bars.map(b => b.h));
   const pad = (hi - lo) * 0.04; lo -= pad; hi += pad;
@@ -2411,14 +2418,35 @@ function drawMTFChart() {
   const last = bars[bars.length - 1];
   svg += `<line x1="0" x2="${right}" y1="${y(last.c)}" y2="${y(last.c)}" stroke="var(--blue)" stroke-width="0.8" stroke-dasharray="2 2"/>
     <rect x="${right + 1}" y="${y(last.c) - 8}" width="${PR - 2}" height="16" rx="3" fill="var(--blue)"/><text x="${right + 4}" y="${y(last.c) + 4}" class="mtf-ax" fill="#fff" style="fill:#fff">${last.c.toFixed(2)}</text>`;
-  const daily = mtfView.tf === '1d';
+  const daily = tf === '1d';
   [0, Math.floor(bars.length / 2), bars.length - 1].forEach(k => {
     const t = bars[k].t, lbl = daily ? new Date(t * 1000).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }) : etLabel(t, true);
     svg += `<text x="${Math.min(right - 40, Math.max(0, x(start + k) - 20))}" y="${H - 6}" class="mtf-ax">${lbl}</text>`;
   });
-  const sym = MTF_SYMS.find(([s]) => s === mtfView.sym)[1];
-  el.innerHTML = `<div class="fs-12 fw-600" style="margin-bottom:4px;">${sym} · ${MTF_LABEL[mtfView.tf]} · last ${bars.length} candles · ${daily ? '' : 'ET'}</div>
-    <svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="${sym} ${MTF_LABEL[mtfView.tf]} chart with fair value gaps">${svg}</svg>`;
+  // session levels on intraday charts
+  if (!daily) for (const lv of sessionLevels(sym)) {
+    if (lv.p < lo || lv.p > hi) continue;
+    svg += `<line x1="0" x2="${right}" y1="${y(lv.p)}" y2="${y(lv.p)}" stroke="var(--warn)" stroke-width="0.8" stroke-dasharray="5 3" opacity="0.8"/><text x="4" y="${y(lv.p) - 3}" class="mtf-ax" style="fill:var(--warn)">${lv.n} ${lv.p.toFixed(2)}</text>`;
+  }
+  const name = MTF_SYMS.find(([s]) => s === sym)[1];
+  el.innerHTML = `<div class="fs-12 fw-600" style="margin-bottom:4px;">${name} · ${MTF_LABEL[tf] || tf} · last ${bars.length} candles${daily ? '' : ' · ET'}</div>
+    <svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="${name} ${MTF_LABEL[tf] || tf} chart with fair value gaps">${svg}</svg>`;
+}
+
+// Charts tab: one chart per contract with its own timeframe switch
+const FC_TFS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
+const fcView = { 'ES=F': '5m', 'NQ=F': '5m' };
+function fcSet(sym, tf) { fcView[sym] = tf; renderFuturesCharts(); }
+function renderFuturesCharts() {
+  if (!mtf) return;
+  for (const [sym, name] of MTF_SYMS) {
+    const id = name.replace('!', '');
+    const segs = document.getElementById('fc-segs-' + id);
+    if (segs) segs.innerHTML = FC_TFS.map(t => `<button class="mtf-seg${t === fcView[sym] ? ' on' : ''}" onclick="fcSet('${sym}','${t}')">${MTF_LABEL[t] || t}</button>`).join('');
+    const c = document.getElementById('fc-contract-' + id);
+    if (c && mtf.contracts && mtf.contracts[sym]) c.textContent = 'CME front month: ' + mtf.contracts[sym];
+    drawCandles('fc-' + id, sym, fcView[sym], { n: 90, h: 360 });
+  }
 }
 
 // ============================================================
@@ -2436,6 +2464,7 @@ function showPage(name) {
   currentTab = name;
   if (name === 'journal') initJournalDate();
   if (name === 'tradelog') renderTradeLog();
+  if (name === 'charts') renderFuturesCharts();
   try { localStorage.setItem('jct_tab', name); } catch(e) {}
 }
 
@@ -3310,15 +3339,15 @@ function computeAISignal() {
 
   // 2. ES bias
   const esBias = bias.esBias || '';
-  if (esBias === 'bullish') { bullPts += 2; factors.push({ icon:'📈', text:'ES bias: Bullish', cls:'strong' }); }
-  else if (esBias === 'bearish') { bearPts += 2; factors.push({ icon:'📉', text:'ES bias: Bearish', cls:'strong' }); }
-  else factors.push({ icon:'➡️', text:'ES bias: Not set — go to Daily Bias tab', cls:'caution' });
+  if (esBias === 'bullish') { bullPts += 2; factors.push({ icon:'📈', text:'ES1! bias: Bullish', cls:'strong' }); }
+  else if (esBias === 'bearish') { bearPts += 2; factors.push({ icon:'📉', text:'ES1! bias: Bearish', cls:'strong' }); }
+  else factors.push({ icon:'➡️', text:'ES1! bias: Not set — go to Daily Bias tab', cls:'caution' });
 
   // 3. NQ bias
   const nqBias = bias.nqBias || '';
-  if (nqBias === 'bullish') { bullPts += 2; factors.push({ icon:'📈', text:'NQ bias: Bullish', cls:'strong' }); }
-  else if (nqBias === 'bearish') { bearPts += 2; factors.push({ icon:'📉', text:'NQ bias: Bearish', cls:'strong' }); }
-  else factors.push({ icon:'➡️', text:'NQ bias: Not set', cls:'' });
+  if (nqBias === 'bullish') { bullPts += 2; factors.push({ icon:'📈', text:'NQ1! bias: Bullish', cls:'strong' }); }
+  else if (nqBias === 'bearish') { bearPts += 2; factors.push({ icon:'📉', text:'NQ1! bias: Bearish', cls:'strong' }); }
+  else factors.push({ icon:'➡️', text:'NQ1! bias: Not set', cls:'' });
 
   // 4. Confidence
   const conf = parseInt(bias.confidence || 50);
@@ -3331,11 +3360,11 @@ function computeAISignal() {
   const anTag = k => (!bias[k] && an[k]) ? ' (Morning Analysis)' : '';
   const smt = bias.smt || an.smt || '';
   if (smt === 'bullish-div') {
-    bullPts += 1.5; factors.push({ icon:'🔀', text:'SMT: Bullish divergence — ES/NQ split at lows → buy signal', cls:'strong' });
+    bullPts += 1.5; factors.push({ icon:'🔀', text:'SMT: Bullish divergence — ES1!/NQ1! split at lows → buy signal', cls:'strong' });
   } else if (smt === 'bearish-div') {
-    bearPts += 1.5; factors.push({ icon:'🔀', text:'SMT: Bearish divergence — ES/NQ split at highs → sell signal', cls:'strong' });
+    bearPts += 1.5; factors.push({ icon:'🔀', text:'SMT: Bearish divergence — ES1!/NQ1! split at highs → sell signal', cls:'strong' });
   } else if (smt === 'aligned') {
-    factors.push({ icon:'🔗', text:'ES and NQ aligned — no divergence yet' + anTag('smt'), cls:'' });
+    factors.push({ icon:'🔗', text:'ES1! and NQ1! aligned — no divergence yet' + anTag('smt'), cls:'' });
   }
 
   // 6. Liquidity sweep
@@ -3353,7 +3382,7 @@ function computeAISignal() {
   const ms = window.mtfScan && window.mtfScan.syms;
   if (ms && ms['ES=F']) {
     const e = ms['ES=F'], n = ms['NQ=F'];
-    const txt = 'Multi-TF FVG scan: ES ' + e.label + ' (' + e.score.toFixed(2) + ')' + (n ? ', NQ ' + n.label + ' (' + n.score.toFixed(2) + ')' : '');
+    const txt = 'Multi-TF FVG scan: ES1! ' + e.label + ' (' + e.score.toFixed(2) + ')' + (n ? ', NQ1! ' + n.label + ' (' + n.score.toFixed(2) + ')' : '');
     if (e.label === 'Bullish') { bullPts += 1; factors.push({ icon:'🧭', text: txt, cls:'strong' }); }
     else if (e.label === 'Bearish') { bearPts += 1; factors.push({ icon:'🧭', text: txt, cls:'strong' }); }
     else factors.push({ icon:'🧭', text: txt + ': no clear HTF lean', cls:'' });
@@ -3362,8 +3391,8 @@ function computeAISignal() {
   // 9. Confluence checklist alignment (ES, 1m–4H)
   const cf = window.mtfScan && window.mtfScan.conf && window.mtfScan.conf['ES=F'];
   if (cf) {
-    if (cf.bullTFs > cf.bearTFs && cf.bullTFs >= 2) { bullPts += 1; factors.push({ icon:'✅', text:`TJR confluences aligned bullish on ${cf.bullTFs} timeframes (ES)`, cls:'strong' }); }
-    else if (cf.bearTFs > cf.bullTFs && cf.bearTFs >= 2) { bearPts += 1; factors.push({ icon:'✅', text:`TJR confluences aligned bearish on ${cf.bearTFs} timeframes (ES)`, cls:'strong' }); }
+    if (cf.bullTFs > cf.bearTFs && cf.bullTFs >= 2) { bullPts += 1; factors.push({ icon:'✅', text:`TJR confluences aligned bullish on ${cf.bullTFs} timeframes (ES1!)`, cls:'strong' }); }
+    else if (cf.bearTFs > cf.bullTFs && cf.bearTFs >= 2) { bearPts += 1; factors.push({ icon:'✅', text:`TJR confluences aligned bearish on ${cf.bearTFs} timeframes (ES1!)`, cls:'strong' }); }
     else factors.push({ icon:'☑️', text:`TJR confluences not aligned (bull ${cf.bullTFs} TFs, bear ${cf.bearTFs} TFs)`, cls:'' });
   }
 

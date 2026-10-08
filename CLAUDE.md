@@ -45,8 +45,11 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - Deployed: https://dialflow.github.io/jc-trading/ (repo github.com/DialFlow/jc-trading, Pages from `main` / root). Push from Jacob's own terminal; Claude Code's shell can't do the GitHub sign-in.
 - Headless check: Playwright with `channel: 'msedge'` (Edge is preinstalled; Chromium download was slow).
 
+## Instruments: ES1! and NQ1! (Jacob trades these)
+- All analysis runs on Yahoo `ES=F` / `NQ=F`, which is the CME front-month E-mini (Dec 26 as of Oct 8): the same contract as TradingView ES1!/NQ1!. `bars.json` carries `contracts` (e.g. "E-Mini S&P 500 Dec 26"); check it around roll weeks, since Yahoo may roll on a different day than TradingView.
+- TradingView free embeds refuse every CME futures variant (`CME_MINI:ES1!`, `CME_MINI_DL:ES1!`, `ESZ2026`…; tested Oct 8). So the Charts tab draws its own ES1!/NQ1! candle charts (`drawCandles`, 1m–Daily, FVG boxes, PDH/PDL/Asia/London lines from `sessionLevels`) and links to the live chart in Jacob's TradingView. The ticker tape keeps only real symbols (SPY, QQQ, NVDA, TSLA, gold, BTC). UI labels say ES1!/NQ1!.
+
 ## Data feeds (how prices work now)
-- **Charts:** free TradingView embeds can't show CME futures (ES1!/NQ1!, GC1!) or CBOE VIX ("only available on TradingView"). The Charts tab uses CFD proxies, labelled as such: `OANDA:SPX500USD`, `OANDA:NAS100USD`, `CAPITALCOM:VIX`, `OANDA:XAUUSD`. Also embeddable: `CAPITALCOM:DXY`. The Technical Analysis widget has no data for any CFD, so it uses `AMEX:SPY` / `NASDAQ:QQQ`.
 - **Prices in the page JS:** corsproxy.io now returns 401 without an API key, and free keyless proxies (allorigins, codetabs, thingproxy, cors.lol) all failed. So `.github/workflows/prices.yml` runs `scripts/fetch-prices.mjs` every 5 min Sun–Fri. It batch-fetches Yahoo `/v8/finance/spark` (max 20 symbols per call) for every value in `YAHOO_MAP` and force-pushes `prices.json` to the `data` branch. The page reads `raw.githubusercontent.com/DialFlow/jc-trading/data/prices.json` via `loadPrices()`/`fetchYahoo()`. Prices are delayed ~5–15 min; the freshness pill says "Delayed", never "Live".
 - To add a symbol: add it to `YAHOO_MAP` (and `ALL_JOURNAL_SYMS` for the journal); the workflow picks it up automatically.
 

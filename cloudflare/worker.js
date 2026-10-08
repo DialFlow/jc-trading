@@ -83,13 +83,14 @@ async function bars(ctx) {
   const cacheKey = new Request('https://cache.local/bars');
   const hit = await cache.match(cacheKey);
   if (hit) return new Response(hit.body, { headers: { 'Content-Type': 'application/json', ...CORS } });
-  const out = {};
+  const out = {}, contracts = {};
   await Promise.all(['ES=F', 'NQ=F'].flatMap(sym => BAR_SPECS.map(async s => {
     const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${s.interval}&range=${s.range}&includePrePost=true`,
       { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!res.ok) return;
     const r = (await res.json())?.chart?.result?.[0], q = r?.indicators?.quote?.[0];
     if (!r || !q) return;
+    if (r.meta?.longName || r.meta?.shortName) contracts[sym] = r.meta.longName || r.meta.shortName;
     const rows = [];
     r.timestamp.forEach((t, i) => {
       if ([q.open[i], q.high[i], q.low[i], q.close[i]].some(v => v == null)) return;
@@ -97,7 +98,7 @@ async function bars(ctx) {
     });
     (out[sym] ||= {})[s.tf] = rows.slice(-s.keep);
   })));
-  const body = JSON.stringify({ updated: Math.floor(Date.now() / 1000), source: 'Yahoo Finance via Worker', bars: out });
+  const body = JSON.stringify({ updated: Math.floor(Date.now() / 1000), source: 'Yahoo Finance via Worker', contracts, bars: out });
   ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers: { 'Cache-Control': 'max-age=60' } })));
   return new Response(body, { headers: { 'Content-Type': 'application/json', ...CORS } });
 }
