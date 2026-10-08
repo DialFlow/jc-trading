@@ -53,10 +53,10 @@ for (const sym of Object.keys(INSTR)) {
       const re = run(bars, sym, { ...c, exitMode: ex }), se = run(bars, sym, { ...c, exitMode: ex, fillThrough: 2, slipTicks: 3 });
       exits[ex] = { trades: re.trades.map(({ td, dir, entryTime, entry, exitTime, exit, stop, target, tp1, scaled, risk, r, mfe, mae, mfeR, maeR, mins, pts, pnl, why }) => ({ td, dir, entryTime, entry, exitTime, exit, stop, target, tp1, scaled, risk, r, mfe, mae, mfeR, maeR, mins, pts, pnl, why })),
         stats: slim(stats(re.trades)), halves: [re.trades.filter(t => t.td < mid), re.trades.filter(t => t.td >= mid)].map(ts => slim(stats(ts))),
-        stress: { stats: slim(stats(se.trades)), trades: se.trades.map(t => ({ td: t.td, pts: t.pts, pnl: t.pnl, r: t.r })) } };
+        stress: { stats: slim(stats(se.trades)), trades: se.trades.map(t => ({ td: t.td, pts: t.pts, pnl: t.pnl, r: t.r, mfe: t.mfe, mae: t.mae })) } };
     }
     out.runs.push({ sym, name: I.name, ...cfg, trades: r.trades, funnel: r.funnel, skipped: r.skipped, stats: slim(st), equity: st.equity,
-      halves, stress: { stats: slim(stats(cons.trades)), trades: cons.trades.map(t => ({ td: t.td, pts: t.pts, pnl: t.pnl, r: t.r })) }, exits });
+      halves, stress: { stats: slim(stats(cons.trades)), trades: cons.trades.map(t => ({ td: t.td, pts: t.pts, pnl: t.pnl, r: t.r, mfe: t.mfe, mae: t.mae })) }, exits });
   }
 
   // replay data: levels as of the 07:25 bar (from a full run), then candles 07:30–12:30

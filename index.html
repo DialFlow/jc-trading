@@ -326,6 +326,12 @@ body {
 #lab-nav .mtf-seg { white-space: nowrap; flex-shrink: 0; }
 @media (max-width: 600px) { .lab-pick, .lab-pick select { width: 100%; } .lab-pick select { min-width: 0; } }
 
+/* Account sim plan */
+.sim-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sim-plan-pick { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.sim-plan-pick select { width: auto; font-size: 13px; padding: 6px 8px; }
+.sim-rules summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--blue); padding: 4px 0 8px; }
+
 /* Scenarios + exit plan */
 .sc-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; }
 .sc-chips { flex-wrap: wrap; }
@@ -1830,16 +1836,13 @@ select { cursor: pointer; }
   <!-- ACCOUNT SIM -->
   <div class="lab-view" id="lab-sim" hidden>
     <div class="card mb-md"><div class="card-body">
-      <div class="fs-13" style="margin-bottom:10px">Monte Carlo: each simulated day takes a trade with the same probability as in the backtest, drawing a real trade at random from the selected settings' history. The account rules decide pass or fail. Edit the rules to match your MyFundedFutures plan.</div>
-      <div class="sim-grid">
-        <label>Contract <select id="sim-kind"><option value="micro">Micro (MES/MNQ)</option><option value="full">Full (ES/NQ)</option></select></label>
-        <label>Contracts <input id="sim-n" type="number" min="1" max="20" value="1"></label>
-        <label>Profit target $ <input id="sim-target" type="number" value="3000" step="100"></label>
-        <label>Trailing drawdown $ <input id="sim-dd" type="number" value="2000" step="100"></label>
-        <label>Daily loss limit $ (0 = none) <input id="sim-dll" type="number" value="0" step="100"></label>
-        <label>Trading days <input id="sim-days" type="number" value="30" min="5" max="120"></label>
-        <label class="sim-check"><input id="sim-lock" type="checkbox" checked> Drawdown stops trailing at starting balance</label>
-        <label class="sim-check"><input id="sim-stress" type="checkbox" checked> Use stress-test trades (worse fills)</label>
+      <div class="fs-13" style="margin-bottom:10px">Monte Carlo: 5,000 simulated accounts. Each day takes a trade as often as the backtest did, drawing a real trade at random and replaying its worst and best point through your MyFundedFutures plan's rules.</div>
+      <div id="sim-plan"></div>
+      <div class="sim-grid" style="margin-top:10px">
+        <label>Contract <select id="sim-kind" onchange="simRun()"><option value="micro">Micro (MES/MNQ)</option><option value="full">Full (ES/NQ)</option></select></label>
+        <label>Contracts <input id="sim-n" type="number" min="1" max="50" value="3" onchange="simRun()"></label>
+        <label>Trading days <input id="sim-days" type="number" value="30" min="5" max="120" onchange="simRun()"></label>
+        <label class="sim-check"><input id="sim-stress" type="checkbox" checked onchange="simRun()"> Use stress-test trades (worse fills)</label>
       </div>
       <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="simRun()">Run 5,000 simulations</button>
     </div></div>
@@ -1939,7 +1942,7 @@ let nqLevels = [];
 // ============================================================
 const JC_API = '';
 const SYNC_KEYS = ['jct_bias','jct_bt_chat','jct_checklist','jct_dash_notes','jct_edge_notes',
-  'jct_journal','jct_levels','jct_trades','tjr_bias','jct_risk'];
+  'jct_journal','jct_levels','jct_trades','tjr_bias','jct_risk','jct_plan'];
 
 const Sync = (() => {
   const _setItem = Storage.prototype.setItem;
@@ -3932,7 +3935,7 @@ function liveMiniOld(st, evs, nowM, ageMin, r, title) {
 
 // ---------- ACCOUNT SIM (Monte Carlo) ----------
 const pctS = v => v > 0 && v < 0.005 ? '<1%' : Math.round(v * 100) + '%';
-function simRun() {
+function simRunOld() {
   if (!BT) return;
   const r = viaExit(labCfg()), I = { 'ES=F': { pv: 50 }, 'NQ=F': { pv: 20 } }[r.sym];
   const kind = document.getElementById('sim-kind').value, n = Math.max(1, +document.getElementById('sim-n').value || 1);
@@ -4262,7 +4265,7 @@ function renderPlaybook() {
 // ============================================================
 // LAB HIGHLIGHTS — the numbers in plain English, shareable
 // ============================================================
-function mcQuick(r, kind, cnt, days = 30, paths = 2000) {
+function mcQuickOld(r, kind, cnt, days = 30, paths = 2000) {
   const pv = window.TJR.INSTR[r.sym].pointValue, src = r.stress.trades, risk = getRisk();
   const p = src.length / BT.instruments[r.sym].nySessions, target = 3000, dd = risk.dd || 2000;
   let pass = 0, fail = 0;
@@ -4313,7 +4316,7 @@ function renderHighlights() {
     { id: 'survival', kicker: 'Account survival · 30 days', big: `${Math.round(mcMicro.fail * 100)}% <span class="hl-small">blow-up risk with 3 MNQ</span>`, title: `vs ${Math.round(mcFull.fail * 100)}% with 1 full NQ`, body: `
       <div class="hl-bars"><div class="hl-bar"><span>3 × MNQ</span><div><i style="width:${(mcMicro.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcMicro.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcMicro.pass * 100)}% pass</b></div>
       <div class="hl-bar"><span>1 × NQ</span><div><i style="width:${(mcFull.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcFull.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcFull.pass * 100)}% pass</b></div></div>
-      <div class="fs-13">2,000 <span class="gl" data-g="mc">Monte Carlo</span> runs against a $3,000 target and $${getRisk().dd.toLocaleString()} <span class="gl" data-g="dd">drawdown</span> limit. <span class="gl" data-g="micro">Micros</span> pass slower but blow up far less. Green = pass, red = fail.</div>`, caveat },
+      <div class="fs-13">2,000 <span class="gl" data-g="mc">Monte Carlo</span> runs of the <b>${esc(mcMicro.plan)}</b> evaluation rules (target, trailing <span class="gl" data-g="dd">drawdown</span>, open-trade dips), as set in Lab → Account sim. <span class="gl" data-g="micro">Micros</span> pass slower but blow up far less. Green = pass, red = fail.</div>`, caveat },
     { id: 'trades', kicker: 'Best and worst trade', big: `${btMoney(best.pnl)} <span class="hl-small">/ ${btMoney(worst.pnl)}</span>`, title: 'Every trade is listed in Results', body: `
       <div class="hl-two"><div><div class="fs-12 text-2">Best · ${best.entryTime.slice(5, 10)}</div><div class="fw-600">${best.dir} ${best.entry.toFixed(2)} → ${best.exit.toFixed(2)}</div><div class="bull fs-13">${best.r >= 0 ? '+' : ''}${best.r}<span class="gl" data-g="r">R</span> · ${best.why}</div></div>
       <div><div class="fs-12 text-2">Worst · ${worst.entryTime.slice(5, 10)}</div><div class="fw-600">${worst.dir} ${worst.entry.toFixed(2)} → ${worst.exit.toFixed(2)}</div><div class="bear fs-13">${worst.r}R · ${worst.why}</div></div></div>`, caveat },
@@ -4812,6 +4815,176 @@ function confHistoryRow(sym, tfs) {
   return `<tr class="cf-hist"><th>History when 5+ of 6 align</th>${tfs.map(tf => { const s = cs[tf]?.[sym]; if (!s) return '<td>–</td>';
     const edge = s.signal5.winRate - s.baseline, cls = edge >= 0.05 ? 'cf-b' : edge <= -0.05 ? 'cf-s' : 'cf-n';
     return `<td class="${cls}" title="${s.signal5.n} signals, ${s.from}–${s.to}; random ${Math.round(s.baseline * 100)}%">${Math.round(s.signal5.winRate * 100)}%</td>`; }).join('')}</tr>`;
+}
+
+// ============================================================
+// MYFUNDEDFUTURES PLAN SIMULATOR
+// Rules from MFF's help center (checked Oct 8 2026); every field is editable in the Lab.
+// Profit numbers are relative to the starting balance ($0 = $50,000).
+// ============================================================
+const MFF_PLANS = {
+  rapid: { name: 'Rapid 50K', maxMini: 5, maxMicro: 50, src: 'help.myfundedfutures.com · Rapid Plan 50k',
+    eval: { target: 3000, mll: 2000, trail: 'eod', lock: 100, dll: 0, cons: 0.5, minDays: 2 },
+    funded: { mll: 2000, trail: 'intraday', lock: 100, dll: 0, buffer: 2100, minPayout: 500, maxPayout: 0, split: 0.9, wait: 1, cycleCons: 0, cycleDays: 0 } },
+  rapidEod: { name: 'Rapid EOD 50K', maxMini: 3, maxMicro: 30, src: 'help.myfundedfutures.com · Rapid EOD 50k',
+    eval: { target: 3000, mll: 2000, trail: 'eod', lock: 100, dll: 0, cons: 0.3, minDays: 4 },
+    funded: { mll: 2000, trail: 'eod', lock: 100, dll: 0, buffer: 2100, minPayout: 500, maxPayout: 0, split: 0.9, wait: 1, cycleCons: 0, cycleDays: 0 } },
+  builder: { name: 'Builder 50K', maxMini: 4, maxMicro: 40, src: 'help.myfundedfutures.com · Builder Plan 50k',
+    eval: { target: 3000, mll: 2000, trail: 'eod', lock: 100, dll: 1000, cons: 0, minDays: 1 },
+    funded: { mll: 2000, trail: 'eod', lock: 100, dll: 1000, buffer: 2100, minPayout: 500, maxPayout: 2000, split: 0.8, wait: 2, cycleCons: 0.5, cycleDays: 2 } },
+  builderAdd: { name: 'Builder 50K ($1,500 MLL add-on)', maxMini: 4, maxMicro: 40, src: 'help.myfundedfutures.com · Builder Plan 50k',
+    eval: { target: 3000, mll: 1500, trail: 'eod', lock: 100, dll: 1000, cons: 0, minDays: 1 },
+    funded: { mll: 1500, trail: 'eod', lock: 100, dll: 1000, buffer: 1600, minPayout: 500, maxPayout: 2000, split: 0.8, wait: 2, cycleCons: 0.5, cycleDays: 2 } },
+  pro: { name: 'Pro 50K', maxMini: 5, maxMicro: 50, src: 'help.myfundedfutures.com · Pro Plan (eval target assumed $3,000)',
+    eval: { target: 3000, mll: 2000, trail: 'eod', lock: 100, dll: 0, cons: 0.5, minDays: 2 },
+    funded: { mll: 2000, trail: 'eod', lock: 100, dll: 0, buffer: 2100, minPayout: 1000, maxPayout: 0, split: 0.8, wait: 10, cycleCons: 0, cycleDays: 0 } },
+};
+const PLAN_FIELDS = {
+  eval: [['target', 'Profit target $'], ['mll', 'Max loss (trailing) $'], ['trail', 'Trailing'], ['lock', 'Stops trailing at +$'], ['dll', 'Daily loss limit $ (0 = none)'], ['cons', 'Consistency (best day ≤ % of profit, 0 = none)'], ['minDays', 'Min trading days']],
+  funded: [['mll', 'Max loss (trailing) $'], ['trail', 'Trailing'], ['lock', 'Stops trailing at +$'], ['dll', 'Daily loss limit $ (0 = none)'], ['buffer', 'Payout buffer $'], ['minPayout', 'Min payout $'], ['maxPayout', 'Max payout per cycle $ (0 = none)'], ['split', 'Your split (0–1)'], ['wait', 'Trading days before 1st payout'], ['cycleCons', 'Payout consistency (0 = none)'], ['cycleDays', 'Min days per payout cycle']],
+};
+function getPlan() {
+  let p = {}; try { p = JSON.parse(localStorage.getItem('jct_plan') || '{}'); } catch(e) {}
+  const key = MFF_PLANS[p.key] ? p.key : 'rapid', base = MFF_PLANS[key];
+  return { key, stage: p.stage === 'funded' ? 'funded' : 'eval', rules: { ...base[p.stage === 'funded' ? 'funded' : 'eval'], ...(p.over && p.over[p.stage === 'funded' ? 'funded' : 'eval'] || {}) }, base };
+}
+function savePlan(patch) {
+  let p = {}; try { p = JSON.parse(localStorage.getItem('jct_plan') || '{}'); } catch(e) {}
+  Object.assign(p, patch);
+  try { localStorage.setItem('jct_plan', JSON.stringify(p)); } catch(e) {}
+}
+
+/**
+ * One simulated account. Each trade is replayed through its path: winners dip to their worst point (MAE) first,
+ * then run to their best (MFE); losers run up first, then fall. Open-trade losses count against the max loss
+ * on every plan; on intraday-trailing plans the floor also rises with unrealised highs.
+ */
+function simAccount(src, pv, plan, kind, cnt, days, paths, keepCurves, stage) {
+  const R = plan, dpp = pv * (kind === 'micro' ? 0.1 : 1) * cnt, cost = 2 * (kind === 'micro' ? 0.75 : 2.5) * cnt;
+  let pass = 0, fail = 0, failMid = 0, payAny = 0, payTotal = 0, payCount = 0;
+  const daysToPass = [], daysToPay = [], curves = keepCurves ? [] : null, endBal = [];
+  for (let k = 0; k < paths; k++) {
+    let bal = 0, peak = 0, hw = 0, floor = -R.mll, traded = 0, best = 0, done = false, paid = 0, nPay = 0, cycStart = 0, cycBest = 0, cycDays = 0;
+    const curve = keepCurves ? [0] : null;
+    for (let d = 0; d < days && !done; d++) {
+      if (Math.random() < src.pTrade) {
+        const t = src.list[(Math.random() * src.list.length) | 0];
+        let pnl = t.pts * dpp - cost, mfe = (t.mfe ?? Math.max(0, t.pts)) * dpp, mae = (t.mae ?? Math.max(0, -t.pts)) * dpp;
+        if (R.dll > 0 && pnl < -R.dll) { pnl = -R.dll; mae = Math.min(mae, R.dll); }   // daily loss limit flattens you
+        if (R.dll > 0) mae = Math.min(mae, R.dll);
+        const path = pnl >= 0 ? [-mae, mfe] : [mfe, -mae];
+        for (const e of path) {
+          if (R.trail === 'intraday' && e > 0) { hw = Math.max(hw, bal + e); floor = Math.min(Math.max(floor, hw - R.mll), R.lock); }
+          if (bal + e <= floor) { fail++; done = true; if (bal + pnl > floor) failMid++; break; }
+        }
+        if (done) break;
+        bal += pnl; traded++; best = Math.max(best, pnl);
+        cycDays++; cycBest = Math.max(cycBest, pnl);
+        if (bal <= floor) { fail++; done = true; break; }
+      }
+      // end of day: EOD trailing moves the floor up to (best close − max loss), until it locks
+      peak = Math.max(peak, bal); hw = Math.max(hw, bal);
+      floor = Math.min(Math.max(floor, (R.trail === 'intraday' ? hw : peak) - R.mll), R.lock);
+      if (stage === 'eval') {
+        if (bal >= R.target && traded >= R.minDays && (!R.cons || best <= R.cons * bal)) { pass++; done = true; daysToPass.push(d + 1); }
+      } else if (traded >= R.wait) {
+        const cyc = bal - cycStart, avail = bal - R.buffer;
+        if (avail >= R.minPayout && (!R.cycleDays || cycDays >= R.cycleDays) && (!R.cycleCons || cycBest <= R.cycleCons * Math.max(cyc, 1))) {
+          const amt = R.maxPayout ? Math.min(avail, R.maxPayout) : avail;
+          bal -= amt; paid += amt * R.split; nPay++; if (nPay === 1) daysToPay.push(d + 1);
+          floor = R.lock; peak = hw = Math.max(bal, R.lock + R.mll);   // after a payout the floor stays locked
+          cycStart = bal; cycBest = 0; cycDays = 0;
+        }
+      }
+      if (curve) curve.push(bal + paid / (R.split || 1));
+    }
+    if (stage === 'funded') { if (nPay) payAny++; payTotal += paid; payCount += nPay; }
+    endBal.push(bal);
+    if (curve) { while (curve.length <= days) curve.push(curve[curve.length - 1]); curves.push(curve); }
+  }
+  const med = a => a.length ? a.sort((x, y) => x - y)[a.length >> 1] : null;
+  return { pass: pass / paths, fail: fail / paths, open: stage === 'eval' ? 1 - (pass + fail) / paths : 1 - fail / paths, failMid: fail ? failMid / fail : 0,
+    medDays: med(daysToPass), payAny: payAny / paths, payAvg: payTotal / paths, payN: payCount / paths, medPayDays: med(daysToPay), curves };
+}
+function simSource(r, stress) {
+  const list = stress ? r.stress.trades : r.trades;
+  return { list, pTrade: list.length / BT.instruments[r.sym].nySessions };
+}
+
+// ---------- Account sim view ----------
+function simPlanForm() {
+  const P = getPlan(), wrap = document.getElementById('sim-plan'); if (!wrap) return;
+  const fields = PLAN_FIELDS[P.stage].map(([k, lbl]) => k === 'trail'
+    ? `<label>${lbl}<select data-k="trail" onchange="simEdit(this)"><option value="eod"${P.rules.trail === 'eod' ? ' selected' : ''}>End of day</option><option value="intraday"${P.rules.trail === 'intraday' ? ' selected' : ''}>Intraday (real-time)</option></select></label>`
+    : `<label>${lbl}<input type="number" step="any" data-k="${k}" value="${P.rules[k]}" onchange="simEdit(this)"></label>`).join('');
+  wrap.innerHTML = `
+    <div class="sim-top">
+      <label class="sim-plan-pick">MyFundedFutures plan <select onchange="savePlan({ key: this.value, over: {} }); simPlanForm(); simRun()">${Object.entries(MFF_PLANS).map(([k, v]) => `<option value="${k}"${k === P.key ? ' selected' : ''}>${v.name}</option>`).join('')}</select></label>
+      <div class="mtf-segs"><button class="mtf-seg${P.stage === 'eval' ? ' on' : ''}" onclick="savePlan({ stage: 'eval' }); simPlanForm(); simRun()">Evaluation</button><button class="mtf-seg${P.stage === 'funded' ? ' on' : ''}" onclick="savePlan({ stage: 'funded' }); simPlanForm(); simRun()">Sim-funded</button></div>
+    </div>
+    <div class="fs-12 text-2" style="margin:6px 0 10px">${P.stage === 'eval' ? 'Pass = hit the target with the minimum days and consistency rule met.' : 'Payouts start from $0 balance; the floor trails until it locks at +$' + P.rules.lock + '.'} Trailing: <b>${P.rules.trail === 'eod' ? 'end of day' : 'intraday, with unrealised highs'}</b>. Open-trade dips count against the max loss on every plan. Max size ${P.base.maxMini} minis / ${P.base.maxMicro} micros. Source: ${esc(P.base.src)}.</div>
+    <details class="sim-rules"><summary>Plan rules (edit if your plan differs)</summary><div class="sim-grid">${fields}</div>
+      <button class="btn btn-secondary btn-xs" style="margin-top:8px" onclick="savePlan({ over: {} }); simPlanForm(); simRun()">Reset to MFF defaults</button></details>`;
+}
+function simEdit(el) {
+  const P = getPlan(); let p = {}; try { p = JSON.parse(localStorage.getItem('jct_plan') || '{}'); } catch(e) {}
+  p.over = p.over || {}; p.over[P.stage] = p.over[P.stage] || {};
+  p.over[P.stage][el.dataset.k] = el.dataset.k === 'trail' ? el.value : +el.value;
+  try { localStorage.setItem('jct_plan', JSON.stringify(p)); } catch(e) {}
+  simRun();
+}
+function simRun() {
+  if (!BT) return;
+  if (!document.getElementById('sim-plan').innerHTML) simPlanForm();
+  const r = viaExit(labCfg()), P = getPlan(), R = P.rules, I = { 'ES=F': { pv: 50 }, 'NQ=F': { pv: 20 } }[r.sym];
+  const kind = document.getElementById('sim-kind').value, n = Math.max(1, +document.getElementById('sim-n').value || 1);
+  const days = Math.max(5, +document.getElementById('sim-days').value || 30), stress = document.getElementById('sim-stress').checked;
+  const src = simSource(r, stress), out = document.getElementById('sim-out');
+  if (!src.list.length) { out.innerHTML = '<div class="card"><div class="card-body fs-13">These settings produced no trades, so there is nothing to simulate.</div></div>'; return; }
+  const run = (k, c, paths, keep) => simAccount(src, I.pv, R, k, c, days, paths, keep, P.stage);
+  const main = run(kind, n, 5000, true);
+  const nm = r.sym === 'ES=F' ? 'ES' : 'NQ', mic = r.sym === 'ES=F' ? 'MES' : 'MNQ', over = kind === 'micro' ? n > P.base.maxMicro : n > P.base.maxMini;
+  const pct = q => Array.from({ length: days + 1 }, (_, d) => { const col = main.curves.map(c => c[d]).sort((a, b) => a - b); return col[Math.floor(q * (col.length - 1))]; });
+  const p10 = pct(0.1), p50 = pct(0.5), p90 = pct(0.9), top = P.stage === 'eval' ? R.target : Math.max(R.buffer + R.minPayout, ...p90);
+  const W = 600, H = 200, lo = Math.min(-R.mll, ...p10), hi = Math.max(top, ...p90), X = d => 34 + d * (W - 44) / days, Y = v => 8 + (hi - v) / (hi - lo) * (H - 28);
+  const path = a => a.map((v, d) => `${X(d)},${Y(v)}`).join(' ');
+  const fan = `<svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="Simulated account range">
+    <polygon points="${path(p90)} ${p10.map((v, d) => `${X(d)},${Y(v)}`).reverse().join(' ')}" fill="var(--blue)" opacity="0.15"/>
+    <polyline points="${path(p50)}" fill="none" stroke="var(--blue)" stroke-width="2"/>
+    ${P.stage === 'eval' ? `<line x1="34" x2="${W - 10}" y1="${Y(R.target)}" y2="${Y(R.target)}" stroke="var(--bull)" stroke-dasharray="4 3"/><text x="38" y="${Y(R.target) - 3}" class="mtf-ax" style="fill:var(--bull)">target +${usd(R.target)}</text>`
+      : `<line x1="34" x2="${W - 10}" y1="${Y(R.buffer)}" y2="${Y(R.buffer)}" stroke="var(--bull)" stroke-dasharray="4 3"/><text x="38" y="${Y(R.buffer) - 3}" class="mtf-ax" style="fill:var(--bull)">payout buffer ${usd(R.buffer)}</text>`}
+    <line x1="34" x2="${W - 10}" y1="${Y(-R.mll)}" y2="${Y(-R.mll)}" stroke="var(--bear)" stroke-dasharray="4 3"/><text x="38" y="${Y(-R.mll) + 11}" class="mtf-ax" style="fill:var(--bear)">starting max loss −${usd(R.mll)} (trails up to +$${R.lock})</text>
+    <line x1="34" x2="${W - 10}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--border)"/><text x="34" y="${H - 4}" class="mtf-ax">day 0</text><text x="${W - 50}" y="${H - 4}" class="mtf-ax">day ${days}</text></svg>`;
+  const sizes = [['micro', 1], ['micro', 2], ['micro', 3], ['micro', 5], ['micro', 10], ['full', 1], ['full', 2]];
+  const ladder = sizes.map(([k, c]) => ({ k, c, over: k === 'micro' ? c > P.base.maxMicro : c > P.base.maxMini, ...run(k, c, 2000, false) }));
+  const tiles = P.stage === 'eval' ? `
+      <div class="stat-tile"><div class="stat-eyebrow">Pass</div><div class="stat-value bull">${pctS(main.pass)}</div><div class="stat-sub">${main.medDays ? 'median ' + main.medDays + ' trading days' : 'not within ' + days + ' days'}</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Fail (max loss hit)</div><div class="stat-value bear">${pctS(main.fail)}</div><div class="stat-sub">${main.fail ? Math.round(main.failMid * 100) + '% of these mid-trade, on a trade that would have closed above the floor' : 'within ' + days + ' days'}</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Still going</div><div class="stat-value">${pctS(main.open)}</div><div class="stat-sub">neither after ${days} days</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Size</div><div class="stat-value" style="font-size:20px">${n} × ${kind === 'micro' ? mic : nm}</div><div class="stat-sub ${over ? 'bear' : ''}">${over ? 'over the plan maximum!' : (src.pTrade * 100).toFixed(0) + '% of days have a trade'}</div></div>`
+    : `
+      <div class="stat-tile"><div class="stat-eyebrow">Got at least 1 payout</div><div class="stat-value bull">${pctS(main.payAny)}</div><div class="stat-sub">${main.medPayDays ? 'median day ' + main.medPayDays : 'none within ' + days + ' days'}</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Avg paid to you</div><div class="stat-value mono bull">${usd(main.payAvg)}</div><div class="stat-sub">${main.payN.toFixed(1)} payouts on average, after the ${Math.round(R.split * 100)}% split</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Account blown</div><div class="stat-value bear">${pctS(main.fail)}</div><div class="stat-sub">${main.fail ? Math.round(main.failMid * 100) + '% mid-trade' : 'within ' + days + ' days'}</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Size</div><div class="stat-value" style="font-size:20px">${n} × ${kind === 'micro' ? mic : nm}</div><div class="stat-sub ${over ? 'bear' : ''}">${over ? 'over the plan maximum!' : (src.pTrade * 100).toFixed(0) + '% of days have a trade'}</div></div>`;
+  const okRows = ladder.filter(z => !z.over && z.fail <= 0.2);
+  const best = P.stage === 'eval' ? okRows.sort((a, b) => b.pass - a.pass)[0] : okRows.sort((a, b) => b.payAvg - a.payAvg)[0];
+  out.innerHTML = `
+    <div class="bt-summary">${tiles}</div>
+    <div class="card mb-md" style="margin-top:12px"><div class="card-body"><div class="fs-12 fw-600 mb-sm">Account P&amp;L across 5,000 simulations (middle 80% shaded, median line)</div>${fan}</div></div>
+    <div class="card mb-md"><div class="card-body"><div class="fs-12 fw-600 mb-sm">Same rules at different sizes (2,000 simulations each)</div>
+      <table class="bt-table"><tr><th>Size</th>${P.stage === 'eval' ? '<th>Pass</th><th>Fail</th><th>Fail mid-trade</th><th>Still going</th><th>Median days</th>' : '<th>≥1 payout</th><th>Avg paid to you</th><th>Blown</th><th>Fail mid-trade</th>'}</tr>
+      ${ladder.map(z => `<tr${z === best ? ' class="bt-row on"' : ''}${z.over ? ' style="opacity:.45"' : ''}><td>${z.c} × ${z.k === 'micro' ? mic : nm}${z.over ? ' (over max)' : ''}</td>${P.stage === 'eval'
+        ? `<td class="bull">${pctS(z.pass)}</td><td class="bear">${pctS(z.fail)}</td><td>${z.fail ? Math.round(z.failMid * 100) + '%' : '–'}</td><td>${pctS(z.open)}</td><td>${z.medDays ?? '–'}</td>`
+        : `<td class="bull">${pctS(z.payAny)}</td><td class="mono">${usd(z.payAvg)}</td><td class="bear">${pctS(z.fail)}</td><td>${z.fail ? Math.round(z.failMid * 100) + '%' : '–'}</td>`}</tr>`).join('')}</table>
+      <div class="fs-12 text-2" style="margin-top:8px">${best ? `Highlighted: the best ${P.stage === 'eval' ? 'pass rate' : 'average payout'} with a fail rate of 20% or less, within the plan's size limit (${best.c} × ${best.k === 'micro' ? mic : nm}).` : 'No size keeps the fail rate at or under 20% with these settings and this plan.'} "Fail mid-trade" = the open-trade dip touched the max loss even though that trade would have closed above it.</div></div></div>
+    <div class="fs-12 text-2">${esc(MFF_PLANS[P.key].name)} · ${P.stage === 'eval' ? 'evaluation' : 'sim-funded'} rules · ${esc(r.name)} · ${esc(btLabel(r))} · ${EXIT_LABEL[labExit || 'rules']} · ${src.list.length} ${stress ? 'stress-test' : 'normal'} trades from ${BT.instruments[r.sym].nySessions} sessions, replayed through each trade's worst and best point. Micro commission assumed $0.75/side. The future can look different from this sample. Rules-based simulation, not a recommendation.</div>`;
+}
+// quick version for Highlights (current plan, evaluation)
+function mcQuick(r, kind, cnt, days = 30, paths = 2000) {
+  const P = getPlan(), R = { ...P.base.eval, ...(P.stage === 'eval' ? P.rules : {}) };
+  const out = simAccount(simSource(r, true), window.TJR.INSTR[r.sym].pointValue, R, kind, cnt, days, paths, false, 'eval');
+  return { pass: out.pass, fail: out.fail, plan: P.base.name };
 }
 
 // One refresh for everything that reads today's candles
