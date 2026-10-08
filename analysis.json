@@ -5,50 +5,146 @@
   "headline": "London swept sell-side liquidity: Asian low and prior-day low taken on both ES and NQ. Price is holding just above the London low going into NY.",
   "lean": "bull",
   "leanLabel": "Bullish potential, needs confirmation",
+  "signal": {
+    "sweep": "ssl",
+    "smt": "aligned"
+  },
   "instruments": [
     {
       "sym": "ES",
       "last": 7807.75,
       "levels": [
-        { "name": "Prior-day high (PDH)", "price": 7884.50, "tag": "BSL" },
-        { "name": "Asian high", "price": 7858.25, "tag": "BSL" },
-        { "name": "Oct 7 4 pm close", "price": 7851.25, "tag": "" },
-        { "name": "Midnight open", "price": 7847.75, "tag": "" },
-        { "name": "London high", "price": 7837.25, "tag": "BSL" },
-        { "name": "Asian low", "price": 7828.50, "tag": "swept" },
-        { "name": "Prior-day low (PDL)", "price": 7815.75, "tag": "swept" },
-        { "name": "London low (6:30)", "price": 7802.75, "tag": "SSL" },
-        { "name": "Range EQ (Oct 1 low → Oct 6 high)", "price": 7785.00, "tag": "" },
-        { "name": "Oct 5 low", "price": 7760.25, "tag": "SSL" }
+        {
+          "name": "Prior-day high (PDH)",
+          "price": 7884.5,
+          "tag": "BSL"
+        },
+        {
+          "name": "Asian high",
+          "price": 7858.25,
+          "tag": "BSL"
+        },
+        {
+          "name": "Oct 7 4 pm close",
+          "price": 7851.25,
+          "tag": ""
+        },
+        {
+          "name": "Midnight open",
+          "price": 7847.75,
+          "tag": ""
+        },
+        {
+          "name": "London high",
+          "price": 7837.25,
+          "tag": "BSL"
+        },
+        {
+          "name": "Asian low",
+          "price": 7828.5,
+          "tag": "swept"
+        },
+        {
+          "name": "Prior-day low (PDL)",
+          "price": 7815.75,
+          "tag": "swept"
+        },
+        {
+          "name": "London low (6:30)",
+          "price": 7802.75,
+          "tag": "SSL"
+        },
+        {
+          "name": "Range EQ (Oct 1 low → Oct 6 high)",
+          "price": 7785,
+          "tag": ""
+        },
+        {
+          "name": "Oct 5 low",
+          "price": 7760.25,
+          "tag": "SSL"
+        }
       ]
     },
     {
       "sym": "NQ",
       "last": 31146.25,
       "levels": [
-        { "name": "Prior-day high (PDH)", "price": 31521.00, "tag": "BSL" },
-        { "name": "Asian high", "price": 31466.00, "tag": "BSL" },
-        { "name": "Midnight open", "price": 31368.50, "tag": "" },
-        { "name": "London high", "price": 31294.00, "tag": "BSL" },
-        { "name": "Asian low", "price": 31248.00, "tag": "swept" },
-        { "name": "Prior-day low (PDL)", "price": 31143.00, "tag": "swept" },
-        { "name": "London low (6:30)", "price": 31119.75, "tag": "SSL" },
-        { "name": "Range EQ (Oct 1 low → Oct 6 high)", "price": 31073.00, "tag": "" },
-        { "name": "Oct 5 low", "price": 30957.50, "tag": "SSL" }
+        {
+          "name": "Prior-day high (PDH)",
+          "price": 31521,
+          "tag": "BSL"
+        },
+        {
+          "name": "Asian high",
+          "price": 31466,
+          "tag": "BSL"
+        },
+        {
+          "name": "Midnight open",
+          "price": 31368.5,
+          "tag": ""
+        },
+        {
+          "name": "London high",
+          "price": 31294,
+          "tag": "BSL"
+        },
+        {
+          "name": "Asian low",
+          "price": 31248,
+          "tag": "swept"
+        },
+        {
+          "name": "Prior-day low (PDL)",
+          "price": 31143,
+          "tag": "swept"
+        },
+        {
+          "name": "London low (6:30)",
+          "price": 31119.75,
+          "tag": "SSL"
+        },
+        {
+          "name": "Range EQ (Oct 1 low → Oct 6 high)",
+          "price": 31073,
+          "tag": ""
+        },
+        {
+          "name": "Oct 5 low",
+          "price": 30957.5,
+          "tag": "SSL"
+        }
       ]
     }
   ],
   "smt": "No SMT divergence yet. ES and NQ both took the Asian low and PDL at the same 6:30 low. Watch the London low after 9:30: if one index trades below it and the other holds, that is bullish SMT.",
   "htf": "Daily: rally from the Oct 1 low (7672.75) to the Oct 6 high (7897.50), then a down day on Oct 7 and a lower open today. Price is back at the middle of that leg, just above its 50% level (~7785).",
   "steps": [
-    { "step": "1 Potential", "text": "Sell-side taken in London (Asian low + PDL). A second sweep of the London low (7802.75 ES / 31119.75 NQ) after 9:30 would be the classic TJR long trigger." },
-    { "step": "2 Confirmation", "text": "Needed: a bullish BOS (close above the last swing high) plus an IFVG. Nothing before 9:50; 9:30–9:50 is the manipulation window." },
-    { "step": "3 Continuation", "text": "Entries only in the 9:50–10:10 macro, at the FVG / equilibrium of the BOS leg." },
-    { "step": "4 Draw", "text": "Buy-side above: London high 7837.25, midnight open 7847.75, Asian high 7858.25 (NQ: 31294, 31368.5, 31466)." }
+    {
+      "step": "1 Potential",
+      "text": "Sell-side taken in London (Asian low + PDL). A second sweep of the London low (7802.75 ES / 31119.75 NQ) after 9:30 would be the classic TJR long trigger."
+    },
+    {
+      "step": "2 Confirmation",
+      "text": "Needed: a bullish BOS (close above the last swing high) plus an IFVG. Nothing before 9:50; 9:30–9:50 is the manipulation window."
+    },
+    {
+      "step": "3 Continuation",
+      "text": "Entries only in the 9:50–10:10 macro, at the FVG / equilibrium of the BOS leg."
+    },
+    {
+      "step": "4 Draw",
+      "text": "Buy-side above: London high 7837.25, midnight open 7847.75, Asian high 7858.25 (NQ: 31294, 31368.5, 31466)."
+    }
   ],
   "invalidation": "If price accepts below the London low and the ~7785 EQ with a bearish BOS, the bullish idea is off. The draw then becomes the Oct 5 low (7760.25 ES / 30957.50 NQ). A short would need a buy-side sweep first (e.g. into 7815–7837) plus a bearish BOS.",
   "reminder": "The v4 backtest lost on wick-tight stops. A stop under the London low is ~5 pts from current price, which is noise-sized.",
   "events": [
-    { "impact": "MED", "name": "Initial jobless claims (usual Thursday release; confirm on your calendar)", "time": "8:30 AM ET" }
+    {
+      "impact": "MED",
+      "name": "Initial jobless claims (usual Thursday release; confirm on your calendar)",
+      "time": "8:30 AM ET"
+    }
   ]
 }

@@ -1079,7 +1079,7 @@ select { cursor: pointer; }
         <div class="section-eyebrow" style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text3);text-transform:uppercase;margin-bottom:2px;">⚡ AI Trade Signal</div>
         <div class="ai-signal-subtitle">TJR methodology · updates with your Daily Bias</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="refreshAISignal()" style="font-size:12px;padding:5px 12px;">↻ Refresh</button>
+      <button class="btn btn-secondary btn-sm" id="ai-refresh-btn" onclick="refreshAll()" style="font-size:12px;padding:5px 12px;">↻ Refresh</button>
     </div>
     <div class="ai-signal-body">
       <div class="ai-direction-block" id="ai-direction-block" style="background:var(--fill);">
@@ -1960,6 +1960,7 @@ async function loadAnalysis() {
   const now = getCurrentETTime();
   const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const isToday = a.date === today;
+  window.todayAnalysis = isToday ? a : null;
   const dateLbl = new Date(a.date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
   const leanCls = a.lean === 'bull' ? 'badge-bull' : a.lean === 'bear' ? 'badge-bear' : 'badge-warn';
   const tagCls = { BSL:'badge-blue', SSL:'badge-purple', swept:'badge-neutral' };
@@ -2006,6 +2007,7 @@ async function loadAnalysis() {
     ev.innerHTML = a.events.map(e => `<div class="card-row"><span class="badge ${cls[e.impact] || 'badge-neutral'}">${esc(e.impact)}</span>
       <span class="fs-13 fw-600 flex-1">${esc(e.name)}</span><span class="fs-12 text-2 mono">${esc(e.time)}</span></div>`).join('');
   }
+  refreshAISignal(); // signal uses today's sweep/SMT
 }
 
 // ============================================================
@@ -2913,25 +2915,28 @@ function computeAISignal() {
   else if (conf < 40) { score -= 0.5; factors.push({ icon:'❓', text:`Low conviction (${conf}%) — reduce size or skip`, cls:'caution' }); }
 
   // 5. SMT divergence
-  const smt = bias.smt || '';
+  // Sweep / SMT / HTF: Daily Bias first, else today's Morning Analysis (analysis.json)
+  const an = (window.todayAnalysis && window.todayAnalysis.signal) || {};
+  const anTag = k => (!bias[k] && an[k]) ? ' (Morning Analysis)' : '';
+  const smt = bias.smt || an.smt || '';
   if (smt === 'bullish-div') {
     bullPts += 1.5; factors.push({ icon:'🔀', text:'SMT: Bullish divergence — ES/NQ split at lows → buy signal', cls:'strong' });
   } else if (smt === 'bearish-div') {
     bearPts += 1.5; factors.push({ icon:'🔀', text:'SMT: Bearish divergence — ES/NQ split at highs → sell signal', cls:'strong' });
   } else if (smt === 'aligned') {
-    factors.push({ icon:'🔗', text:'ES and NQ aligned — confirms direction, no divergence', cls:'' });
+    factors.push({ icon:'🔗', text:'ES and NQ aligned — no divergence yet' + anTag('smt'), cls:'' });
   }
 
   // 6. Liquidity sweep
-  const sweep = bias.sweep || '';
-  if (sweep === 'ssl') { bullPts += 1; factors.push({ icon:'🎯', text:'SSL swept → expecting draw to buy-side liquidity', cls:'strong' }); }
-  else if (sweep === 'bsl') { bearPts += 1; factors.push({ icon:'🎯', text:'BSL swept → expecting draw to sell-side liquidity', cls:'strong' }); }
+  const sweep = bias.sweep || an.sweep || '';
+  if (sweep === 'ssl') { bullPts += 1; factors.push({ icon:'🎯', text:'SSL swept → expecting draw to buy-side liquidity' + anTag('sweep'), cls:'strong' }); }
+  else if (sweep === 'bsl') { bearPts += 1; factors.push({ icon:'🎯', text:'BSL swept → expecting draw to sell-side liquidity' + anTag('sweep'), cls:'strong' }); }
   else if (!sweep) { factors.push({ icon:'👀', text:'No confirmed liquidity sweep — wait for sweep before entry', cls:'' }); }
 
   // 7. HTF structure
-  const htf = bias.htf || '';
-  if (htf === 'bullish') { bullPts += 0.5; factors.push({ icon:'🗓️', text:'HTF daily structure: Bullish — supports longs', cls:'' }); }
-  else if (htf === 'bearish') { bearPts += 0.5; factors.push({ icon:'🗓️', text:'HTF daily structure: Bearish — supports shorts', cls:'' }); }
+  const htf = bias.htf || an.htf || '';
+  if (htf === 'bullish') { bullPts += 0.5; factors.push({ icon:'🗓️', text:'HTF daily structure: Bullish — supports longs' + anTag('htf'), cls:'' }); }
+  else if (htf === 'bearish') { bearPts += 0.5; factors.push({ icon:'🗓️', text:'HTF daily structure: Bearish — supports shorts' + anTag('htf'), cls:'' }); }
 
   // Final direction
   const net = bullPts - bearPts;
@@ -2955,6 +2960,18 @@ function computeAISignal() {
 
   const confLabel = score >= 7.5 ? 'High' : score >= 5 ? 'Moderate' : score >= 2.5 ? 'Low' : 'No Signal';
   return { direction, dirColor, arrow, score, confLabel, factors, session, tjrStep };
+}
+
+// Refresh button: new prices + latest analysis, then recompute the signal
+async function refreshAll() {
+  const btn = document.getElementById('ai-refresh-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
+  pricesLoadedAt = 0; // bypass the price cache
+  try { await Promise.all([autoFetchHeader(), loadAnalysis()]); } catch(e) {}
+  refreshAISignal();
+  if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
+  const asOf = lastPriceFetch ? lastPriceFetch.toLocaleTimeString('en-US', { timeZone:'America/New_York', hour:'numeric', minute:'2-digit' }) + ' ET' : 'unavailable';
+  showToast('Refreshed · prices as of ' + asOf);
 }
 
 function refreshAISignal() {
