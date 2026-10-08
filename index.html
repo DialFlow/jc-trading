@@ -379,6 +379,11 @@ body {
 .hl-cav { font-size: 11px; color: var(--text3); margin-top: 12px; line-height: 1.4; }
 .hl-post footer { display: flex; justify-content: flex-end; margin-top: 10px; }
 
+/* Sync sign-in box */
+.sync-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.sync-modal[hidden] { display: none; }
+.sync-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; width: min(420px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,0.35); }
+
 /* Lab */
 .lab-view[hidden] { display: none !important; }
 .lab-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -510,6 +515,7 @@ body {
 
 @media (max-width: 600px) {
   .header-prices { display: none; }
+  #sync-pill { margin-left: auto; }
   .header-session { display: none; }
   .ai-signal-body { grid-template-columns: 1fr; }
 }
@@ -1237,6 +1243,10 @@ select { cursor: pointer; }
     <span class="header-session" id="hdr-session">–</span>
   </div>
   <div class="header-spacer"></div>
+  <div class="freshness-pill" id="sync-pill" onclick="Sync.setup()" style="cursor:pointer;display:none">
+      <span class="fresh-dot" id="sync-dot"></span>
+      <span id="sync-label">Sync off</span>
+    </div>
   <div class="header-prices">
     <div class="header-price-item">
       <span class="price-symbol">ES1!</span>
@@ -1253,10 +1263,6 @@ select { cursor: pointer; }
     <div class="freshness-pill" id="freshness-pill">
       <span class="fresh-dot" id="fresh-dot"></span>
       <span id="fresh-label">Fetching…</span>
-    </div>
-    <div class="freshness-pill" id="sync-pill" onclick="Sync.setup()" style="cursor:pointer;display:none">
-      <span class="fresh-dot" id="sync-dot"></span>
-      <span id="sync-label">Sync off</span>
     </div>
   </div>
 </header>
@@ -1932,6 +1938,19 @@ select { cursor: pointer; }
 
 </main>
 <div id="gl-pop" class="gl-pop" hidden role="tooltip"></div>
+<div id="sync-modal" class="sync-modal" hidden>
+  <div class="sync-box" role="dialog" aria-labelledby="sync-title">
+    <div class="fw-600" id="sync-title" style="font-size:16px;margin-bottom:6px">Sync this device</div>
+    <div id="sync-msg" class="fs-12 text-2"></div>
+    <input type="password" id="sync-input" placeholder="Your sync key" autocomplete="current-password" style="margin:10px 0" onkeydown="if(event.key==='Enter')Sync.save()">
+    <label class="fs-12 text-2" style="display:flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" onchange="document.getElementById('sync-input').type=this.checked?'text':'password'" style="width:auto"> Show key</label>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="Sync.save(true)">Turn off here</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sync-modal').hidden=true">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="Sync.save()">Save &amp; sync</button>
+    </div>
+  </div>
+</div>
 
 <script type="module">
 // Shared strategy engine (same file the backtest runs in Node) — see scripts/tjr-engine.mjs
@@ -2067,12 +2086,24 @@ const Sync = (() => {
     pushTimer = setTimeout(push, 2000);
   }
 
-  async function setup() {
+  // In-page sign-in box (browser prompt() is blocked in many browsers and in-app views)
+  function setup() {
     if (!JC_API) return;
-    const k = prompt('Sync key (same on every device). Leave empty to turn sync off on this device:', key());
-    if (k === null) return;
-    try { _setItem.call(localStorage, 'jct_sync_key', k.trim()); } catch(e) {}
-    if (await pull()) location.reload();
+    const box = document.getElementById('sync-modal');
+    box.hidden = false;
+    const inp = document.getElementById('sync-input'); inp.value = key(); inp.focus();
+    document.getElementById('sync-msg').textContent = key() ? 'Sync is set up on this device. Enter a different key, or turn it off.' : 'Enter the private key you saved as SYNC_KEY in Cloudflare. Use the same key on every device.';
+    document.getElementById('sync-msg').className = 'fs-12 text-2';
+  }
+  async function save(off) {
+    const msg = document.getElementById('sync-msg'), k = off ? '' : document.getElementById('sync-input').value.trim();
+    try { _setItem.call(localStorage, 'jct_sync_key', k); } catch(e) {}
+    if (!k) { setStatus('off'); document.getElementById('sync-modal').hidden = true; showToast('Sync turned off on this device'); return; }
+    msg.textContent = 'Checking the key…'; msg.className = 'fs-12 text-2';
+    meta.synced = meta.synced || false;
+    const changed = await pull();
+    if (status === 'ok') { msg.textContent = '✓ Synced'; msg.className = 'fs-12 cf-b'; showToast('Synced'); setTimeout(() => { document.getElementById('sync-modal').hidden = true; if (changed) location.reload(); }, 700); }
+    else { const why = document.getElementById('sync-pill').title || 'unknown error'; msg.textContent = why === 'wrong sync key' ? "✗ That key doesn't match the one saved in Cloudflare (it's case-sensitive). Try again." : "✗ Couldn't reach the sync server: " + why; msg.className = 'fs-12 cf-s'; }
   }
 
   // Coming back to the app (phone unlock, tab switch): get the other device's changes
@@ -2081,7 +2112,7 @@ const Sync = (() => {
     if (await pull()) location.reload();
   });
 
-  return { pull, push, setup, setStatus, status: () => status };
+  return { pull, push, setup, save, setStatus, status: () => status };
 })();
 
 // ============================================================
