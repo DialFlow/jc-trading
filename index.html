@@ -335,6 +335,7 @@ body {
 .rp-panel:first-child { border-top: 0; margin-top: 4px; }
 .rp-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .rp-sym { font-size: 18px; font-weight: 800; }
+.rp-tf-l { font-size: 11px; color: var(--text2); padding: 6px 6px 6px 8px; }
 .rp-steps summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--blue); padding: 4px 0; }
 
 /* Replay candle-by-candle notes */
@@ -1904,7 +1905,7 @@ select { cursor: pointer; }
       </div>
       <input type="range" id="rp-slider" min="0" max="0" value="0" oninput="rpAt(+this.value)" style="width:100%" aria-label="Replay position">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px">
-        <div class="mtf-segs" id="rp-mode"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="mtf-segs" id="rp-mode"></div><div class="mtf-segs" id="rp-tf"></div></div>
         <div class="fs-12 text-2" id="rp-clock"></div>
       </div>
       <div id="rp-panels"></div>
@@ -3864,7 +3865,8 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   const lv = state ? state.levels : {};
   const pools = [['PDH', lv.pdH], ['PDL', lv.pdL], ['Asia H', lv.asianH], ['Asia L', lv.asianL], ['Ldn H', lv.londonH], ['Ldn L', lv.londonL]].filter(x => x[1] != null && !Number.isNaN(x[1]));
   const evs = (events || []).filter(e => bars.some(b => b.t === e.t) || e.t <= bars[bars.length - 1].t);
-  const idx = t => bars.findIndex(b => b.t === t);
+  const idx = t => { let k = -1; for (let i = 0; i < bars.length && bars[i].t <= t; i++) k = i; return k; };
+  const tdNow = bars[bars.length - 1].td, d0 = Math.max(0, bars.findIndex(b => b.td === tdNow));
   const order = evs.filter(e => e.type === 'order' && e.data).pop();
   const fill = evs.find(e => e.type === 'fill' && order && e.t >= order.t), scale = evs.find(e => e.type === 'scale');
   const exit = evs.find(e => e.type === 'exit'), cancel = evs.find(e => e.type === 'cancel');
@@ -3880,7 +3882,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   let svg = '';
   // session time markers (neutral, so red/green only ever mean loss/profit)
   for (const [m, lbl, ly] of [[WIN().watchStart, WIN().wTxt, 0], [570, '9:30', 0], [590, '9:50', 0], [WIN().entryEnd, WIN().endTxt, 0]].filter((x, i, a) => a.findIndex(y => y[0] === x[0]) === i)) {
-    const i = bars.findIndex(b => b.m >= m); if (i < 0) continue;
+    const i = bars.findIndex((b, j) => j >= d0 && b.m >= m && b.m < 1080); if (i < 0) continue;   // same day, not the 6 pm start of the session
     svg += `<line x1="${x(i) - cw / 2}" x2="${x(i) - cw / 2}" y1="${PT}" y2="${H - PB}" stroke="var(--text3)" stroke-width="0.6" stroke-dasharray="2 3"/><text x="${x(i) - cw / 2 - 12}" y="${PT - 4}" class="mtf-ax">${lbl}</text>`;
   }
   // FVG / IFVG boxes from the candles shown (no look-ahead when the future is hidden)
@@ -3903,7 +3905,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   for (const [nm, p] of pools) {
     if (!inR(p)) continue;
     const isHigh = /H$|PDH/.test(nm);
-    const ti = bars.findIndex(b => b.m >= 570 && (isHigh ? b.h > p : b.l < p));
+    const ti = bars.findIndex((b, j) => j >= d0 && b.m >= 570 && b.m < 1080 && (isHigh ? b.h > p : b.l < p));
     svg += `<line x1="0" x2="${right}" y1="${y(p)}" y2="${y(p)}" stroke="var(--warn)" stroke-width="0.8" stroke-dasharray="6 3" opacity="${ti >= 0 ? 0.45 : 0.9}"/><text x="4" y="${y(p) - 3}" class="mtf-ax" style="fill:var(--warn)">${nm} ${p.toFixed(2)}${ti >= 0 ? ` · taken ${bars[ti].hm}` : ''}</text>`;
     if (ti >= 0) svg += `<circle cx="${x(ti)}" cy="${y(p)}" r="3" fill="var(--warn)"/>`;
   }
@@ -4133,6 +4135,17 @@ function simRunOld() {
 // (the Lab's picks for the Lab's symbol, the robust default for the other).
 const RP_SYMS = [['ES=F', 'ES1!'], ['NQ=F', 'NQ1!']];
 let rpMode = 'both';   // always opens with ES1! and NQ1! together
+let rpTf = '5m';       // chart timeframe: 5m (the strategy's) or 15m / 1h for higher-timeframe context
+const RP_TF = { '5m': ['5m', 300, '5-minute'], '15m': ['15m', 900, '15-minute'], '1h': ['1H', 3600, '1-hour'] };
+function rpSetTf(tf) { rpTf = tf; rpPanels(); rpDraw(); }
+// higher-timeframe candles up to the replay time: stored history + today's 5m candles (incl. pre-7:30) rolled up, last one may still be forming
+function rpHtf(S, upto, tf) {
+  const sec = RP_TF[tf][1], hist = (tf === '15m' ? S.h15 : S.h60) || [];
+  const first = (upto[0] || S.bars[0]).t, b0 = Math.floor(first / sec) * sec, out = hist.filter(x => x.t < b0).map(x => ({ ...x }));
+  for (const b of [...S.pre, ...upto]) { if (b.t < b0) continue; const k = Math.floor(b.t / sec) * sec, last = out[out.length - 1];
+    if (last && last.t === k) { last.h = Math.max(last.h, b.h); last.l = Math.min(last.l, b.l); last.c = b.c; } else out.push({ ...b, t: k, ...window.TJR.et(k) }); }
+  return out;
+}
 let rpSets = {}, rpBars = [];   // rpBars = the clock (the contract with the most candles that day)
 function rpSetMode(m) { rpMode = m; rpPanels(); rpDraw(); }
 function rpSymsShown() { return RP_SYMS.filter(([s]) => rpMode === 'both' || rpMode === s); }
@@ -4143,10 +4156,11 @@ function rpCfgFor(sym) {
 }
 function rpPanels() {
   document.getElementById('rp-mode').innerHTML = [['both', 'Both'], ...RP_SYMS].map(([v, n]) => `<button class="mtf-seg${rpMode === v ? ' on' : ''}" onclick="rpSetMode('${v}')">${n}</button>`).join('');
+  document.getElementById('rp-tf').innerHTML = `<span class="rp-tf-l">Chart</span>${Object.entries(RP_TF).map(([k, [l]]) => `<button class="mtf-seg${rpTf === k ? ' on' : ''}" onclick="rpSetTf('${k}')">${l}</button>`).join('')}`;
   const pn = document.getElementById('rp-panels'); pn.className = rpSymsShown().length > 1 ? 'rp-grid' : '';
   pn.innerHTML = rpSymsShown().map(([sym, nm]) => { const id = nm.replace('1!', ''), c = rpCfgFor(sym);
     return `<section class="rp-panel">
-      <div class="rp-head"><span class="rp-sym">${nm}</span><span class="badge badge-blue">5-minute candles</span><span class="fs-12 text-2">${esc(btLabel(c.r))} · ${EXIT_LABEL[c.exit] || ''}</span></div>
+      <div class="rp-head"><span class="rp-sym">${nm}</span><span class="badge badge-blue">${RP_TF[rpTf][2]} chart</span>${rpTf !== '5m' ? '<span class="fs-12 text-2">context view · rules &amp; notes run on 5m</span>' : ''}<span class="fs-12 text-2">${esc(btLabel(c.r))} · ${EXIT_LABEL[c.exit] || ''}</span></div>
       <div id="rp-banner-${id}" class="live-banner" style="margin:8px 0"></div>
       <div id="rp-chart-${id}" class="rp-chart"></div>
       <div id="rp-events-${id}" class="fs-12 text-2" style="margin-top:8px"></div>
@@ -4165,7 +4179,8 @@ function rpLoad() {
   whenTJR(() => {
     if (!rpData) return rpInit();
     const td = document.getElementById('rp-day').value; rpSets = {};
-    for (const [sym] of RP_SYMS) { const d = rpData.days[sym]?.[td]; if (d) rpSets[sym] = { pre: window.TJR.toBars(d.pre), bars: window.TJR.toBars(d.bars), seed: d.seed }; }
+    for (const [sym] of RP_SYMS) { const d = rpData.days[sym]?.[td]; if (d) rpSets[sym] = { pre: window.TJR.toBars(d.pre), bars: window.TJR.toBars(d.bars), seed: d.seed,
+      h15: d.h15 ? window.TJR.toBars(d.h15) : [], h60: d.h60 ? window.TJR.toBars(d.h60) : [] }; }
     const clock = Object.values(rpSets).sort((x, y) => y.bars.length - x.bars.length)[0]; if (!clock) return;
     rpBars = clock.bars;
     document.getElementById('rp-slider').max = rpBars.length - 1;
@@ -4185,7 +4200,7 @@ function rpPlay() {
 function rpDraw() {
   if (!rpBars.length || !window.TJR) return;
   const E = window.TJR, tNow = rpBars[rpIdx].t, hide = document.getElementById('rp-hide').checked;
-  document.getElementById('rp-clock').textContent = `5-minute candles · ${rpBars[rpIdx].hm} ET · candle ${rpIdx + 1} of ${rpBars.length}`;
+  document.getElementById('rp-clock').textContent = `Replaying 5-minute candles · ${rpBars[rpIdx].hm} ET · ${rpIdx + 1} of ${rpBars.length} · chart: ${RP_TF[rpTf][2]}`;
   for (const [sym, nm] of rpSymsShown()) {
     const S = rpSets[sym], id = nm.replace('1!', ''), el = document.getElementById('rp-events-' + id); if (!el) continue;
     if (!S) { el.innerHTML = 'No data for this session.'; continue; }
@@ -4195,7 +4210,9 @@ function rpDraw() {
     const st = res.state, evs = res.events, b = upto[upto.length - 1];
     const [cls, title, sub] = bannerFor(st, evs, b.m, null), ban = document.getElementById('rp-banner-' + id);
     ban.className = 'live-banner ' + cls; ban.innerHTML = `${nm} · ${b.hm} ET · ${esc(title)}<span class="sub">${esc(sub)}</span>`;
-    drawSetupChart(document.getElementById('rp-chart-' + id), hide ? upto : S.bars, st, evs, { slots: S.bars.length });
+    if (rpTf === '5m') drawSetupChart(document.getElementById('rp-chart-' + id), hide ? upto : S.bars, st, evs, { slots: S.bars.length });
+    else { const hb = rpHtf(S, hide ? upto : S.bars, rpTf), full = rpHtf(S, S.bars, rpTf);
+      drawSetupChart(document.getElementById('rp-chart-' + id), hb, st, evs, { slots: full.length, tf: RP_TF[rpTf][0] + ' candles' }); }
     el.innerHTML = `<details class="rp-steps" open><summary>Checklist: the rules step by step</summary>${stepsHtml(st, evs, b.m)}</details>` + rpNotesHtml(upto, res.snapshots, evs, upto.length - 1, sym, c.r, 'rpn-list-' + id);
     const nl = document.getElementById('rpn-list-' + id); if (nl) nl.scrollTop = nl.scrollHeight;
   }

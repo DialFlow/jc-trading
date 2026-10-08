@@ -67,6 +67,8 @@ The site will be shared with a few of Jacob's friends (beginners): keep wording 
 ## Replay: ES1! + NQ1! together (Oct 8)
 - The Replay shows both contracts on one clock (`rpBars` = the contract with the most candles; each panel draws candles up to that time): a banner, a chart (labelled **5m candles**; the strategy runs on 5-minute bars), a collapsible step checklist and candle-by-candle notes per contract. Each contract uses the Lab's setting/exit if it's the Lab symbol, otherwise its robust default (`rpCfgFor`). Always opens on Both: side by side at ≥1000px (`.rp-grid`), stacked on phones; checklists open. The Both / ES1! / NQ1! switch only focuses for the moment (not remembered). The day list marks which contracts traded.
 
+- **Chart: 5m · 15m · 1H** switch (`rpTf`). Rules and candle notes always run on 5m. 15m/1H are context: `replay.json` days carry `h15` (64 completed 15m candles before 7:30) and `h60` (72 1H candles before 7:00), and `rpHtf()` rolls today's 5m (incl. pre-7:30) into the current, possibly forming candle, so there is no look-ahead with "hide the future". `drawSetupChart` maps events to the candle containing them and only marks session times / "taken" on the current day before 18:00. replay.json is ~950 KB.
+
 ## Lab Highlights (Oct 8)
 - Default Lab view: a feed of post cards (today's verdict, result + equity spark, win rate vs win size, robustness checks, account survival via `mcQuick`, best/worst trade, 4-step diagram). Every results card carries the sample-size caveat.
 - `.gl` terms open a plain-English `GLOSSARY` popover. `hlShare(id)` draws a 1080×1350 PNG on a canvas and uses the Web Share sheet, else downloads it and copies the caption.

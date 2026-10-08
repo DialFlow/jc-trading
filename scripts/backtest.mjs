@@ -75,7 +75,12 @@ for (const sym of Object.keys(INSTR)) {
     const day = bars.filter((b, i) => i > idx && b.td === td && b.m <= 750); // 07:30–12:30
     // 20 candles before 07:30 for the displacement average and the 5-bar BOS lookback
     const pre = bars.slice(Math.max(0, idx - 19), idx + 1);
-    replay.days[sym][td] = { seed, seedPrevM: 445, pre: pre.map(b => [b.t, b.o, b.h, b.l, b.c]), bars: day.map(b => [b.t, b.o, b.h, b.l, b.c]) };
+    // higher-timeframe context for the Replay: completed 15m candles before 7:30 and 1H candles before 7:00 (the page builds the rest from 5m)
+    const t730 = day[0] ? day[0].t : bars[idx].t + 300;
+    const agg = (sec, before, keep) => { const out = []; for (const b of bars) { if (b.t >= before) break; const k = Math.floor(b.t / sec) * sec, last = out[out.length - 1];
+      if (last && last[0] === k) { last[2] = Math.max(last[2], b.h); last[3] = Math.min(last[3], b.l); last[4] = b.c; } else out.push([k, b.o, b.h, b.l, b.c]); } return out.slice(-keep); };
+    replay.days[sym][td] = { seed, seedPrevM: 445, pre: pre.map(b => [b.t, b.o, b.h, b.l, b.c]), bars: day.map(b => [b.t, b.o, b.h, b.l, b.c]),
+      h15: agg(900, t730, 64), h60: agg(3600, Math.floor(t730 / 3600) * 3600, 72) };
   }
 
   if (VALIDATE) {
