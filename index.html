@@ -454,6 +454,7 @@ body {
 .hd-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.5; }
 @media (max-width: 520px) { .hd-row { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 .hm-meter { grid-template-columns: minmax(0, 1fr); } .hm-cd { text-align: left; display: flex; gap: 10px; align-items: baseline; } .hm-lbl { max-width: none; } }
+.hm-crow { border-radius: 10px; padding: 6px 8px; margin: 0 -8px 4px; cursor: pointer; } .hm-crow.on { background: rgba(0,122,255,0.08); } .hm-crow .hm-now { margin-bottom: 4px; }
 .hm-switch { background: rgba(0,122,255,0.10); color: var(--blue); border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
 .hm-bias-me { display: flex; justify-content: space-between; align-items: center; gap: 10px; } .hm-bias-v { font-size: 20px; font-weight: 800; } .hm-bias-v small { font-size: 12px; font-weight: 600; color: var(--text2); }
 .hm-reads { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-top: 8px; } .hm-read { background: var(--fill); border-radius: 10px; padding: 8px 10px; }
@@ -3215,6 +3216,10 @@ setInterval(updateFreshnessPill, 1000);
 // Auto-fetch ES/NQ/VIX every 15s
 async function autoFetchHeader() {
   const cache = await fetchPriceBatch(['ES1!', 'NQ1!', 'VIX', 'GOLD']);
+  if (typeof tvLive === 'function' && tvLive()) for (const [k, sym] of [['ES1!', 'ES=F'], ['NQ1!', 'NQ=F']]) {
+    const last = labRaw?.bars?.[sym]?.['5m']?.slice(-1)[0], q = cache[k];
+    if (last && q && q.prev) { q.price = last[4]; q.change = last[4] - q.prev; q.changePct = q.change / q.prev * 100; q.time = last[0] + 300; }
+  }
   renderMarketPanel();
   const es = cache['ES1!'], nq = cache['NQ1!'], vix = cache['VIX'];
   const fmt = (n, d=2) => n != null ? n.toFixed(d) : '–';
@@ -4828,7 +4833,7 @@ function lvRender() {
   document.getElementById('lv-plan').innerHTML = lvPlanHtml(R, A);
   trLastA = A; trLastR = R;
   { const G = trGuard(), other = MTF_SYMS.map(([s]) => runs[s]).find(r => r && r.sym !== R.sym);
-    document.getElementById('hm-meter').innerHTML = hmMeterHtml(R, now, ph, other);
+    document.getElementById('hm-meter').innerHTML = hmMeterHtml(R, now, ph, other, runs);
     if (document.activeElement?.id !== 'hm-day') hmRenderDayPicker();
     document.getElementById('hm-switch').innerHTML = switchNote ? `<div class="hm-switch">↪ ${esc(switchNote)} · <a href="#" onclick="lvSetSym('${other ? other.sym : R.sym}');return false">show ${other ? lvName(other.sym) : ''}</a></div>` : '';
     document.getElementById('tr-open-slot').innerHTML = trOpenHtml(R);
@@ -5084,17 +5089,20 @@ function hmCountdown(now) {
   const pct = m >= W.watchStart && m < 720 ? Math.round((m - W.watchStart) / (720 - W.watchStart) * 100) : 0;
   return { big: f(nx[0] - m), label: nx[1], pct, inWin: m >= W.entryStart && m < W.entryEnd };
 }
-function hmMeterHtml(R, now, ph, other) {
-  const C = hmCountdown(now), [cls, title] = bannerFor(R.st, R.evs, R.sameDay ? now.m : 1439, R.sameDay ? R.ageMin : null);
+function hmMeterHtml(R, now, ph, other, runs) {
+  const C = hmCountdown(now);
+  // both contracts, each with its own check marks (tap a row to focus the chart on it)
+  const row = r => { if (!r) return ''; const [, title] = bannerFor(r.st, r.evs, r.sameDay ? now.m : 1439, r.sameDay ? r.ageMin : null);
+    return `<div class="hm-crow${r.sym === R.sym ? ' on' : ''}" onclick="lvSetSym('${r.sym}')" role="button" aria-label="Focus ${lvName(r.sym)}">
+      <div class="hm-now"><b>${lvName(r.sym)}</b> <span class="mono">${r.last.c.toFixed(2)}</span> · ${esc(title)}</div>
+      <div class="lv-drive">${lvDrive(r, ph.inPlay && r.sameDay)}</div></div>`; };
   return `<div class="hm-meter ${C.inWin ? 'hot' : ''}">
     <div class="hm-cd"><div class="hm-big">${C.big}</div><div class="hm-lbl">${esc(C.label)}</div></div>
     <div class="hm-mid">
-      <div class="hm-now"><b>${lvName(R.sym)}</b> · ${esc(title)}</div>
-      <div class="lv-drive">${lvDrive(R, ph.inPlay && R.sameDay)}</div>
+      ${MTF_SYMS.map(([s]) => row((runs || {})[s] || (s === R.sym ? R : null))).join('')}
       <div class="hm-bar" title="8:30 → 12:00"><span style="width:${C.pct}%"></span>${[570, WIN().entryStart, WIN().entryEnd].map(t => `<i style="left:${((t - WIN().watchStart) / (720 - WIN().watchStart) * 100).toFixed(1)}%"></i>`).join('')}</div>
       <div class="hm-ticks"><span>8:30</span><span>9:30</span><span>9:50</span><span>11:00</span><span>12:00</span></div>
     </div>
-    ${other ? `<div class="hm-other" onclick="lvSetSym('${other.sym}')" role="button">${lvName(other.sym)}<br><small>${esc(hmStatusWord(other))}</small></div>` : ''}
   </div>`;
 }
 // your bias next to the market's read: context, not a prediction
