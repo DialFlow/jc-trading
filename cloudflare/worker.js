@@ -44,6 +44,7 @@ export default {
       if (url.pathname === '/tv' && req.method === 'POST') return await tvIn(req, env);
       if (url.pathname === '/news' && req.method === 'GET') return await cached(ctx, 'news', 1800, news);
       if (url.pathname === '/sectors' && req.method === 'GET') return await cached(ctx, 'sectors', 300, sectors);
+      if (url.pathname === '/journal' && req.method === 'GET') return await journal(url, ctx);
       if (url.pathname === '/sync') return await sync(req, env);
       if (url.pathname === '/account/signup' && req.method === 'POST') return await signup(req, env);
       if (url.pathname === '/account/login' && req.method === 'POST') return await login(req, env);
@@ -179,6 +180,47 @@ async function barsFor(req, env, ctx) {
   }
   body.live = { source: 'TradingView', updated: tv.updated, last: Math.max(...['ES=F', 'NQ=F'].map(s => ((tv.bars[s] || []).at(-1) || [0])[0])) };
   return json(body, 200, { 'Cache-Control': 'no-store' });
+}
+
+// ---------- Morning Journal: the numbers for one date, per symbol ----------
+// GET /journal?date=YYYY-MM-DD&t1=505&t2=585&symbols=ES=F,SPY,…  (t1/t2 = ET minutes; 505 = 8:25)
+// → { date, syms: { sym: { close, p1, p2, asia: { h, l, took }, ldn: { h, l, took } } } }
+//   close = prior session's 4:00 pm ET price · p1/p2 = price at t1/t2 (close of the 5m candle ending then; null if not reached)
+//   asia = 6 pm–3 am ET, ldn = 3–8:30 am ET; took = what price did after the session up to the later time: 'up' (took the high),
+//   'down' (took the low), 'both', 'inside'. Stocks have no Asian session (pre-market starts 4 am).
+const etParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+function etOf(t) { const p = {}; for (const x of etParts.formatToParts(new Date(t * 1000))) p[x.type] = x.value; return { d: `${p.year}-${p.month}-${p.day}`, m: +p.hour * 60 + +p.minute }; }
+async function journal(url, ctx) {
+  const date = url.searchParams.get('date') || '', t1 = +url.searchParams.get('t1') || 505, t2 = +url.searchParams.get('t2') || 585;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: 'date=YYYY-MM-DD required' }, 400);
+  const syms = [...new Set((url.searchParams.get('symbols') || '').split(',').map(s => s.trim()).filter(Boolean))].slice(0, 45);
+  const key = new Request(`https://cache.local/journal?${date}&${t1}&${t2}&${syms.slice().sort().join(',')}`), hit = await caches.default.match(key);
+  if (hit) return new Response(hit.body, { headers: { 'Content-Type': 'application/json', ...CORS } });
+  const prevDay = new Date(Date.parse(date + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
+  const out = {};
+  await Promise.all(syms.map(async sym => {
+    const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=5m&range=10d&includePrePost=true`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) return;
+    const r = (await res.json())?.chart?.result?.[0], q = r?.indicators?.quote?.[0]; if (!r || !q) return;
+    const bars = []; r.timestamp.forEach((t, i) => { if ([q.high[i], q.low[i], q.close[i]].every(v => v != null)) bars.push({ ...etOf(t), h: q.high[i], l: q.low[i], c: q.close[i] }); });
+    const round = v => v == null ? null : Math.round(v * 100) / 100;
+    // prior close: the last candle starting at or before 3:55 pm on the latest earlier date
+    const before = bars.filter(b => b.d < date && b.m <= 955), close = before.length ? before[before.length - 1].c : null;
+    const at = tm => { const b = bars.filter(x => x.d === date && x.m <= tm - 5); const last = b[b.length - 1]; return last && last.m >= tm - 30 ? last.c : null; };
+    const p1 = at(t1), p2 = at(t2);
+    const range = f => { const s = bars.filter(f); return s.length ? { h: Math.max(...s.map(b => b.h)), l: Math.min(...s.map(b => b.l)) } : null; };
+    const upTo = Math.max(t1, t2), reached = bars.some(b => b.d === date && b.m >= upTo - 5);
+    const end = reached ? upTo : 24 * 60;
+    const took = (rg, from) => { if (!rg) return null; const s = bars.filter(b => b.d === date && b.m >= from && b.m < end); if (!s.length) return null;
+      const hi = Math.max(...s.map(b => b.h)) > rg.h, lo = Math.min(...s.map(b => b.l)) < rg.l; return hi && lo ? 'both' : hi ? 'up' : lo ? 'down' : 'inside'; };
+    const allHours = /=F$|-USD$/.test(sym);   // futures and crypto trade overnight; stocks only have after-hours/pre-market
+    const asia = !allHours ? null : range(b => (b.d === prevDay && b.m >= 1080) || (b.d === date && b.m < 180)), ldn = range(b => b.d === date && b.m >= 180 && b.m < 510);
+    out[sym] = { close: round(close), p1: round(p1), p2: round(p2),
+      asia: asia ? { h: round(asia.h), l: round(asia.l), took: took(asia, 180) } : null, ldn: ldn ? { h: round(ldn.h), l: round(ldn.l), took: took(ldn, 510) } : null };
+  }));
+  const body = JSON.stringify({ date, t1, t2, syms: out });
+  ctx.waitUntil(caches.default.put(key, new Response(body, { headers: { 'Cache-Control': 'max-age=120' } })));
+  return new Response(body, { headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 
 async function cached(ctx, name, ttl, make) {

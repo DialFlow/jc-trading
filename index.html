@@ -392,6 +392,12 @@ body {
 .lv-fct .k { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
 .lv-fct .v { font-size: 18px; font-weight: 800; margin: 2px 0; }
 .lvp { border: 1.5px solid var(--blue); }
+.jt-time { font: 600 12px inherit; padding: 2px 4px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); width: auto; }
+.sess-cell { text-align: center; }
+.sess-btn { border: 0; background: var(--fill); border-radius: 8px; min-width: 34px; height: 28px; font-size: 15px; font-weight: 800; cursor: pointer; color: var(--text2); }
+.sess-btn.up { color: var(--bull); background: rgba(52,199,89,0.14); } .sess-btn.down { color: var(--bear); background: rgba(255,59,48,0.12); }
+.sess-btn.both { color: var(--warn); background: rgba(255,149,0,0.14); } .sess-btn.inside { color: var(--blue); background: rgba(0,122,255,0.10); }
+.sess-hl { font: 500 10px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text3); margin-top: 2px; line-height: 1.25; }
 .lvp-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
 .lvp-title { font-size: 18px; font-weight: 800; line-height: 1.3; margin-bottom: 2px; }
 .lvp-grade { flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; color: #fff; }
@@ -1548,14 +1554,11 @@ select { cursor: pointer; }
   <!-- Auto-fill bar -->
   <div class="journal-autofill-bar">
     <div>
-      <div style="font-size:13px;font-weight:600;color:var(--text);">Auto-fill prices from Yahoo Finance</div>
-      <div style="font-size:11px;color:var(--text2);margin-top:2px;">Fetches current market prices for all symbols · <span id="jfetch-status">Ready</span></div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);">Fill in the numbers for this date</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px;">Prior 4 pm close, the price at your two times, and what the Asian / London ranges did · works up to ~2 weeks back · <span id="jfetch-status">Ready</span></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-secondary btn-sm" onclick="fillJournalCol('close')" style="font-size:11px;">Fill Close</button>
-      <button class="btn btn-secondary btn-sm" onclick="fillJournalCol('am7')" style="font-size:11px;">Fill 7am</button>
-      <button class="btn btn-secondary btn-sm" onclick="fillJournalCol('am915')" style="font-size:11px;">Fill 9:15am</button>
-      <button class="btn btn-primary btn-sm" onclick="fillAllJournal()" style="font-size:11px;">↓ Fill All Now</button>
+      <button class="btn btn-primary btn-sm" onclick="fillAllJournal()" style="font-size:12px;">↓ Fill from market data</button>
     </div>
   </div>
 
@@ -1564,11 +1567,13 @@ select { cursor: pointer; }
       <thead>
         <tr>
           <th style="width:90px;">Symbol</th>
-          <th style="width:90px;">Close</th>
-          <th style="width:90px;">7:00 AM</th>
-          <th style="width:64px;">↕</th>
-          <th style="width:90px;">9:15 AM</th>
-          <th style="width:64px;">↕</th>
+          <th style="width:90px;">Prior close</th>
+          <th style="width:96px;"><select id="journal-t1" class="jt-time" onchange="journalTimesChanged()" aria-label="First time"></select></th>
+          <th style="width:64px;">+ / −</th>
+          <th style="width:96px;"><select id="journal-t2" class="jt-time" onchange="journalTimesChanged()" aria-label="Second time"></select></th>
+          <th style="width:64px;">+ / −</th>
+          <th style="width:70px;" title="Asian session 6 pm–3 am ET: what price did with its range afterwards">Asia</th>
+          <th style="width:70px;" title="London session 3–8:30 am ET (stocks: pre-market 4–8:30): what price did with its range afterwards">London</th>
           <th>Dir</th>
           <th>Notes</th>
         </tr>
@@ -1576,6 +1581,7 @@ select { cursor: pointer; }
       <tbody id="journal-tbody"></tbody>
     </table>
   </div>
+  <div class="fs-12 text-2" style="margin:-8px 2px 14px">Asia / London: <b class="bull">▲</b> price later broke above the session high · <b class="bear">▼</b> broke below the low · <b>↕</b> took both · <b>•</b> stayed inside. Asia is checked from 3 am, London from 8:30 am, up to your later time. Tap a symbol to change it. Stocks have no Asian session.</div>
 
   <div class="section-label">Market Observations</div>
   <div class="card mb-md">
@@ -3083,11 +3089,29 @@ async function fillJournalCol(col) {
   setTimeout(()=>{ if(statusEl) statusEl.textContent='Ready'; }, 5000);
 }
 async function fillAllJournal() {
-  await fillJournalCol('close');
-  await sleep(350);
-  await fillJournalCol('am7');
-  await sleep(350);
-  await fillJournalCol('am915');
+  const status = document.getElementById('jfetch-status'), date = document.getElementById('journal-date').value;
+  const t1 = +document.getElementById('journal-t1').value, t2 = +document.getElementById('journal-t2').value;
+  if (!JC_API) { if (status) status.textContent = 'Needs the Cloudflare Worker'; return; }
+  if (status) status.textContent = 'Getting the numbers…';
+  let j = null;
+  try { const res = await fetch(`${JC_API}/journal?date=${date}&t1=${t1}&t2=${t2}&symbols=${encodeURIComponent(ALL_JOURNAL_SYMS.map(s => YAHOO_MAP[s] || s).join(','))}`, { signal: AbortSignal.timeout(25000) });
+    if (res.ok) j = await res.json(); else if (status) status.textContent = res.status === 404 ? 'The server needs its update first' : 'Server error ' + res.status; } catch(e) { if (status) status.textContent = "Couldn't reach the server"; }
+  if (!j) return;
+  let filled = 0, missing = 0;
+  for (const sym of ALL_JOURNAL_SYMS) {
+    const x = j.syms[YAHOO_MAP[sym] || sym], key = sym.replace(/[^a-zA-Z0-9]/g, '_'), tr = document.querySelector(`#journal-tbody tr[data-sym="${sym}"]`);
+    if (!x || !tr) { missing++; continue; }
+    const set = (f, v) => { const el = tr.querySelector(`[data-field="${f}"]`); if (el && v != null) el.value = typeof v === 'number' ? v.toFixed(2) : v; };
+    set('close', x.close); set('am7', x.p1); set('am915', x.p2);
+    for (const s of ['asia', 'ldn']) { const r = x[s], btn = tr.querySelector(`.sess-btn[data-field="${s}"]`); if (!btn) continue;
+      if (r) { set(s + 'H', r.h); set(s + 'L', r.l); setSess(btn, r.took || ''); btn.title = `High ${r.h} · low ${r.l}`;
+        let hl = btn.parentElement.querySelector('.sess-hl'); if (!hl) { hl = document.createElement('div'); hl.className = 'sess-hl'; btn.parentElement.appendChild(hl); } hl.innerHTML = `${r.h}<br>${r.l}`; } }
+    calcDeltas(tr.querySelector('[data-field="close"]'));
+    if (x.close != null) filled++;
+  }
+  journalChanged();
+  const later = j.syms['ES=F'] && j.syms['ES=F'].p2 == null ? ` · ${jtLabel(t2)} not reached yet` : '';
+  if (status) status.textContent = `✓ Filled ${filled} symbols for ${date}${later}${missing ? ` · ${missing} without data` : ''}`;
 }
 
 // Legacy stub so init() doesn't break
@@ -3222,7 +3246,7 @@ function buildJournalRows() {
   for (const group of JOURNAL_GROUPS) {
     const hdr = document.createElement('tr');
     hdr.className = 'group-header';
-    hdr.innerHTML = `<td colspan="8">${group.name}</td>`;
+    hdr.innerHTML = `<td colspan="10">${group.name}</td>`;
     tbody.appendChild(hdr);
     for (const sym of group.syms) {
       const key = sym.replace(/[^a-zA-Z0-9]/g,'_');
@@ -3236,6 +3260,7 @@ function buildJournalRows() {
         <td class="delta-cell" id="d1-${key}">${formatDelta(d.close, d.am7)}</td>
         <td><input class="price-input" data-field="am915" data-sym="${key}" value="${d.am915||''}" placeholder="–" oninput="calcDeltas(this)"></td>
         <td class="delta-cell" id="d2-${key}">${formatDelta(d.close, d.am915)}</td>
+        ${sessCell('asia', key, d)}${sessCell('ldn', key, d)}
         <td><button class="dir-btn ${d.dir||'neutral'}" data-sym="${key}" onclick="cycleDir(this)">${dirIcon(d.dir||'neutral')}</button></td>
         <td><input class="notes-input" data-field="note" data-sym="${key}" value="${d.note||''}" placeholder="–"></td>
       `;
@@ -3244,6 +3269,24 @@ function buildJournalRows() {
   }
 }
 
+// session range cells: ▲ took the high, ▼ took the low, ↕ both, • stayed inside (tap to cycle)
+const SESS_STATES = ['', 'up', 'down', 'both', 'inside'], SESS_ICON = { '': '–', up: '▲', down: '▼', both: '↕', inside: '•' };
+function sessCell(s, key, d) {
+  const v = d[s] || '', H = d[s + 'H'], L = d[s + 'L'];
+  return `<td class="sess-cell"><button class="sess-btn ${v}" data-field="${s}" data-sym="${key}" value="${v}" onclick="cycleSess(this)" title="${H ? 'High ' + H + ' · low ' + L : 'Tap to set'}">${SESS_ICON[v]}</button>` +
+    `<input type="hidden" data-field="${s}H" data-sym="${key}" value="${H || ''}"><input type="hidden" data-field="${s}L" data-sym="${key}" value="${L || ''}">${H ? `<div class="sess-hl">${H}<br>${L}</div>` : ''}</td>`;
+}
+function setSess(btn, v) { btn.value = v; btn.className = 'sess-btn ' + v; btn.textContent = SESS_ICON[v]; }
+function cycleSess(btn) { setSess(btn, SESS_STATES[(SESS_STATES.indexOf(btn.value) + 1) % SESS_STATES.length]); journalChanged(); }
+// the two snapshot times (ET minutes); saved with each day. New days: 8:25 (before the 8:30 news / start of the watch) and 9:45 (after the 9:30–9:50 manipulation)
+const JT_OPTS = [420, 480, 505, 540, 555, 570, 585, 600, 630, 660];
+const jtLabel = m => `${Math.floor(m / 60) % 12 || 12}:${String(m % 60).padStart(2, '0')}`;
+function journalTimes(dateKey) { const d = journalData[dateKey]; return d && d.times ? d.times : d && d.rows ? { t1: 420, t2: 555 } : { t1: 505, t2: 585 }; }   // older entries were 7:00 / 9:15
+function renderJournalTimes(tm) {
+  for (const [id, v] of [['journal-t1', tm.t1], ['journal-t2', tm.t2]]) { const el = document.getElementById(id); if (!el) continue;
+    el.innerHTML = [...new Set([...JT_OPTS, v])].sort((a, b) => a - b).map(m => `<option value="${m}"${m === v ? ' selected' : ''}>${jtLabel(m)} AM</option>`).join(''); }
+}
+function journalTimesChanged() { journalChanged(); const s = document.getElementById('jfetch-status'); if (s) s.textContent = 'Times changed: tap Fill to get the prices at the new times'; }
 function dirIcon(state) {
   if (state === 'bull') return '▲';
   if (state === 'bear') return '▼';
@@ -3305,9 +3348,10 @@ function saveJournal(auto) {
   const edge = document.getElementById('journal-edge').value;
   // pick up edits from other devices first, so this save only replaces this one day
   try { journalData = JSON.parse(localStorage.getItem('jct_journal') || '{}'); } catch(e) {}
-  const empty = !obs.trim() && !edge.trim() && Object.values(rows).every(d => !d.close && !d.am7 && !d.am915 && !d.note && d.dir === 'neutral');
+  const empty = !obs.trim() && !edge.trim() && Object.values(rows).every(d => !d.close && !d.am7 && !d.am915 && !d.note && d.dir === 'neutral' && !d.asia && !d.ldn);
+  const times = { t1: +document.getElementById('journal-t1').value || 505, t2: +document.getElementById('journal-t2').value || 585 };
   if (empty && !journalData[dateKey]) { journalStatus(''); return; }   // nothing typed for this day yet
-  journalData[dateKey] = { ...(journalData[dateKey] || {}), rows, obs, edge, u: Date.now() };
+  journalData[dateKey] = { ...(journalData[dateKey] || {}), rows, obs, edge, times, u: Date.now() };
   try { localStorage.setItem('jct_journal', JSON.stringify(journalData)); } catch(e) { journalStatus('✗ Not saved: this browser blocked storage'); return; }
   renderPastEntries();
   const at = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -3326,6 +3370,7 @@ function loadJournal() {
   const dateKey = document.getElementById('journal-date').value;
   journalShown = dateKey;
   const d = journalData[dateKey] || {};
+  renderJournalTimes(journalTimes(dateKey));
   journalStatus(d.u ? 'Saved ' + new Date(d.u).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '');
   const obs = document.getElementById('journal-obs');
   const edge = document.getElementById('journal-edge');
