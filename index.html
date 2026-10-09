@@ -346,6 +346,50 @@ body {
 .rpn-now { background: rgba(0,122,255,0.08); }
 .rpn b { font-weight: 700; }
 
+/* Live tab: ESPN-style scoreboard, play-by-play, drive tracker */
+.lv-board { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 10px; }
+.lv-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; background: var(--fill); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.lv-onair { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; background: #ff3b30; color: #fff; font-weight: 800; }
+.lv-onair.off { background: var(--text3); }
+.lv-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff3b30; }
+.lv-onair .lv-dot { background: #fff; }
+.lv-pulse { animation: lvPulse 1.4s ease-in-out infinite; }
+@keyframes lvPulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .lv-pulse { animation: none; } }
+.lv-phase { font-size: 13px; }
+.lv-clock { margin-left: auto; font: 700 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.lv-team { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 14px; border-top: 1px solid var(--border); cursor: pointer; }
+.lv-team.on { background: rgba(0,122,255,0.06); }
+.lv-name { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lv-px { font: 800 22px ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
+.lv-chg { font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
+.lv-drive { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
+.lv-seg { font-size: 11px; font-weight: 700; text-align: center; padding: 5px 2px; border-radius: 6px; background: var(--fill); color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-seg.done { background: rgba(0,122,255,0.16); color: var(--blue); }
+.lv-seg.now { background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue); color: var(--blue); }
+.lv-seg.act { background: var(--blue); color: #fff; }
+.lv-seg.win { background: rgba(52,199,89,0.18); color: var(--bull); }
+.lv-seg.loss { background: rgba(255,59,48,0.14); color: var(--bear); }
+@media (max-width: 520px) { .lv-seg { font-size: 10px; padding: 5px 1px; } }
+.lv-sit { grid-column: 1 / -1; font-size: 12px; color: var(--text2); }
+.lv-ticker { display: flex; gap: 8px; align-items: baseline; padding: 9px 12px; border-radius: 12px; background: #111; color: #fff; font-size: 13px; margin-bottom: 12px; overflow: hidden; }
+.lv-ticker b { color: #ffd60a; white-space: nowrap; }
+.lv-ticker span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lv-ctrl { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.lv-fc-btn { border: 0; border-radius: 8px; padding: 7px 12px; font: 700 12px/1 inherit; cursor: pointer; background: var(--blue); color: #fff; }
+.lv-fc-btn.on { background: #5e5ce6; }
+.lv-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 14px; }
+@media (min-width: 1000px) { .lv-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); } }
+.lv-h { font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--text2); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#lv-pbp .rpn-list { max-height: 560px; }
+#lv-pbp .rpn { grid-template-columns: 78px minmax(0, 1fr); }
+.lv-tfh { font-size: 11px; font-weight: 800; color: var(--text2); margin: 12px 0 6px; letter-spacing: .04em; }
+.lv-fcg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+@media (max-width: 600px) { .lv-fcg { grid-template-columns: minmax(0, 1fr); } }
+.lv-fct { background: var(--fill); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+.lv-fct .k { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
+.lv-fct .v { font-size: 18px; font-weight: 800; margin: 2px 0; }
+
 /* Account sim plan */
 .sim-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sim-plan-pick { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
@@ -1286,6 +1330,7 @@ select { cursor: pointer; }
      ============================================================ -->
 <nav class="tab-bar" id="tab-bar">
   <button class="tab-btn active" onclick="showPage('dashboard')">📊 Dashboard</button>
+  <button class="tab-btn" onclick="showPage('live')">🔴 Live</button>
   <button class="tab-btn" onclick="showPage('charts')">📈 Charts</button>
   <button class="tab-btn" onclick="showPage('journal')">📓 Morning Journal</button>
   <button class="tab-btn" onclick="showPage('bias')">🎯 Daily Bias</button>
@@ -1402,6 +1447,40 @@ select { cursor: pointer; }
 </div>
 
 <!-- ===== TAB 2: CHARTS ===== -->
+<!-- ===== TAB 2: LIVE (play-by-play of the current session) ===== -->
+<div class="tab-page" id="page-live">
+  <div id="lv-board" class="lv-board"></div>
+  <div id="lv-ticker" class="lv-ticker"></div>
+  <div class="lv-ctrl">
+    <div class="mtf-segs" id="lv-sym"></div>
+    <div class="mtf-segs" id="lv-tf"></div>
+    <button class="lv-fc-btn" id="lv-fc-btn" onclick="lvToggleForecast()">🔮 Forecast</button>
+    <button class="mtf-seg" onclick="lvRefresh(true)" title="Reload candles now">↻ Refresh</button>
+  </div>
+  <div class="card mb-md"><div class="card-body">
+    <div id="lv-banner" class="live-banner" style="margin:0 0 8px"></div>
+    <div id="lv-chart" class="rp-chart"></div>
+  </div></div>
+  <div id="lv-fc" class="card mb-md" hidden><div class="card-body" id="lv-fc-body"></div></div>
+  <div class="lv-grid">
+    <section class="card mb-md"><div class="card-body">
+      <div class="lv-h"><span class="lv-dot"></span> PLAY-BY-PLAY <span class="fs-12 text-2" id="lv-pbp-sub"></span></div>
+      <div id="lv-pbp"></div>
+    </div></section>
+    <section>
+      <div class="card mb-md"><div class="card-body">
+        <div class="lv-h">CONFLUENCES · 5m → Daily</div>
+        <div id="lv-conf"></div>
+      </div></div>
+      <div class="card mb-md"><div class="card-body">
+        <div class="lv-h">THE RULES, STEP BY STEP</div>
+        <div id="lv-steps"></div>
+      </div></div>
+    </section>
+  </div>
+  <div class="fs-12 text-2" style="margin:4px 2px 16px">Candles are Yahoo CME futures data, about 10 minutes behind the exchange, so "Live" means this session as it happens, not tick-by-tick. The strategy runs on 5-minute candles; 15m–Daily are context. Learning tool, not a trade recommendation.</div>
+</div>
+
 <div class="tab-page" id="page-charts">
 
   <iframe src="https://www.tradingview.com/embed-widget/ticker-tape/?locale=en#%7B%22symbols%22%3A%5B%7B%22proName%22%3A%22AMEX%3ASPY%22%2C%22title%22%3A%22SPY%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3AQQQ%22%2C%22title%22%3A%22QQQ%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ANVDA%22%2C%22title%22%3A%22NVDA%22%7D%2C%7B%22proName%22%3A%22NASDAQ%3ATSLA%22%2C%22title%22%3A%22TSLA%22%7D%2C%7B%22proName%22%3A%22OANDA%3AXAUUSD%22%2C%22title%22%3A%22Gold%22%7D%2C%7B%22proName%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22title%22%3A%22BTC%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%2C%22colorTheme%22%3A%22dark%22%2C%22locale%22%3A%22en%22%7D" style="width:100%;height:46px;border:none;border-radius:12px;margin-top:4px;" loading="lazy" title="TradingView ticker tape"></iframe>
@@ -2638,7 +2717,7 @@ function showPage(name) {
   const page = document.getElementById('page-' + name);
   if (page) page.classList.add('active');
   const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabNames = ['dashboard','charts','journal','bias','strategy','tradelog','edge','backtest'];
+  const tabNames = ['dashboard','live','charts','journal','bias','strategy','tradelog','edge','backtest'];
   const idx = tabNames.indexOf(name);
   if (idx >= 0 && tabBtns[idx]) tabBtns[idx].classList.add('active');
   currentTab = name;
@@ -2646,6 +2725,7 @@ function showPage(name) {
   if (name === 'tradelog') renderTradeLog();
   if (name === 'charts') renderFuturesCharts();
   if (name === 'strategy') readyCycle(false);
+  if (name === 'live') lvRefresh(false);
   try { localStorage.setItem('jct_tab', name); } catch(e) {}
 }
 
@@ -3875,6 +3955,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   const span0 = hi - lo;
   for (const [, p] of pools) if (p > lo - span0 * 0.6 && p < hi + span0 * 0.6) { lo = Math.min(lo, p); hi = Math.max(hi, p); }
   if (order) for (const p of [order.data.stop, order.data.target, order.data.limit]) { lo = Math.min(lo, p); hi = Math.max(hi, p); }
+  if (opts.fc) for (const s of opts.fc.band) { lo = Math.min(lo, s[0]); hi = Math.max(hi, s[2]); }
   const pad = (hi - lo) * 0.05; lo -= pad; hi += pad;
   const n = opts.slots || bars.length, cw = (W - PR) / n, right = W - PR;
   const x = i => i * cw + cw / 2, y = p => PT + (hi - p) / (hi - lo) * (H - PT - PB);
@@ -3945,6 +4026,14 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   });
   const last = bars[bars.length - 1];
   svg += `<line x1="0" x2="${right}" y1="${y(last.c)}" y2="${y(last.c)}" stroke="var(--text2)" stroke-dasharray="2 2" stroke-width="0.6"/>`;
+  // forecast: middle-50% band and median path of similar past sessions, in the empty slots after the last candle
+  if (opts.fc && opts.fc.band.length) {
+    const i0 = bars.length - 1, pts = [[i0, last.c, last.c, last.c], ...opts.fc.band.map((s, k) => [i0 + k + 1, ...s])].filter(p => x(p[0]) <= right);
+    svg += `<polygon points="${pts.map(p => `${x(p[0])},${y(p[3])}`).join(' ')} ${pts.slice().reverse().map(p => `${x(p[0])},${y(p[1])}`).join(' ')}" fill="#5e5ce6" fill-opacity="0.16" stroke="#5e5ce6" stroke-opacity="0.4" stroke-width="0.6"/>`;
+    svg += `<polyline points="${pts.map(p => `${x(p[0])},${y(p[2])}`).join(' ')}" fill="none" stroke="#5e5ce6" stroke-width="1.6" stroke-dasharray="4 3"/>`;
+    const pe = pts[pts.length - 1];
+    svg += `<text x="${Math.max(0, Math.min(right - 120, x(pe[0]) - 110))}" y="${Math.max(PT + 10, y(pe[3]) - 6)}" class="mtf-ax" style="fill:#5e5ce6;font-weight:700">forecast · ${opts.fc.n} sessions</text>`;
+  }
   if (!order) for (let k = 0; k <= 3; k++) { const p = lo + (hi - lo) * k / 3; svg += `<text x="${right + 4}" y="${y(p) + 3}" class="mtf-ax">${p.toFixed(0)}</text>`; }
   for (const b of [...new Set([bars[0], bars.find(b => b.m === 660), last].filter(Boolean))]) { const i = bars.indexOf(b); svg += `<text x="${Math.min(right - 30, Math.max(0, x(i) - 14))}" y="${H - 5}" class="mtf-ax">${b.hm}</text>`; }
   svg += `<rect x="${right - 74}" y="2" width="72" height="14" rx="3" fill="var(--fill)"/><text x="${right - 70}" y="12" class="mtf-ax" style="fill:var(--text);font-weight:700">${opts.tf || '5m candles'}</text>`;
@@ -4216,6 +4305,248 @@ function rpDraw() {
     el.innerHTML = `<details class="rp-steps" open><summary>Checklist: the rules step by step</summary>${stepsHtml(st, evs, b.m)}</details>` + rpNotesHtml(upto, res.snapshots, evs, upto.length - 1, sym, c.r, 'rpn-list-' + id);
     const nl = document.getElementById('rpn-list-' + id); if (nl) nl.scrollTop = nl.scrollHeight;
   }
+}
+
+// ============================================================
+// LIVE TAB — the current session as a play-by-play (same engine, chart and notes as the Replay)
+// ============================================================
+let lvSym = 'NQ=F', lvTf = '5m', lvFc = false, lvTicks = 0, lvClockTimer = null, lvBusy = false, lvConfC = {}, lvFcRuns = {};
+try { lvSym = localStorage.getItem('jct_lv_sym') || 'NQ=F'; lvTf = localStorage.getItem('jct_lv_tf') || '5m'; } catch(e) {}
+const LV_TFS = [['5m', '5m'], ['15m', '15m'], ['1h', '1H'], ['4h', '4H'], ['1d', 'D']];
+const LV_STAGE = ['no sweep yet', 'sweep done', 'break of structure done', 'gap formed / order working', 'in a trade', 'done for the day'];
+const lvName = sym => sym === 'ES=F' ? 'ES1!' : 'NQ1!';
+function lvSetSym(s) { lvSym = s; try { localStorage.setItem('jct_lv_sym', s); } catch(e) {} lvRender(); }
+function lvSetTf(t) { lvTf = t; try { localStorage.setItem('jct_lv_tf', t); } catch(e) {} lvRender(); }
+// same setting + exit as the Lab/Replay for that contract
+function lvCfg(sym) {
+  if (labCfgId) return rpCfgFor(sym);
+  const r = defaultCfgFor(sym), exit = defaultExitFor(r);
+  return { r, exit, cfg: { ...engCfg(r), exitMode: exit } };
+}
+// where we are in the trading day (ET), with the minute the phase ends
+function lvPhase(m, wd) {
+  const W = WIN();
+  if (wd === 6 || (wd === 0 && m < 1080) || (wd === 5 && m >= 1020)) return { name: 'Market closed for the weekend', open: false, end: null };
+  if (m >= 1020 && m < 1080) return { name: 'Daily break (5–6 pm ET)', open: false, end: 1080 };
+  const P = [[1080, 1440, 'Asian session'], [0, 180, 'Asian session'], [180, W.watchStart, 'London session'], [W.watchStart, 570, `NY open · sweeps count from ${W.wTxt}`],
+    [570, W.entryStart, 'Manipulation window · no entries'], [W.entryStart, W.entryEnd, `Entry window ${W.eTxt}`], [W.entryEnd, 720, 'Managing trades · no new entries'],
+    [720, 960, 'NY afternoon · rules done for today'], [960, 1020, 'After hours']];
+  const p = P.find(([a, b]) => m >= a && m < b) || [0, 0, 'Session'];
+  return { name: p[2], open: true, end: p[1] % 1440, inPlay: m >= W.watchStart && m < 720 };
+}
+// engine run on today's candles, plus the slice shown (7:30 → now during the day, the last 6 hours otherwise)
+function lvRun(sym) {
+  const E = window.TJR, rows = labRaw?.bars?.[sym]?.['5m'];
+  if (!E || !rows || rows.length < 100 || !BT) return null;
+  const c = lvCfg(sym), bars = E.toBars(rows);
+  const res = E.run(bars, sym, c.cfg, { keepOpen: true, snapshots: true });
+  const last = bars[bars.length - 1], td = last.td;
+  let i0 = bars.findIndex(b => b.td === td && b.m >= 450 && b.m < 1080);
+  const session = i0 >= 0; if (!session) i0 = Math.max(0, bars.length - 72);
+  const day = bars.slice(i0), prev = [...bars].reverse().find(b => b.td !== td);
+  return { sym, c, bars, i0, day, snaps: res.snapshots, evs: res.events.filter(e => e.t >= day[0].t), st: res.state, td, last, session,
+    prevC: prev ? prev.c : NaN, ageMin: (Date.now() / 1000 - last.t - 300) / 60, sameDay: E.et(Date.now() / 1000).td === td };
+}
+// TJR step reached at a snapshot (0 none … 5 done), and the side the rules are leaning
+function lvStageOf(s, m) {
+  if (!s || m < WIN().watchStart || m >= 1080) return { k: 0, dir: '' };
+  const o = s.pos || s.pending;
+  const dir = o ? o.dir : s.bosUp ? 'long' : s.bosDn ? 'short' : s.sslSwept && !s.bslSwept ? 'long' : s.bslSwept && !s.sslSwept ? 'short' : '';
+  const k = s.pos ? 4 : s.pending ? 3 : s.traded ? 5 : (!Number.isNaN(s.fvgMidL) || !Number.isNaN(s.fvgMidS)) ? 3 : (s.bosUp || s.bosDn) ? 2 : (s.sslSwept || s.bslSwept) ? 1 : 0;
+  return { k, dir };
+}
+// "drive tracker": Sweep → BOS → FVG → Order → Result
+function lvDrive(R, inPlay) {
+  const evs = R.evs, has = t => evs.some(e => e.type === t), st = R.st;
+  const steps = [['Sweep', has('sweep')], ['BOS', has('bos')], ['FVG', has('fvg')], ['Order', has('order')]];
+  const cur = steps.findIndex(s => !s[1]);
+  let html = steps.map(([n, d], i) => `<div class="lv-seg ${d ? 'done' : i === cur && inPlay ? 'now' : ''}">${d ? '✓ ' : ''}${n}</div>`).join('');
+  const ex = evs.filter(e => e.type === 'exit').pop();
+  if (ex && ex.data) html += `<div class="lv-seg ${ex.data.pts >= 0 ? 'win' : 'loss'}">${ex.data.pts >= 0 ? '+' : ''}${ex.data.pts.toFixed(1)} pts</div>`;
+  else if (st.pos) { const op = st.pos.dir === 'long' ? R.last.c - st.pos.entry : st.pos.entry - R.last.c; html += `<div class="lv-seg act">Open ${op >= 0 ? '+' : ''}${op.toFixed(1)}</div>`; }
+  else if (st.pending) html += '<div class="lv-seg act">Working</div>';
+  else if (has('cancel')) html += '<div class="lv-seg done">Expired</div>';
+  else html += '<div class="lv-seg">Result</div>';
+  return html;
+}
+async function lvRefresh(force) {
+  if (!lvClockTimer) lvClockTimer = setInterval(lvClock, 1000);
+  if (lvBusy) return; lvBusy = true;
+  try { await Promise.all([ensureBars(force), loadMTF(force)]); } catch(e) {}
+  lvBusy = false;
+  whenTJR(lvRender);
+}
+function lvClock() {
+  if (currentTab !== 'live') return;
+  const el = document.getElementById('lv-clock'); if (el) el.textContent = getCurrentETTime().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) + ' ET';
+  if (++lvTicks % 60 === 0) lvRefresh(true);
+}
+function lvRender() {
+  const board = document.getElementById('lv-board'); if (!board) return;
+  if (!BT || !window.TJR || !labRaw) { board.innerHTML = '<div class="lv-top">Loading today\'s candles…</div>'; setTimeout(() => { if (currentTab === 'live') lvRender(); }, 1500); return; }
+  const now = etNow(), ph = lvPhase(now.m, now.wd), runs = {};
+  for (const [s] of MTF_SYMS) runs[s] = lvRun(s);
+  const R = runs[lvSym] || Object.values(runs).find(Boolean);
+  if (!R) { board.innerHTML = '<div class="lv-top">Today\'s candles are not available yet.</div>'; return; }
+  const effM = r => r.sameDay ? now.m : 1439;
+  // scoreboard
+  const fresh = R.ageMin <= 20, live = ph.open && fresh;
+  const left = ph.end != null ? ((ph.end - now.m + 1440) % 1440) : null;
+  const team = ([s, nm]) => { const r = runs[s]; if (!r) return '';
+    const [cls, title] = bannerFor(r.st, r.evs, effM(r), r.sameDay ? r.ageMin : null), chg = r.last.c - r.prevC;
+    const badge = cls === 'go' ? 'badge-bull' : cls === 'short' ? 'badge-bear' : cls === 'stale' ? 'badge-bear' : 'badge-neutral';
+    const ex = r.evs.filter(e => e.type === 'exit').pop(), stg = lvStageOf(r.st, effM(r));
+    const short = cls === 'stale' ? 'STALE DATA' : r.st.pos ? `IN ${r.st.pos.dir.toUpperCase()}` : r.st.pending ? 'ORDER WORKING' : ex ? 'FINAL' : r.evs.some(e => e.type === 'cancel') ? 'NO FILL' : stg.k ? `${LV_STAGE[stg.k].toUpperCase()}${stg.dir ? ' · ' + stg.dir.toUpperCase() : ''}` : ph.inPlay && r.sameDay ? 'WATCHING' : 'PRE-GAME';
+    return `<div class="lv-team${s === lvSym ? ' on' : ''}" onclick="lvSetSym('${s}')" role="button" aria-label="Show ${nm}">
+      <div class="lv-name">${nm}<span class="badge ${badge}">${esc(short)}</span></div>
+      <div><div class="lv-px">${r.last.c.toFixed(2)}</div><div class="lv-chg ${chg >= 0 ? 'bull' : 'bear'}">${Number.isNaN(chg) ? '' : `${chg >= 0 ? '+' : ''}${chg.toFixed(2)} (${(chg / r.prevC * 100).toFixed(2)}%)`}</div></div>
+      <div class="lv-drive">${lvDrive(r, ph.inPlay && r.sameDay)}</div>
+      <div class="lv-sit">${esc(title)} · last candle ${r.last.hm} ET${r.sameDay ? ` (${Math.max(0, Math.round(r.ageMin))} min old)` : ''} · ${esc(btLabel(r.c.r))}</div>
+    </div>`; };
+  board.innerHTML = `<div class="lv-top">
+      <span class="lv-onair${live ? '' : ' off'}"><span class="lv-dot${live ? ' lv-pulse' : ''}"></span>${live ? 'LIVE' : ph.open ? 'DELAYED' : 'CLOSED'}</span>
+      <span class="lv-phase">${esc(ph.name)}${left != null ? ` · ${left >= 60 ? Math.floor(left / 60) + 'h ' : ''}${left % 60}m left` : ''}</span>
+      <span class="lv-clock" id="lv-clock">${getCurrentETTime().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })} ET</span>
+    </div>${MTF_SYMS.map(team).join('')}`;
+  // last play across both contracts
+  const lastPlay = MTF_SYMS.flatMap(([s, nm]) => (runs[s]?.evs || []).filter(e => e.td === runs[s].td).map(e => ({ ...e, nm }))).sort((a, b) => b.t - a.t)[0];
+  document.getElementById('lv-ticker').innerHTML = lastPlay ? `<b>LAST PLAY · ${lastPlay.hm} ${lastPlay.nm}</b><span>${esc(lastPlay.text)}</span>` : `<b>LAST PLAY</b><span>No rule events yet this session · ${esc(ph.name)}</span>`;
+  // controls
+  document.getElementById('lv-sym').innerHTML = MTF_SYMS.map(([s, n]) => `<button class="mtf-seg${s === R.sym ? ' on' : ''}" onclick="lvSetSym('${s}')">${n}</button>`).join('');
+  document.getElementById('lv-tf').innerHTML = LV_TFS.map(([t, l]) => `<button class="mtf-seg${t === lvTf ? ' on' : ''}" onclick="lvSetTf('${t}')">${l}</button>`).join('');
+  const fb = document.getElementById('lv-fc-btn'); fb.classList.toggle('on', lvFc); fb.textContent = lvFc ? '🔮 Hide forecast' : '🔮 Forecast';
+  // banner + chart
+  const [cls, title, sub] = bannerFor(R.st, R.evs, effM(R), R.sameDay ? R.ageMin : null), ban = document.getElementById('lv-banner');
+  ban.className = 'live-banner ' + cls; ban.innerHTML = `${lvName(R.sym)} · ${esc(title)}<span class="sub">${esc(sub)}${sub ? ' · ' : ''}${R.session ? `session ${R.td}` : 'overnight · the NY session view starts at 7:30 ET'}</span>`;
+  const F = lvFc ? lvForecast(R) : null;
+  document.getElementById('lv-fc').hidden = !lvFc;
+  if (lvFc) document.getElementById('lv-fc-body').innerHTML = F.html;
+  if (lvTf === '5m') drawSetupChart(document.getElementById('lv-chart'), R.day, R.st, R.evs, { slots: Math.max(R.session ? 61 : 0, R.day.length + (F && F.band ? 13 : 0)), fc: F && F.band ? { band: F.band, n: F.n } : null });
+  else drawCandles('lv-chart', R.sym, lvTf, { n: 80, h: 340 });
+  // play-by-play: one note per candle, newest first
+  const tfl = LV_TFS.find(x => x[0] === lvTf)[1];
+  document.getElementById('lv-pbp-sub').textContent = `· ${lvName(R.sym)} · ${tfl} candles · newest on top`;
+  if (lvTf === '5m') { const n0 = Math.max(0, R.i0 - 12), bars = R.bars.slice(n0);
+    document.getElementById('lv-pbp').innerHTML = rpNotesHtml(bars, R.snaps.slice(n0), R.evs, bars.length - 1, R.sym, R.c.r, 'lv-pbp-list', { from: R.i0 - n0, newestFirst: true, noHead: true }); }
+  else document.getElementById('lv-pbp').innerHTML = lvHtfNotes(R.sym, lvTf);
+  document.getElementById('lv-conf').innerHTML = lvConf(R.sym);
+  document.getElementById('lv-steps').innerHTML = stepsHtml(R.st, R.evs, effM(R));
+}
+// one note per higher-timeframe candle: displacement, sweeps of swing points, structure breaks, FVG / IFVG events
+function lvHtfNotes(sym, tf, n = 30) {
+  const d = mtf?.syms[sym]?.tfs[tf]; if (!d || d.bars.length < 30) return '<div class="fs-12 text-2">No candles for this timeframe yet.</div>';
+  const B = d.bars, N = B.length, pv = pivots(B, 2), daily = tf === '1d', out = [];
+  const lbl = t => daily ? new Date(t * 1000).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'numeric', day: 'numeric' }) : etLabel(t, true);
+  for (let k = Math.max(21, N - n); k < N; k++) {
+    const b = B[k], up = b.c >= b.o, rng = b.h - b.l;
+    let avg = 0; for (let j = k - 20; j < k; j++) avg += B[j].h - B[j].l; avg /= 20;
+    const notes = [`<span class="${up ? 'bull' : 'bear'}">${up ? 'Bullish' : 'Bearish'} candle</span> · O ${px(b.o)} H ${px(b.h)} L ${px(b.l)} C ${px(b.c)} · range ${rng.toFixed(2)}${avg && rng > 1.8 * avg ? ` <b>(${(rng / avg).toFixed(1)}× normal — displacement)</b>` : ''}${k === N - 1 ? ' <span class="text-2">(latest, may still be forming)</span>' : ''}`];
+    const ph = pv.hi.filter(i => i + 2 < k).pop(), pl = pv.lo.filter(i => i + 2 < k).pop();
+    if (ph != null && b.h > B[ph].h && b.c < B[ph].h) notes.push(`Swept the swing high <b>${px(B[ph].h)}</b> and closed back below → buy-side liquidity taken.`);
+    if (pl != null && b.l < B[pl].l && b.c > B[pl].l) notes.push(`Swept the swing low <b>${px(B[pl].l)}</b> and closed back above → sell-side liquidity taken.`);
+    if (ph != null && b.c > B[ph].h && B[k - 1].c <= B[ph].h) notes.push(`✓ <b>Break of structure up:</b> closed above the swing high ${px(B[ph].h)}.`);
+    if (pl != null && b.c < B[pl].l && B[k - 1].c >= B[pl].l) notes.push(`✓ <b>Break of structure down:</b> closed below the swing low ${px(B[pl].l)}.`);
+    for (const g of d.gaps) {
+      const z = `${px(g.lo)}–${px(g.hi)}`, nm = g.dir === 'bull' ? 'bullish' : 'bearish';
+      if (g.i === k) notes.push(`Left a <b>${nm} FVG</b> ${z}.`);
+      if (g.at === k && g.status === 'respected') notes.push(`Traded into the ${nm} FVG ${z} and it held (respected).`);
+      if (g.at === k && g.status === 'disrespected') notes.push(`Closed through the ${nm} FVG ${z} → now an <b>IFVG</b> (acts ${g.dir === 'bull' ? 'bearish' : 'bullish'}).`);
+      if (g.invEnd === k) notes.push(`Closed back through the IFVG ${z}: it no longer counts.`);
+    }
+    out.push(`<div class="rpn${k === N - 1 ? ' rpn-now' : ''}"><div class="rpn-t">${lbl(b.t)}</div><div>${notes.map(x => `<div>${x}</div>`).join('')}</div></div>`);
+  }
+  return `<div class="rpn-list">${out.reverse().join('')}</div>`;
+}
+// TJR confluences per timeframe, 5m → Daily (Daily computed here; the Dashboard grid stops at 4H)
+function lvConf(sym) {
+  const S = mtf?.syms[sym]; if (!S) return '<div class="fs-12 text-2">Loading candles…</div>';
+  const tfs = ['5m', '15m', '1h', '4h', '1d'].filter(tf => S.tfs[tf] && S.tfs[tf].bars.length >= RECENT + 5), C = {};
+  const has = (v, d) => v === d || v === 'both';
+  for (const tf of tfs) {
+    let c = mtf.conf?.[sym]?.[tf];
+    if (!c) { c = confChecks(S.tfs[tf]); const e = mtf.syms['ES=F']?.tfs[tf], q = mtf.syms['NQ=F']?.tfs[tf];
+      c.smt = e && q && e.bars.length >= RECENT && q.bars.length >= RECENT ? smtCheck(e, q) : { v: '', why: 'needs ES and NQ' };
+      c.bull = CONF_ROWS.filter(r => has(c[r.key].v, 'bull')).length; c.bear = CONF_ROWS.filter(r => has(c[r.key].v, 'bear')).length; }
+    C[tf] = c;
+  }
+  lvConfC = { sym, C };
+  const mark = v => v === 'bull' ? '<span class="cf-b">✓</span>' : v === 'bear' ? '<span class="cf-s">✓</span>' : v === 'both' ? '<span class="cf-b">✓</span><span class="cf-s">✓</span>' : '<span class="cf-n">·</span>';
+  const L = { '5m': '5m', '15m': '15m', '1h': '1H', '4h': '4H', '1d': 'D' };
+  let g0 = '';
+  const rows = CONF_ROWS.map(r => { const g = r.group !== g0 ? `<tr class="cf-grp"><td colspan="${tfs.length + 1}">${r.group}</td></tr>` : ''; g0 = r.group;
+    return g + `<tr><th>${r.name}</th>${tfs.map(tf => `<td title="${esc(L[tf] + ': ' + C[tf][r.key].why)}" onclick="lvConfDetail('${tf}','${r.key}')">${mark(C[tf][r.key].v)}</td>`).join('')}</tr>`; }).join('');
+  const bias = `<tr><th>FVG bias (respect / disrespect)</th>${tfs.map(tf => { const b = S.tfs[tf].bias; return `<td class="${b.label === 'Bullish' ? 'cf-b' : b.label === 'Bearish' ? 'cf-s' : ''}" title="${esc(b.lastEvent)}">${b.label === 'Bullish' ? '▲' : b.label === 'Bearish' ? '▼' : '–'}</td>`; }).join('')}</tr>`;
+  const score = `<tr class="cf-score"><th>Bull / Bear count</th>${tfs.map(tf => { const c = C[tf]; return `<td class="${c.bull >= 4 && c.bull > c.bear ? 'cf-b' : c.bear >= 4 && c.bear > c.bull ? 'cf-s' : ''}">${c.bull}/${c.bear}</td>`; }).join('')}</tr>`;
+  const bu = tfs.filter(tf => C[tf].bull >= 4 && C[tf].bull > C[tf].bear).length, be = tfs.filter(tf => C[tf].bear >= 4 && C[tf].bear > C[tf].bull).length;
+  const verdict = bu > be ? `<span class="badge badge-bull">Bullish on ${bu} of ${tfs.length} timeframes</span>` : be > bu ? `<span class="badge badge-bear">Bearish on ${be} of ${tfs.length} timeframes</span>` : `<span class="badge badge-neutral">No alignment (bull ${bu} · bear ${be})</span>`;
+  return `<div style="margin-bottom:8px">${verdict}</div><div style="overflow-x:auto"><table class="cf-table"><tr><th></th>${tfs.map(tf => `<th class="cf-tf">${L[tf]}</th>`).join('')}</tr>${rows}${bias}${score}</table></div>
+    <div id="lv-conf-detail" class="fs-12 text-2" style="margin-top:8px;min-height:16px">Tap a ✓ to see what was found.</div>
+    <div class="fs-12 text-2" style="margin-top:4px"><span class="cf-b">✓</span> bullish · <span class="cf-s">✓</span> bearish · aligned = 4+ of 6. Each check reads the last 40 candles of that timeframe.</div>`;
+}
+function lvConfDetail(tf, key) {
+  const c = lvConfC.C && lvConfC.C[tf], el = document.getElementById('lv-conf-detail'); if (!c || !el) return;
+  el.textContent = `${lvName(lvConfC.sym)} ${tf === '1d' ? 'Daily' : tf.toUpperCase()} · ${CONF_ROWS.find(x => x.key === key).name}: ${c[key].why}`;
+}
+
+// ---------- FORECAST: what happened next in past sessions that looked like this one at this time ----------
+async function lvToggleForecast() {
+  lvFc = !lvFc;
+  if (lvFc && !rpData) { document.getElementById('lv-fc').hidden = false; document.getElementById('lv-fc-body').innerHTML = '<div class="fs-13 text-2">Loading past sessions…</div>';
+    try { const res = await fetch('replay.json', { cache: 'no-store' }); if (res.ok) rpData = await res.json(); } catch(e) {} }
+  lvRender();
+}
+const lvQ = (a, q) => { if (!a.length) return NaN; const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(q * (s.length - 1) + 0.5))]; };
+function lvForecast(R) {
+  const E = window.TJR, m = R.last.m, sym = R.sym, nm = lvName(sym);
+  const msg = t => ({ html: `<div class="lv-h">🔮 FORECAST · ${nm}</div><div class="fs-13 text-2">${t}</div>` });
+  if (!rpData || !rpData.days?.[sym]) return msg('Past sessions are not available here (open the hosted site).');
+  if (!R.session || !R.sameDay || m < 450 || m > 745) return msg('The forecast compares this moment with past sessions between 7:30 and 12:30 ET (that is the stored history). It switches on at 7:30 ET on a trading day.');
+  // run the rules over every stored session once per setting
+  const key = sym + '|' + JSON.stringify(R.c.cfg);
+  if (!lvFcRuns[key]) lvFcRuns[key] = Object.entries(rpData.days[sym]).filter(([td]) => td !== R.td).map(([td, d]) => {
+    const pre = E.toBars(d.pre), bars = E.toBars(d.bars), res = E.run([...pre, ...bars], sym, R.c.cfg, { seed: d.seed, seedFrom: pre.length, snapshots: true });
+    return { td, bars, snaps: res.snapshots, trades: res.trades, events: res.events };
+  });
+  const runs = lvFcRuns[key], today = lvStageOf(R.st, m), mv = Math.sign(R.last.c - R.day[0].o);
+  const pts = runs.map(A => { const j = A.bars.findLastIndex(b => b.m <= m); if (j < 0 || A.bars[j].m < m - 5) return null;
+    const s = lvStageOf(A.snaps[j], A.bars[j].m); return { A, j, s, mv: Math.sign(A.bars[j].c - A.bars[0].o) }; }).filter(Boolean);
+  const tiers = [
+    [p => p.s.k === today.k && p.s.dir === today.dir, `at the same step by ${R.last.hm} (${LV_STAGE[today.k]}${today.dir ? ', leaning ' + today.dir : ''})`],
+    [p => p.mv === mv, `that were also ${mv >= 0 ? 'up' : 'down'} from the 7:30 open at ${R.last.hm}`],
+    [() => true, `at ${R.last.hm} (all stored sessions)`]];
+  let set = [], why = '';
+  for (const [f, w] of tiers) { set = pts.filter(f); why = w; if (set.length >= 8) break; }
+  if (set.length < 3) return msg('Not enough past sessions at this time of day to compare.');
+  const c0 = R.last.c, ret = (p, h) => p.j + h < p.A.bars.length ? p.A.bars[p.j + h].c / p.A.bars[p.j].c - 1 : null;
+  const band = []; for (let h = 1; h <= 12; h++) { const r = set.map(p => ret(p, h)).filter(v => v != null); if (r.length < 3) break; band.push([c0 * (1 + lvQ(r, 0.25)), c0 * (1 + lvQ(r, 0.5)), c0 * (1 + lvQ(r, 0.75))]); }
+  const hor = h => { const r = set.map(p => ret(p, h)).filter(v => v != null).map(v => v * c0); if (!r.length) return '<div class="v">–</div>';
+    const upP = r.filter(v => v > 0).length / r.length, med = lvQ(r, 0.5);
+    return `<div class="v ${med >= 0 ? 'bull' : 'bear'}">${med >= 0 ? '+' : ''}${med.toFixed(1)} pts</div><div>Up in ${Math.round(upP * 100)}% of ${r.length} · middle half ${lvQ(r, 0.25).toFixed(1)} to ${lvQ(r, 0.75) >= 0 ? '+' : ''}${lvQ(r, 0.75).toFixed(1)}</div>`; };
+  // liquidity race: nearest pool above vs below, as the same % distance on each past session, until 12:00
+  const L = R.st.levels, pools = [['Asian high', L.asianH], ['Asian low', L.asianL], ['London high', L.londonH], ['London low', L.londonL], ['Prior-day high', L.pdH], ['Prior-day low', L.pdL], ['Midnight open', L.mOpen], ['NY high', L.nyH], ['NY low', L.nyL]].filter(([, p]) => p != null && !Number.isNaN(p));
+  const ab = pools.filter(([, p]) => p > c0).sort((a, b) => a[1] - b[1])[0], be = pools.filter(([, p]) => p < c0).sort((a, b) => b[1] - a[1])[0];
+  let race = '<div class="v">–</div><div>No session level on one side of price.</div>';
+  if (ab && be) { const dU = ab[1] / c0 - 1, dD = 1 - be[1] / c0; let u = 0, d = 0, nn = 0, both = 0;
+    for (const p of set) { const b0 = p.A.bars[p.j].c; let hit = 0;
+      for (let k = p.j + 1; k < p.A.bars.length && p.A.bars[k].m <= 720; k++) { const b = p.A.bars[k], hu = b.h >= b0 * (1 + dU), hd = b.l <= b0 * (1 - dD); if (hu && hd) { both++; hit = 1; break; } if (hu) { u++; hit = 1; break; } if (hd) { d++; hit = 1; break; } }
+      if (!hit) nn++; }
+    const t = set.length, pc = v => Math.round(v / t * 100) + '%';
+    race = `<div class="v ${u >= d ? 'bull' : 'bear'}">${u >= d ? '▲ ' + pc(u) : '▼ ' + pc(d)}</div><div>${ab[0]} ${ab[1].toFixed(2)} (+${(ab[1] - c0).toFixed(1)}) first: <b>${pc(u)}</b> · ${be[0]} ${be[1].toFixed(2)} (−${(c0 - be[1]).toFixed(1)}) first: <b>${pc(d)}</b>${both ? ` · same candle ${pc(both)}` : ''} · neither by 12:00 ${pc(nn)}</div>`; }
+  // what the rules went on to do on those days
+  let ord = 0, fil = 0, won = 0, lost = 0;
+  for (const p of set) { const evs = p.A.events, tr = p.A.trades[0];
+    if (evs.some(e => e.type === 'order')) ord++; if (evs.some(e => e.type === 'fill')) fil++;
+    if (tr) { if (tr.pnl > 0) won++; else lost++; } }
+  const v = viaExit(R.c.r, R.c.exit).stats;
+  return { n: set.length, band, html: `<div class="lv-h">🔮 FORECAST · ${nm} from ${R.last.hm} ET</div>
+    <div class="fs-13">Built from <b>${set.length} past sessions</b> ${esc(why)}. The purple band on the 5m chart is where the middle half of them went over the next hour, scaled to today's price.</div>
+    <div class="lv-fcg">
+      <div class="lv-fct"><div class="k">Next 30 min</div>${hor(6)}</div>
+      <div class="lv-fct"><div class="k">Next 60 min</div>${hor(12)}</div>
+      <div class="lv-fct"><div class="k">Which liquidity first</div>${race}</div>
+    </div>
+    <div class="fs-13">The rules on those days: <b>${ord}</b> placed an order, <b>${fil}</b> filled, <b>${won}</b> won, <b>${lost}</b> lost. Over all ${BT.instruments[sym].nySessions} sessions this setting won ${Math.round(v.winRate * 100)}% of ${v.trades} trades (${Math.round(v.winRateLo * 100)}–${Math.round(v.winRateHi * 100)}% likely range).</div>
+    <div class="fs-12 text-2" style="margin-top:6px">Small sample (about 10 weeks of sessions), so treat this as "what usually happened", not a prediction. Rules-based, not a trade recommendation.</div>` };
 }
 
 // ============================================================
@@ -5177,7 +5508,7 @@ function WIN() {
 // ============================================================
 // REPLAY PLAY-BY-PLAY — one structured note per 5-minute candle
 // ============================================================
-function rpNotesHtml(bars, snaps, events, upto, sym, r, listId) {
+function rpNotesHtml(bars, snaps, events, upto, sym, r, listId, o = {}) {
   const W = WIN(), out = [], cfg = engCfg(r || labCfg());
   const KEY = { 'Asian high': 'aH', 'Asian low': 'aL', 'London high': 'lH', 'London low': 'lL', 'Prior-day high': 'pdH', 'Prior-day low': 'pdL' };
   const watches = n => cfg.sweepLvl === 'Any' || (cfg.sweepLvl === 'Asian H/L' && /Asian/.test(n)) || (cfg.sweepLvl === 'London H/L' && /London/.test(n)) || (cfg.sweepLvl === 'PDH/PDL' && /Prior-day/.test(n));
@@ -5188,7 +5519,7 @@ function rpNotesHtml(bars, snaps, events, upto, sym, r, listId) {
       if (snaps[k].taken && snaps[k].taken[key] && !(snaps[k - 1] && snaps[k - 1].taken && snaps[k - 1].taken[key])) takenAt[n] = bars[k].hm; } }
   const preTaken = n => { const s0 = snaps[0]; return s0 && s0.taken && s0.taken[KEY[n]]; };
   const takenNote = (n, k) => { const at = takenAt[n]; if (preTaken(n)) return 'already taken before 7:30'; return at && bars.findIndex(b => b.hm === at) < k ? `already taken at ${at}` : ''; };
-  const start = Math.max(1, bars.findIndex(b => b.m >= W.watchStart - 5));
+  const start = o.from != null ? Math.max(1, o.from) : Math.max(1, bars.findIndex(b => b.m >= W.watchStart - 5));
   let avg = 0; { const rs = bars.slice(0, start).map(b => b.h - b.l); avg = rs.length ? rs.reduce((a, v) => a + v, 0) / rs.length : 0; }
   const f2 = v => v.toFixed(2);
   for (let k = start; k <= upto; k++) {
@@ -5238,7 +5569,8 @@ function rpNotesHtml(bars, snaps, events, upto, sym, r, listId) {
     if (s.pos) { const op = s.pos.dir === 'long' ? b.c - s.pos.entry : s.pos.entry - b.c; notes.push(`In the trade: <span class="${op >= 0 ? 'bull' : 'bear'}">${op >= 0 ? '+' : ''}${op.toFixed(1)} pts open</span> · stop ${f2(s.pos.stop)} · ${s.pos.tp1 != null && !s.pos.scaled ? `½ at ${f2(s.pos.tp1)} (${Math.abs(s.pos.tp1 - b.c).toFixed(1)} away) · ` : ''}target ${f2(s.pos.target)} (${Math.abs(s.pos.target - b.c).toFixed(1)} away).`); }
     out.push(`<div class="rpn${k === upto ? ' rpn-now' : ''}"><div class="rpn-t">${b.hm}</div><div>${notes.map(n => `<div>${n}</div>`).join('')}</div></div>`);
   }
-  return `<div class="fs-12 fw-600 text-2" style="margin:12px 0 6px">CANDLE BY CANDLE · 5-MINUTE · ${esc(WIN().label || '')}</div><div class="rpn-list" id="${listId || 'rpn-list'}">${out.join('')}</div>`;
+  if (o.newestFirst) out.reverse();
+  return `${o.noHead ? '' : `<div class="fs-12 fw-600 text-2" style="margin:12px 0 6px">CANDLE BY CANDLE · 5-MINUTE · ${esc(WIN().label || '')}</div>`}<div class="rpn-list" id="${listId || 'rpn-list'}">${out.join('')}</div>`;
 }
 
 // ============================================================
