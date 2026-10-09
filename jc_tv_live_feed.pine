@@ -1,0 +1,32 @@
+//@version=6
+indicator("JC Trading live feed (webhook)", overlay=true)
+
+// Sends the last 3 closed 5-minute candles of ES1! and NQ1! to the JC Trading Worker on every 5-minute close,
+// so the site's Live tab, Readiness and Lab run on your TradingView data instead of Yahoo's ~10-minute-late candles.
+//
+// Setup (once):
+//   1. Add this indicator to a 5-minute chart (any symbol; NQ1! is fine). Paste your TV_KEY below in the settings.
+//   2. Create an alert: Condition = this indicator → "Any alert() function call". Expiration = the longest allowed.
+//      Notifications → Webhook URL = https://jc-trading.jacobcarpenterodell.workers.dev/tv
+//   3. Your TradingView needs CME real-time data (no "D" / delayed marker on NQ1!); otherwise the candles are delayed too.
+// Essential-plan alerts expire after 2 months: recreate the alert when TradingView says it expired.
+
+key   = input.string("", "Feed key (TV_KEY secret in Cloudflare)")
+esSym = input.symbol("CME_MINI:ES1!", "ES symbol")
+nqSym = input.symbol("CME_MINI:NQ1!", "NQ symbol")
+
+[eo, eh, el, ec] = request.security(esSym, timeframe.period, [open, high, low, close])
+[no, nh, nl, nc] = request.security(nqSym, timeframe.period, [open, high, low, close])
+
+f_px(x) => str.tostring(x, "#.##")
+f_row(i, o, h, l, c) => "[" + str.tostring(time[i] / 1000, "#") + "," + f_px(o[i]) + "," + f_px(h[i]) + "," + f_px(l[i]) + "," + f_px(c[i]) + "]"
+f_rows(o, h, l, c) => "[" + f_row(2, o, h, l, c) + "," + f_row(1, o, h, l, c) + "," + f_row(0, o, h, l, c) + "]"
+
+// built on every bar (functions with history references should run on every bar), sent only on a real-time close
+msg = '{"k":"' + key + '","tf":"' + timeframe.period + '","bars":{"ES=F":' + f_rows(eo, eh, el, ec) + ',"NQ=F":' + f_rows(no, nh, nl, nc) + '}}'
+if barstate.isconfirmed and barstate.isrealtime
+    alert(msg, alert.freq_once_per_bar_close)
+
+var table t = table.new(position.bottom_right, 1, 1, bgcolor=color.new(color.black, 30))
+if barstate.islast
+    table.cell(t, 0, 0, timeframe.period == "5" ? (key == "" ? "JC feed: add the key in settings" : "JC feed ready · 5m") : "JC feed: switch the chart to 5 minutes", text_color=color.white, text_size=size.small)

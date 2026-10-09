@@ -15,9 +15,9 @@ A single-file personal trading dashboard (`index.html`) for Jacob, who day-trade
 ## Design system (keep it)
 Apple HIG look: black/white/light gray, Inter, iOS system colors as CSS tokens on `:root` (`--bull`, `--bear`, `--warn`, `--blue`…). Light/dark via `prefers-color-scheme` plus `data-theme`. Cards, segmented controls, pill badges.
 
-## Tabs (8)
-Dashboard, Charts, Morning Journal, Daily Bias, Playbook (id `strategy`), Trade Log, Edge, Lab (id `backtest`).
-Tab switching: `showPage(name)` plus the `tabNames` array in the same order as the buttons. Add new tabs to both. `showPage('levels')` maps to `strategy` (Key Levels merged into Playbook on Oct 8).
+## Tabs (9)
+Dashboard, Live (id `live`, Oct 9), Charts, Morning Journal, Daily Bias, Playbook (id `strategy`), Trade Log, Edge, Lab (id `backtest`).
+Tab switching: `showPage(name)` (flushes the journal autosave first) plus the `tabNames` array in the same order as the buttons. Add new tabs to both. `showPage('levels')` maps to `strategy` (Key Levels merged into Playbook on Oct 8).
 The site will be shared with a few of Jacob's friends (beginners): keep wording plain, always show sample size and caveats next to results, and never present examples as real data.
 
 ## Trade Readiness (Dashboard hero, Oct 8)
@@ -30,6 +30,23 @@ The site will be shared with a few of Jacob's friends (beginners): keep wording 
 ## Playbook tab (Oct 8)
 - Auto levels per contract (PDH/PDL, Asia, London, midnight open, marked "swept today"), TJR 4 steps in plain English with glossary terms, a session clock, Jacob's own levels (`jct_levels`), rules (rewritten to TJR; the old ORB/VWAP template text was removed), and editable risk limits (`jct_risk`, synced). The old hardcoded "reference levels" (ES ATH 5878…) were placeholder data and are gone.
 
+## Live tab (tab 2, Oct 9)
+- ESPN-style scoreboard (`lvRender`): LIVE/DELAYED/CLOSED badge + data source (TradingView real-time vs Yahoo ~10 min), phase + countdown (`lvPhase`), per contract price/change, a drive tracker Sweep → BOS → FVG → Order → Result (`lvDrive`), "last play" ticker. Charts 5m (`drawSetupChart`, 7:30 → now, overnight = last 6 h) and 15m/1H/4H/D (`drawCandles`). Play-by-play: 5m = `rpNotesHtml(..., { from, newestFirst, noHead })`, higher TFs = `lvHtfNotes` (one note per candle: displacement, swing sweeps, BOS, FVG formed/respected/IFVG/void). Confluence grid 5m → Daily (`lvConf`, Daily computed on the fly) + FVG bias row. Refresh 60 s while the tab is open.
+- **Setups outside TJR hours**: engine option `anyTime` (watch/enter around the clock, `restBars` 12 = cancel unfilled after 1 h, `holdBars` 24 = close after 2 h; off by default, parity unaffected). `lvOffSetups` lists last-24 h setups outside 9:50–11:00 with "⚠ outside TJR hours", status, and confluence at order time (`lvConfAt`, candles closed by then only); scoreboard + ticker flag a live one; the chart shows it when the TJR rules have no order.
+- **Forecast = only what survived testing** (`lvForecast`): nearer liquidity first (tested ~75–78%), typical 1-hour move size as a symmetric cone (no direction), the setting's track record. No direction call: the analog direction forecast was 43–47% out of sample (worse than a coin flip).
+- `scripts/research.mjs` → `research.json` (Lab → Forecast study, `renderForecastStudy`): leave-one-session-out + walk-forward test of the forecast at every 5m candle 7:30–11:30 (4,802 forecasts, but only 49 separate days), calibration, Brier skill, band coverage, liquidity race vs "nearer first", the rules' lean by stage, and off-hours setups by session with/without confluence. Oct 9 results: direction no edge; nearer-first 75–78%; ES off-hours (Asian) negative; NQ outside-hours rows positive but n < 35. Jacob chose free data only (no Databento) for now.
+- Test: `tests/livetest.js` (now + time travel to Oct 8 10:12 ET with cut candles and a faked clock; also opens Lab → Forecast study).
+
+## TradingView real-time bridge (built Oct 9; Jacob still has to switch it on)
+- `jc_tv_live_feed.pine` (indicator on a 5-minute chart) → alert "Any alert() function call" → webhook `https://jc-trading.jacobcarpenterodell.workers.dev/tv` with the last 3 closed 5m candles of ES1!/NQ1! each 5m close. Worker `POST /tv` (secret `TV_KEY`) stores them in KV `tv` (~280 writes/day). `GET /bars` merges them (5m by timestamp, plus 15m/1H roll-up) **only for the owner** (old SYNC_KEY or the owner account); everyone else gets Yahoo (CME licence: his real-time data is for him). `live` field → page `tvLive()`; stale after 30 min.
+- Jacob has TradingView **Essential** (webhooks OK, needs 2FA; alerts expire after 2 months → recreate). CME real-time is a separate TradingView add-on: without it the feed is delayed too. Test: `node tests/tvfeedtest.mjs` (13 checks).
+- To switch on: Cloudflare → Worker → Settings → add secret `TV_KEY` (+ optional `INVITE_CODE`), paste the new `cloudflare/worker.js`, Deploy; add the indicator with the key, create the alert.
+
+## Accounts + journal (Oct 9)
+- One private account per person (name + password, PBKDF2 10k in the Worker, token in `jct_user_token`, 400-day expiry). `POST /account/signup` needs an invite: `INVITE_CODE` secret for friends; Jacob's old `SYNC_KEY` as invite = owner account, which takes over the old shared `state`. Data per user in KV `state:<name>`; the old `X-Sync-Key` still works (= owner) until devices sign in. Header pill = "👤 name · saved" / "👤 Sign in" → account box (`Sync.setup/mode/submit/signOut`).
+- Switching person on a device (or signing out) pushes, then removes the synced keys from that browser, so the next person never sees them. A device used without an account merges its entries into the first account that signs in.
+- Journal autosaves 0.6 s after typing (`journalChanged` / `flushJournal`, also on date change, tab switch, hide, pagehide); status next to Save. Each day carries `u` (edit time); `mergeJournalDays` (page) and `mergeJournal` (Worker) keep the newest copy per day, so devices can't wipe each other's days. Default date fixed (was UTC, jumped a day after 8 pm ET). Uploads batched every 8 s (KV free plan: 1,000 writes/day shared by all users + the TV feed).
+- Test: `tests/accounttest.js` (runs the real worker.js in-process; 27 checks on desktop + phone). `tests/synctest.js` (old key box) removed.
 ## Exits, scenarios, alerts (Oct 8, late)
 - **Engine exit modes** (`cfg.exitMode`, `EXITS`): `rules` (Pine target, the default; TradingView parity intact), `liq` (all out at the first liquidity pool ≥1R: session H/L, midnight open, NY high/low since 9:30), `scale` (half out there, stop to break-even, rest to the rules target). Trades now carry MFE/MAE (`mfeR`, `maeR`), `mins` and `scaled`. `stats().reach` = % of trades that reached 0.5/1/1.5/2/3R. `cfg.restEnd` (default 660 = 11:00) lets scenarios ask "what if the order had stayed open to 12:00".
 - **Evidence (Jul 30–Oct 8):** on NQ, liquidity exits raise the sum of net across all 25 settings by ~30% (137k → 179k) and robust settings 11 → 12. Default NQ setting: rules +$7,705 · liq +$9,820 · scale +$9,438 (most even halves 4,470/4,968). 80% of trades reach +1R but only 20% reach +2R. ES: no exit helps (0 robust).
@@ -137,7 +154,8 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - Lab model: sweeps count from 8:30, entries 9:50–11:00, 5-candle BOS, 1 setup/day, scale-out exit (half at liquidity). Default NQ: Fixed points 80 · PDH/PDL · displacement · scale = 20 trades, +$19,240, max DD $1,795 (Jul 30–Oct 8, 10 weeks, in-sample).
 
 ## Open items / next steps (priority order)
-1. Confirm PC sync shows "Synced" and that phone + PC data merged.
+0. Jacob: deploy the new `cloudflare/worker.js` (paste + Deploy) and add secrets `TV_KEY` and `INVITE_CODE`. Until then the live site's sign-in box can't create accounts (old Worker has no /account routes). Then create his account with SYNC_KEY as the invite, sign in on PC + phone, share INVITE_CODE with friends; switch on the TradingView feed; check CME real-time on his TradingView.
+1. Confirm PC sync shows "Synced" and that phone + PC data merged (superseded by accounts once the Worker is deployed).
 2. Done Oct 9: `jc_tjr_backtest_v6.pine`. Jacob to paste it into TradingView on NQ1! 5m, first compare Jul 31–Oct 9 with the expected numbers above, then extend the dates. Note: TradingView's free plan loaded less 5m history (Aug 16 on) than Yahoo's 60 days; longer history needs a paid plan (Deep Backtesting), so ask before suggesting it.
 3. Optional (costs money, ask first): AI-written Morning Analysis via the Anthropic API from the Worker, cached 5 min (est. Haiku 5.5 ~$1–2/mo, Sonnet 5.5 ~$8–30/mo).
 4. Yahoo CME data is ~10 min delayed; true real-time needs a paid feed.
@@ -145,7 +163,7 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 6. GitHub disables scheduled workflows after 60 days without repo activity.
 
 ## Testing (tests/ folder, Playwright + the installed Microsoft Edge)
-- One-time setup: `npm i playwright` in a scratch folder (no browser download: tests use `channel: 'msedge'`). Serve the site: `node tests/serve.js . 8090`, then run e.g. `node tests/dualtest.js` (Replay ES+NQ), `htftest.js` (15m/1H), `dashtest.js` (Dashboard; needs DATA_DIR with prices/bars/news/sectors.json from `node scripts/fetch-prices.mjs <dir>`), `labtest.js`, `sctest.js`, `simtest.js` (MFF simulator unit cases), `synctest.js`. Each prints hscroll + JS errors for desktop and phone; 0 JS errors is the bar. Tests that time-travel "today at 10:05" fail after 6 pm ET (the futures session rolls).
+- One-time setup: `npm i playwright` in a scratch folder (no browser download: tests use `channel: 'msedge'`). Serve the site: `node tests/serve.js . 8090`, then run e.g. `node tests/dualtest.js` (Replay ES+NQ), `htftest.js` (15m/1H), `dashtest.js` (Dashboard; needs DATA_DIR with prices/bars/news/sectors.json from `node scripts/fetch-prices.mjs <dir>`), `labtest.js`, `sctest.js`, `simtest.js` (MFF simulator unit cases), `livetest.js`, `accounttest.js`; `node tests/tvfeedtest.mjs` (no browser). Each prints hscroll + JS errors for desktop and phone; 0 JS errors is the bar. Tests that time-travel "today at 10:05" fail after 6 pm ET (the futures session rolls).
 - Engine parity: `node scripts/backtest.mjs --validate` must still print the 7 TradingView trades for ES (−$2,760) and "replay seeding check: all sessions × all settings match".
 
 ## Real-data backtest (Oct 8)

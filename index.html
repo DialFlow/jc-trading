@@ -357,6 +357,7 @@ body {
 @keyframes lvPulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .lv-pulse { animation: none; } }
 .lv-phase { font-size: 13px; }
+.lv-src { font-size: 11px; font-weight: 700; color: var(--text2); background: var(--surface); border-radius: 6px; padding: 3px 7px; }
 .lv-clock { margin-left: auto; font: 700 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .lv-team { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 14px; border-top: 1px solid var(--border); cursor: pointer; }
 .lv-team.on { background: rgba(0,122,255,0.06); }
@@ -389,6 +390,8 @@ body {
 .lv-fct { background: var(--fill); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
 .lv-fct .k { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
 .lv-fct .v { font-size: 18px; font-weight: 800; margin: 2px 0; }
+.lv-off { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+.lv-off-h { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 
 /* Account sim plan */
 .sim-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -436,6 +439,7 @@ body {
 #sync-pill.sync-cta { background: var(--blue); color: #fff; font-weight: 600; }
 #sync-pill.sync-cta .fresh-dot { display: none; }
 #sync-pill:hover { filter: brightness(1.1); }
+@media (max-width: 520px) { #sync-pill .sync-sub { display: none; } }
 
 /* Sync sign-in box */
 .sync-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -1303,7 +1307,7 @@ select { cursor: pointer; }
   <div class="header-spacer"></div>
   <div class="freshness-pill" id="sync-pill" onclick="Sync.setup()" style="cursor:pointer;display:none">
       <span class="fresh-dot" id="sync-dot"></span>
-      <span id="sync-label">🔄 Set up sync</span>
+      <span id="sync-label">👤 Sign in</span>
     </div>
   <div class="header-prices">
     <div class="header-price-item">
@@ -1469,6 +1473,10 @@ select { cursor: pointer; }
     </div></section>
     <section>
       <div class="card mb-md"><div class="card-body">
+        <div class="lv-h">⚠ SETUPS OUTSIDE TJR HOURS · last 24h <span class="fs-12 text-2" id="lv-off-sub"></span></div>
+        <div id="lv-off"></div>
+      </div></div>
+      <div class="card mb-md"><div class="card-body">
         <div class="lv-h">CONFLUENCES · 5m → Daily</div>
         <div id="lv-conf"></div>
       </div></div>
@@ -1478,7 +1486,7 @@ select { cursor: pointer; }
       </div></div>
     </section>
   </div>
-  <div class="fs-12 text-2" style="margin:4px 2px 16px">Candles are Yahoo CME futures data, about 10 minutes behind the exchange, so "Live" means this session as it happens, not tick-by-tick. The strategy runs on 5-minute candles; 15m–Daily are context. Learning tool, not a trade recommendation.</div>
+  <div class="fs-12 text-2" style="margin:4px 2px 16px">Candles come from your TradingView live feed on devices with the sync key (badge: TradingView real-time, updated at every 5-minute close); otherwise Yahoo CME data about 10 minutes behind (badge: DELAYED). The strategy runs on 5-minute candles; 15m–Daily are context. Learning tool, not a trade recommendation.</div>
 </div>
 
 <div class="tab-page" id="page-charts">
@@ -1513,8 +1521,9 @@ select { cursor: pointer; }
   <div class="flex items-center justify-between mb-sm">
     <div class="section-label" style="padding-top:4px;">Morning Journal</div>
     <div class="flex items-center gap-sm">
-      <input type="date" id="journal-date" style="width:140px;font-size:12px;" onchange="loadJournal()">
-      <button class="btn btn-primary btn-sm" onclick="saveJournal()">Save</button>
+      <input type="date" id="journal-date" style="width:140px;font-size:12px;" onchange="journalDateChanged()">
+      <button class="btn btn-primary btn-sm" onclick="flushJournal();saveJournal()">Save</button>
+      <span class="fs-12 text-2" id="journal-saved" aria-live="polite"></span>
     </div>
   </div>
 
@@ -1915,6 +1924,7 @@ select { cursor: pointer; }
       <button class="mtf-seg" data-v="ss" onclick="labView('ss')">Structure study</button>
       <button class="mtf-seg" data-v="ce" onclick="labView('ce')">Confluence edge</button>
       <button class="mtf-seg" data-v="sc" onclick="labView('sc')">Scenarios</button>
+      <button class="mtf-seg" data-v="fs" onclick="labView('fs')">Forecast study</button>
       <button class="mtf-seg" data-v="replay" onclick="labView('replay')">Replay</button>
     </div>
     <div class="lab-pick">
@@ -1969,6 +1979,7 @@ select { cursor: pointer; }
 
   <!-- SCENARIOS -->
   <div class="lab-view" id="lab-sc" hidden></div>
+<div class="lab-view" id="lab-fs" hidden></div>
 
   <!-- REPLAY -->
   <div class="lab-view" id="lab-replay" hidden>
@@ -2035,14 +2046,27 @@ select { cursor: pointer; }
 <div id="gl-pop" class="gl-pop" hidden role="tooltip"></div>
 <div id="sync-modal" class="sync-modal" hidden>
   <div class="sync-box" role="dialog" aria-labelledby="sync-title">
-    <div class="fw-600" id="sync-title" style="font-size:16px;margin-bottom:6px">Sync this device</div>
-    <div id="sync-msg" class="fs-12 text-2"></div>
-    <input type="password" id="sync-input" placeholder="Your sync key" autocomplete="current-password" style="margin:10px 0" onkeydown="if(event.key==='Enter')Sync.save()">
-    <label class="fs-12 text-2" style="display:flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" onchange="document.getElementById('sync-input').type=this.checked?'text':'password'" style="width:auto"> Show key</label>
-    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
-      <button class="btn btn-secondary btn-sm" onclick="Sync.save(true)">Turn off here</button>
-      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sync-modal').hidden=true">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="Sync.save()">Save &amp; sync</button>
+    <div class="fw-600" id="sync-title" style="font-size:16px;margin-bottom:6px">Your account</div>
+    <div id="acct-in" hidden>
+      <div class="fs-13">Signed in as <b id="acct-name"></b>. Your journal, trade log, bias, levels and notes save to your account automatically and follow you to any device you sign in on.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">
+        <button class="btn btn-secondary btn-sm" onclick="Sync.signOut()">Sign out</button>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('sync-modal').hidden=true">Done</button>
+      </div>
+    </div>
+    <div id="acct-out">
+      <div class="fs-12 text-2" style="margin-bottom:10px">Everyone gets their own private journal. Sign in on each device you use.</div>
+      <div class="mtf-segs" id="acct-mode" style="margin-bottom:10px"><button class="mtf-seg on" data-m="in" onclick="Sync.mode('in')">Sign in</button><button class="mtf-seg" data-m="up" onclick="Sync.mode('up')">Create account</button></div>
+      <input id="acct-user" placeholder="Name (e.g. jacob)" autocomplete="username" autocapitalize="none" spellcheck="false" style="margin-bottom:8px">
+      <input id="acct-pass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password" style="margin-bottom:8px" onkeydown="if(event.key==='Enter')Sync.submit()">
+      <input id="acct-invite" type="password" placeholder="Invite code (ask Jacob)" autocomplete="off" style="margin-bottom:8px" hidden onkeydown="if(event.key==='Enter')Sync.submit()">
+      <label class="fs-12 text-2" style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><input type="checkbox" onchange="['acct-pass','acct-invite'].forEach(i=>document.getElementById(i).type=this.checked?'text':'password')" style="width:auto"> Show</label>
+      <div id="sync-msg" class="fs-12 text-2" style="min-height:16px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sync-modal').hidden=true">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="acct-go" onclick="Sync.submit()">Sign in</button>
+      </div>
+      <div class="fs-12 text-2" style="margin-top:10px">Jacob: create your account with your old sync key as the invite code. That moves your existing journal into it.</div>
     </div>
   </div>
 </div>
@@ -2074,6 +2098,12 @@ const JC_API = 'https://jc-trading.jacobcarpenterodell.workers.dev';
 const SYNC_KEYS = ['jct_bias','jct_bt_chat','jct_checklist','jct_dash_notes','jct_edge_notes',
   'jct_journal','jct_levels','jct_trades','tjr_bias','jct_risk','jct_plan'];
 
+// journal = { 'YYYY-MM-DD': { rows, obs, edge, u } }: keep the most recently edited copy of each day
+function mergeJournalDays(a, b) {
+  try { const x = JSON.parse(a || '{}'), y = JSON.parse(b || '{}'), out = { ...x };
+    for (const d in y) if (!out[d] || (y[d] && (y[d].u || 0) > (out[d].u || 0))) out[d] = y[d];
+    return JSON.stringify(out); } catch(e) { return b; }
+}
 const Sync = (() => {
   const _setItem = Storage.prototype.setItem;
   let meta = { t: {}, synced: false };
@@ -2081,9 +2111,12 @@ const Sync = (() => {
   let applying = false, pushTimer = null, status = 'off';
 
   const key = () => { try { return localStorage.getItem('jct_sync_key') || ''; } catch(e) { return ''; } };
+  const token = () => { try { return localStorage.getItem('jct_user_token') || ''; } catch(e) { return ''; } };
+  const userName = () => { try { return localStorage.getItem('jct_user_name') || ''; } catch(e) { return ''; } };
+  const authHdr = () => token() ? { 'X-User-Token': token() } : key() ? { 'X-Sync-Key': key() } : {};
   const saveMeta = () => { try { _setItem.call(localStorage, 'jct_sync_meta', JSON.stringify(meta)); } catch(e) {} };
   const setLocal = (k, v) => { applying = true; try { localStorage.setItem(k, v); } finally { applying = false; } };
-  const enabled = () => !!(JC_API && key());
+  const enabled = () => !!(JC_API && (token() || key()));
 
   // Every write to a synced key is timestamped and queued for upload
   Storage.prototype.setItem = function(k, v) {
@@ -2099,21 +2132,23 @@ const Sync = (() => {
     const pill = document.getElementById('sync-pill');
     if (pill) pill.style.display = JC_API ? '' : 'none';
     if (!dot || !lbl) return;
-    const map = { off: ['', '🔄 Set up sync'], ok: ['live', 'Synced'], busy: ['stale', 'Syncing…'], error: ['error', 'Sync error · fix'] };
+    const who = userName() ? '👤 ' + userName() : '';
+    const map = { off: ['', '👤 Sign in'], ok: ['live', who ? who + ' · saved' : 'Synced'], busy: ['stale', who ? who + ' · saving…' : 'Syncing…'], error: ['error', title === 'signed out' ? '👤 Sign in again' : 'Sync error · fix'] };
     if (pill) pill.classList.toggle('sync-cta', s === 'off' || s === 'error');
     dot.className = 'fresh-dot ' + map[s][0];
-    lbl.textContent = map[s][1];
-    if (pill) pill.title = title || (s === 'off' ? 'Tap to enter your sync key' : '');
+    const [main, sub] = map[s][1].split(' · ');
+    lbl.innerHTML = esc(main) + (sub ? '<span class="sync-sub"> · ' + esc(sub) + '</span>' : '');
+    if (pill) pill.title = title || (s === 'off' ? 'Sign in to save your journal to your account' : '');
   }
 
   async function api(method, body) {
     const res = await fetch(JC_API + '/sync', {
       method, keepalive: method === 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Sync-Key': key() },
+      headers: { 'Content-Type': 'application/json', ...authHdr() },
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(8000),
     });
-    if (res.status === 401) throw new Error('wrong sync key');
+    if (res.status === 401) throw new Error(token() ? 'signed out' : 'wrong sync key');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
   }
@@ -2122,11 +2157,7 @@ const Sync = (() => {
   function mergeFirst(k, local, remote) {
     try {
       const a = JSON.parse(local), b = JSON.parse(remote);
-      if (k === 'jct_journal') {
-        const out = { ...b };
-        for (const d in a) if (!out[d] || JSON.stringify(a[d]).length > JSON.stringify(out[d]).length) out[d] = a[d];
-        return JSON.stringify(out);
-      }
+      if (k === 'jct_journal') return mergeJournalDays(local, remote);
       if (k === 'jct_trades' && Array.isArray(a) && Array.isArray(b)) {
         const byId = new Map(); [...b, ...a].forEach(t => byId.set(t.id, t));
         return JSON.stringify([...byId.values()].sort((x, y) => y.id - x.id));
@@ -2145,6 +2176,12 @@ const Sync = (() => {
     let changed = false, needPush = false;
     for (const k of SYNC_KEYS) {
       const local = localStorage.getItem(k), r = remote[k], lt = meta.t[k] || 0;
+      if (meta.synced && k === 'jct_journal' && r && local != null && r.v !== local) {
+        const m = mergeJournalDays(local, r.v);
+        if (m !== local) { setLocal(k, m); changed = true; }
+        if (m !== r.v) { meta.t[k] = Date.now(); needPush = true; } else meta.t[k] = r.t;
+        continue;
+      }
       if (!meta.synced) {
         if (r && local != null && r.v !== local) {
           const m = mergeFirst(k, local, r.v);
@@ -2179,19 +2216,58 @@ const Sync = (() => {
   function schedulePush() {
     if (!enabled()) return;
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(push, 2000);
+    pushTimer = setTimeout(push, 8000); // batched: each upload is one write on the free Cloudflare plan
   }
 
   // In-page sign-in box (browser prompt() is blocked in many browsers and in-app views)
+  let acctMode = 'in';
   function setup() {
     if (!JC_API) return;
-    const box = document.getElementById('sync-modal');
-    box.hidden = false;
-    const inp = document.getElementById('sync-input'); inp.value = key(); inp.focus();
-    document.getElementById('sync-msg').textContent = key() ? 'Sync is set up on this device. Enter a different key, or turn it off.' : 'Enter the private key you saved as SYNC_KEY in Cloudflare. Use the same key on every device.';
-    document.getElementById('sync-msg').className = 'fs-12 text-2';
+    document.getElementById('sync-modal').hidden = false;
+    const inAcct = !!token() && status !== 'error';
+    document.getElementById('acct-in').hidden = !inAcct; document.getElementById('acct-out').hidden = inAcct;
+    document.getElementById('acct-name').textContent = userName();
+    const msg = document.getElementById('sync-msg');
+    msg.textContent = !token() && key() ? 'This device uses the old shared sync key. Create your own account (or sign in) to keep your journal private.' : status === 'error' && token() ? 'Your sign-in ran out. Sign in again; nothing on this device is lost.' : '';
+    msg.className = 'fs-12 text-2';
+    if (!inAcct) { mode(acctMode); document.getElementById('acct-user').value = userName(); document.getElementById(userName() ? 'acct-pass' : 'acct-user').focus(); }
   }
-  async function save(off) {
+  function mode(m) {
+    acctMode = m;
+    document.querySelectorAll('#acct-mode .mtf-seg').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+    document.getElementById('acct-invite').hidden = m !== 'up';
+    document.getElementById('acct-pass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
+    document.getElementById('acct-go').textContent = m === 'up' ? 'Create account' : 'Sign in';
+  }
+  // this device's copy of the synced data (journal, trades…) is removed when another person signs in or on sign-out;
+  // it is already in the cloud under the previous account
+  function wipeLocal() { for (const k of SYNC_KEYS) { try { localStorage.removeItem(k); } catch(e) {} } meta = { t: {}, synced: false }; saveMeta(); }
+  async function submit() {
+    const msg = document.getElementById('sync-msg'), name = document.getElementById('acct-user').value.trim().toLowerCase(), pass = document.getElementById('acct-pass').value;
+    const invite = document.getElementById('acct-invite').value.trim();
+    if (!name || !pass) { msg.textContent = 'Enter your name and password.'; msg.className = 'fs-12 cf-s'; return; }
+    msg.textContent = acctMode === 'up' ? 'Creating your account…' : 'Signing in…'; msg.className = 'fs-12 text-2';
+    let res, j = {};
+    try { res = await fetch(JC_API + '/account/' + (acctMode === 'up' ? 'signup' : 'login'), { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, pass, invite }), signal: AbortSignal.timeout(10000) }); j = await res.json().catch(() => ({})); }
+    catch(e) { msg.textContent = "✗ Couldn't reach the server. Check your connection and try again."; msg.className = 'fs-12 cf-s'; return; }
+    if (!res.ok || !j.token) { msg.textContent = res.status === 404 ? "✗ Accounts aren't switched on yet: the server (Cloudflare Worker) needs its update first." : '✗ ' + (j.error || 'HTTP ' + res.status); msg.className = 'fs-12 cf-s'; return; }
+    const prev = userName() || (key() ? '@shared' : '');
+    const switching = prev && prev !== j.name && !(prev === '@shared' && j.owner);
+    if (switching) { if (pushTimer) await push(); wipeLocal(); }
+    try { _setItem.call(localStorage, 'jct_user_token', j.token); _setItem.call(localStorage, 'jct_user_name', j.name); localStorage.removeItem('jct_sync_key'); } catch(e) {}
+    if (prev === '') { meta.synced = false; saveMeta(); }   // a device used without an account: its entries merge into this account
+    await pull();
+    if (status === 'ok') { msg.textContent = '✓ Signed in as ' + j.name; msg.className = 'fs-12 cf-b'; setTimeout(() => location.reload(), 600); }
+    else { msg.textContent = '✗ Signed in, but saving failed: ' + (document.getElementById('sync-pill').title || 'unknown error'); msg.className = 'fs-12 cf-s'; }
+  }
+  async function signOut() {
+    if (pushTimer || typeof flushJournal === 'function') { try { flushJournal(); } catch(e) {} await push(); }
+    try { await fetch(JC_API + '/account/logout', { method: 'POST', headers: authHdr(), signal: AbortSignal.timeout(5000) }); } catch(e) {}
+    try { ['jct_user_token', 'jct_user_name', 'jct_sync_key'].forEach(k => localStorage.removeItem(k)); } catch(e) {}
+    wipeLocal(); location.reload();
+  }
+  async function save(off) { // old shared-key flow, kept for devices that haven't signed in yet
     const msg = document.getElementById('sync-msg'), k = off ? '' : document.getElementById('sync-input').value.trim();
     try { _setItem.call(localStorage, 'jct_sync_key', k); } catch(e) {}
     if (!k) { setStatus('off'); document.getElementById('sync-modal').hidden = true; showToast('Sync turned off on this device'); return; }
@@ -2204,11 +2280,11 @@ const Sync = (() => {
 
   // Coming back to the app (phone unlock, tab switch): get the other device's changes
   document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'hidden') { if (pushTimer) push(); return; }
+    if (document.visibilityState === 'hidden') { try { flushJournal(); } catch(e) {} if (pushTimer) push(); return; }
     if (await pull()) location.reload();
   });
 
-  return { pull, push, setup, save, setStatus, status: () => status };
+  return { pull, push, setup, save, mode, submit, signOut, setStatus, status: () => status, user: userName, authHdr };
 })();
 
 // ============================================================
@@ -2291,6 +2367,9 @@ async function loadAnalysisOld() {
 // ============================================================
 // ===== CONFLUENCE-CORE START (scripts/confluence-stats.mjs evaluates this block in Node; keep it free of top-level DOM access)
 const BARS_URL = 'https://raw.githubusercontent.com/DialFlow/jc-trading/data/bars.json';
+// With the sync key, the Worker merges in real-time 5m candles from Jacob's TradingView feed (jc_tv_live_feed.pine)
+const jcKeyHdr = () => { try { const tk = localStorage.getItem('jct_user_token'), k = localStorage.getItem('jct_sync_key'); return tk ? { 'X-User-Token': tk } : k ? { 'X-Sync-Key': k } : {}; } catch(e) { return {}; } };
+const tvLive = () => !!(labRaw && labRaw.live && labRaw.live.source === 'TradingView' && Date.now() / 1000 - labRaw.live.updated < 20 * 60);
 const MTF_TFS = ['5m', '15m', '1h', '4h', '1d'];
 const MTF_LABEL = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H', '1d': 'Daily' };
 const MTF_WEIGHT = { '5m': 0.5, '15m': 1, '1h': 2, '4h': 2.5, '1d': 3 };
@@ -2378,7 +2457,7 @@ async function loadMTF(force) {
   if (!force && mtf && Date.now() - mtfLoadedAt < 60000) return mtf;
   try {
     const url = JC_API ? JC_API + '/bars' : BARS_URL + '?t=' + Math.floor(Date.now() / 60000);
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000), headers: JC_API ? jcKeyHdr() : {} });
     if (!res.ok) return mtf;
     const raw = await res.json();
     const out = { updated: raw.updated, contracts: raw.contracts || {}, syms: {} };
@@ -2712,6 +2791,7 @@ function renderFuturesCharts() {
 // ============================================================
 function showPage(name) {
   if (name === 'levels') name = 'strategy'; // Key Levels merged into the Playbook tab
+  if (typeof flushJournal === 'function') flushJournal();
   document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   const page = document.getElementById('page-' + name);
@@ -3108,8 +3188,8 @@ const JOURNAL_GROUPS = [
 function initJournalDate() {
   const dateEl = document.getElementById('journal-date');
   if (!dateEl.value) {
-    const now = getCurrentETTime();
-    dateEl.value = now.toISOString().split('T')[0];
+    const d = getCurrentETTime(); // ET wall-clock date (toISOString would switch to UTC and jump a day after 8 pm ET)
+    dateEl.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
   loadJournal();
 }
@@ -3158,6 +3238,7 @@ function cycleDir(btn) {
   const next = states[(states.indexOf(cur) + 1) % states.length];
   btn.className = 'dir-btn ' + next;
   btn.textContent = dirIcon(next);
+  journalChanged();
 }
 
 function formatDelta(close, price) {
@@ -3181,8 +3262,15 @@ function calcDeltas(input) {
   if (d2) d2.innerHTML = formatDelta(closeEl && closeEl.value, am915El && am915El.value);
 }
 
-function saveJournal() {
-  const dateKey = document.getElementById('journal-date').value;
+// Autosave: every edit is saved ~0.6 s after you stop typing, and before the date changes, the tab switches or the app is hidden
+let journalTimer = null, journalShown = '';
+function journalChanged() { clearTimeout(journalTimer); journalTimer = setTimeout(() => saveJournal(true), 600); journalStatus('Saving…'); }
+function flushJournal() { if (journalTimer) { clearTimeout(journalTimer); journalTimer = null; saveJournal(true); } }
+function journalStatus(s) { const el = document.getElementById('journal-saved'); if (el) el.textContent = s; }
+function journalDateChanged() { flushJournal(); loadJournal(); }
+function saveJournal(auto) {
+  journalTimer = null;
+  const dateKey = journalShown || document.getElementById('journal-date').value;
   if (!dateKey) return;
   const rows = {};
   document.querySelectorAll('#journal-tbody tr[data-sym]').forEach(tr => {
@@ -3197,15 +3285,20 @@ function saveJournal() {
   });
   const obs = document.getElementById('journal-obs').value;
   const edge = document.getElementById('journal-edge').value;
-  if (!journalData[dateKey]) journalData[dateKey] = {};
-  journalData[dateKey].rows = rows;
-  journalData[dateKey].obs = obs;
-  journalData[dateKey].edge = edge;
-  try { localStorage.setItem('jct_journal', JSON.stringify(journalData)); } catch(e) {}
+  // pick up edits from other devices first, so this save only replaces this one day
+  try { journalData = JSON.parse(localStorage.getItem('jct_journal') || '{}'); } catch(e) {}
+  const empty = !obs.trim() && !edge.trim() && Object.values(rows).every(d => !d.close && !d.am7 && !d.am915 && !d.note && d.dir === 'neutral');
+  if (empty && !journalData[dateKey]) { journalStatus(''); return; }   // nothing typed for this day yet
+  journalData[dateKey] = { ...(journalData[dateKey] || {}), rows, obs, edge, u: Date.now() };
+  try { localStorage.setItem('jct_journal', JSON.stringify(journalData)); } catch(e) { journalStatus('✗ Not saved: this browser blocked storage'); return; }
   renderPastEntries();
-  showToast('Journal saved');
+  const at = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  journalStatus(Sync.user() ? `✓ Saved ${at} · to ${Sync.user()}'s account` : `✓ Saved ${at} · this device only (sign in to keep it in your account)`);
+  if (!auto) showToast('Journal saved');
 }
 
+document.addEventListener('input', e => { if (e.target.closest && (e.target.closest('#journal-tbody') || e.target.id === 'journal-obs' || e.target.id === 'journal-edge')) journalChanged(); });
+window.addEventListener('pagehide', () => { try { flushJournal(); } catch(e) {} });
 function loadJournal() {
   try {
     const saved = localStorage.getItem('jct_journal');
@@ -3213,7 +3306,9 @@ function loadJournal() {
   } catch(e) {}
   buildJournalRows();
   const dateKey = document.getElementById('journal-date').value;
+  journalShown = dateKey;
   const d = journalData[dateKey] || {};
+  journalStatus(d.u ? 'Saved ' + new Date(d.u).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '');
   const obs = document.getElementById('journal-obs');
   const edge = document.getElementById('journal-edge');
   if (obs) obs.value = d.obs || '';
@@ -3886,10 +3981,11 @@ const usd = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { 
 
 function labView(v) {
   document.querySelectorAll('#lab-nav .mtf-seg').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  for (const id of ['hl', 'live', 'bt', 'sim', 'ss', 'ce', 'sc', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
+  for (const id of ['hl', 'live', 'bt', 'sim', 'ss', 'ce', 'sc', 'fs', 'replay']) document.getElementById('lab-' + id).hidden = id !== v;
   if (v === 'ss') renderStructStudy();
   if (v === 'ce') renderConfEdge();
   if (v === 'sc') renderScenarios(false);
+  if (v === 'fs') renderForecastStudy();
   document.querySelector('.lab-pick').style.visibility = v === 'hl' ? 'hidden' : '';
   if (v === 'hl') renderHighlights();
   try { localStorage.setItem('jct_lab_view', v); } catch(e) {}
@@ -3931,7 +4027,7 @@ function labInit() {
   if (!['rules', 'liq', 'scale'].includes(labExit)) labExit = defaultExitFor(labCfg());
   labRenderPick();
   let v = 'hl'; try { v = localStorage.getItem('jct_lab_view') || 'hl'; } catch(e) {}
-  labView(['hl', 'live', 'bt', 'sim', 'ss', 'ce', 'sc', 'replay'].includes(v) ? v : 'hl');
+  labView(['hl', 'live', 'bt', 'sim', 'ss', 'ce', 'sc', 'fs', 'replay'].includes(v) ? v : 'hl');
   readyCycle(false);
 }
 
@@ -4032,7 +4128,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
     svg += `<polygon points="${pts.map(p => `${x(p[0])},${y(p[3])}`).join(' ')} ${pts.slice().reverse().map(p => `${x(p[0])},${y(p[1])}`).join(' ')}" fill="#5e5ce6" fill-opacity="0.16" stroke="#5e5ce6" stroke-opacity="0.4" stroke-width="0.6"/>`;
     svg += `<polyline points="${pts.map(p => `${x(p[0])},${y(p[2])}`).join(' ')}" fill="none" stroke="#5e5ce6" stroke-width="1.6" stroke-dasharray="4 3"/>`;
     const pe = pts[pts.length - 1];
-    svg += `<text x="${Math.max(0, Math.min(right - 120, x(pe[0]) - 110))}" y="${Math.max(PT + 10, y(pe[3]) - 6)}" class="mtf-ax" style="fill:#5e5ce6;font-weight:700">forecast · ${opts.fc.n} sessions</text>`;
+    svg += `<text x="${Math.max(0, Math.min(right - 120, x(pe[0]) - 110))}" y="${Math.max(PT + 10, y(pe[3]) - 6)}" class="mtf-ax" style="fill:#5e5ce6;font-weight:700">${opts.fc.label || 'forecast'} · ${opts.fc.n} sessions</text>`;
   }
   if (!order) for (let k = 0; k <= 3; k++) { const p = lo + (hi - lo) * k / 3; svg += `<text x="${right + 4}" y="${y(p) + 3}" class="mtf-ax">${p.toFixed(0)}</text>`; }
   for (const b of [...new Set([bars[0], bars.find(b => b.m === 660), last].filter(Boolean))]) { const i = bars.indexOf(b); svg += `<text x="${Math.min(right - 30, Math.max(0, x(i) - 14))}" y="${H - 5}" class="mtf-ax">${b.hm}</text>`; }
@@ -4310,7 +4406,7 @@ function rpDraw() {
 // ============================================================
 // LIVE TAB — the current session as a play-by-play (same engine, chart and notes as the Replay)
 // ============================================================
-let lvSym = 'NQ=F', lvTf = '5m', lvFc = false, lvTicks = 0, lvClockTimer = null, lvBusy = false, lvConfC = {}, lvFcRuns = {};
+let lvSym = 'NQ=F', lvTf = '5m', lvFc = false, lvTicks = 0, lvClockTimer = null, lvBusy = false, lvConfC = {}, lvResearch = null;
 try { lvSym = localStorage.getItem('jct_lv_sym') || 'NQ=F'; lvTf = localStorage.getItem('jct_lv_tf') || '5m'; } catch(e) {}
 const LV_TFS = [['5m', '5m'], ['15m', '15m'], ['1h', '1H'], ['4h', '4H'], ['1d', 'D']];
 const LV_STAGE = ['no sweep yet', 'sweep done', 'break of structure done', 'gap formed / order working', 'in a trade', 'done for the day'];
@@ -4372,7 +4468,7 @@ function lvDrive(R, inPlay) {
 async function lvRefresh(force) {
   if (!lvClockTimer) lvClockTimer = setInterval(lvClock, 1000);
   if (lvBusy) return; lvBusy = true;
-  try { await Promise.all([ensureBars(force), loadMTF(force)]); } catch(e) {}
+  try { await Promise.all([ensureBars(force), loadMTF(force), lvResearch ? null : loadJSON('research.json').then(r => { lvResearch = r; })]); } catch(e) {}
   lvBusy = false;
   whenTJR(lvRender);
 }
@@ -4385,12 +4481,12 @@ function lvRender() {
   const board = document.getElementById('lv-board'); if (!board) return;
   if (!BT || !window.TJR || !labRaw) { board.innerHTML = '<div class="lv-top">Loading today\'s candles…</div>'; setTimeout(() => { if (currentTab === 'live') lvRender(); }, 1500); return; }
   const now = etNow(), ph = lvPhase(now.m, now.wd), runs = {};
-  for (const [s] of MTF_SYMS) runs[s] = lvRun(s);
+  for (const [s] of MTF_SYMS) { runs[s] = lvRun(s); if (runs[s]) runs[s].off = lvOffSetups(runs[s]); }
   const R = runs[lvSym] || Object.values(runs).find(Boolean);
   if (!R) { board.innerHTML = '<div class="lv-top">Today\'s candles are not available yet.</div>'; return; }
   const effM = r => r.sameDay ? now.m : 1439;
   // scoreboard
-  const fresh = R.ageMin <= 20, live = ph.open && fresh;
+  const rt = tvLive(), live = ph.open && rt && R.ageMin <= 7;
   const left = ph.end != null ? ((ph.end - now.m + 1440) % 1440) : null;
   const team = ([s, nm]) => { const r = runs[s]; if (!r) return '';
     const [cls, title] = bannerFor(r.st, r.evs, effM(r), r.sameDay ? r.ageMin : null), chg = r.last.c - r.prevC;
@@ -4401,15 +4497,17 @@ function lvRender() {
       <div class="lv-name">${nm}<span class="badge ${badge}">${esc(short)}</span></div>
       <div><div class="lv-px">${r.last.c.toFixed(2)}</div><div class="lv-chg ${chg >= 0 ? 'bull' : 'bear'}">${Number.isNaN(chg) ? '' : `${chg >= 0 ? '+' : ''}${chg.toFixed(2)} (${(chg / r.prevC * 100).toFixed(2)}%)`}</div></div>
       <div class="lv-drive">${lvDrive(r, ph.inPlay && r.sameDay)}</div>
+      ${(() => { const o = (r.off || []).find(x => !x.ex && !x.cn); return o ? `<div class="lv-sit" style="color:var(--warn);font-weight:700">⚠ Outside TJR hours: ${o.dir.toUpperCase()} setup at ${o.order.hm}, ${esc(o.status)} (${o.order.data.limit.toFixed(2)})</div>` : ''; })()}
       <div class="lv-sit">${esc(title)} · last candle ${r.last.hm} ET${r.sameDay ? ` (${Math.max(0, Math.round(r.ageMin))} min old)` : ''} · ${esc(btLabel(r.c.r))}</div>
     </div>`; };
   board.innerHTML = `<div class="lv-top">
       <span class="lv-onair${live ? '' : ' off'}"><span class="lv-dot${live ? ' lv-pulse' : ''}"></span>${live ? 'LIVE' : ph.open ? 'DELAYED' : 'CLOSED'}</span>
-      <span class="lv-phase">${esc(ph.name)}${left != null ? ` · ${left >= 60 ? Math.floor(left / 60) + 'h ' : ''}${left % 60}m left` : ''}</span>
+      <span class="lv-src">${rt ? 'TradingView real-time' : 'Yahoo · ~10 min delay'}</span><span class="lv-phase">${esc(ph.name)}${left != null ? ` · ${left >= 60 ? Math.floor(left / 60) + 'h ' : ''}${left % 60}m left` : ''}</span>
       <span class="lv-clock" id="lv-clock">${getCurrentETTime().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })} ET</span>
     </div>${MTF_SYMS.map(team).join('')}`;
   // last play across both contracts
-  const lastPlay = MTF_SYMS.flatMap(([s, nm]) => (runs[s]?.evs || []).filter(e => e.td === runs[s].td).map(e => ({ ...e, nm }))).sort((a, b) => b.t - a.t)[0];
+  const lastPlay = MTF_SYMS.flatMap(([s, nm]) => [...(runs[s]?.evs || []).filter(e => e.td === runs[s].td).map(e => ({ ...e, nm })),
+    ...(runs[s]?.off || []).flatMap(o => o.evs).filter(e => e.t >= (runs[s].last.t - 6 * 3600)).map(e => ({ ...e, nm: nm + ' · outside TJR hours' }))]).sort((a, b) => b.t - a.t)[0];
   document.getElementById('lv-ticker').innerHTML = lastPlay ? `<b>LAST PLAY · ${lastPlay.hm} ${lastPlay.nm}</b><span>${esc(lastPlay.text)}</span>` : `<b>LAST PLAY</b><span>No rule events yet this session · ${esc(ph.name)}</span>`;
   // controls
   document.getElementById('lv-sym').innerHTML = MTF_SYMS.map(([s, n]) => `<button class="mtf-seg${s === R.sym ? ' on' : ''}" onclick="lvSetSym('${s}')">${n}</button>`).join('');
@@ -4421,7 +4519,8 @@ function lvRender() {
   const F = lvFc ? lvForecast(R) : null;
   document.getElementById('lv-fc').hidden = !lvFc;
   if (lvFc) document.getElementById('lv-fc-body').innerHTML = F.html;
-  if (lvTf === '5m') drawSetupChart(document.getElementById('lv-chart'), R.day, R.st, R.evs, { slots: Math.max(R.session ? 61 : 0, R.day.length + (F && F.band ? 13 : 0)), fc: F && F.band ? { band: F.band, n: F.n } : null });
+  const offShow = !R.evs.some(e => e.type === 'order') && (R.off || []).find(o => o.order.t >= R.day[0].t);
+  if (lvTf === '5m') drawSetupChart(document.getElementById('lv-chart'), R.day, R.st, offShow ? [...R.evs, ...offShow.evs] : R.evs, { slots: Math.max(R.session ? 61 : 0, R.day.length + (F && F.band ? 13 : 0)), fc: F && F.band ? { band: F.band, n: F.n, label: F.label } : null });
   else drawCandles('lv-chart', R.sym, lvTf, { n: 80, h: 340 });
   // play-by-play: one note per candle, newest first
   const tfl = LV_TFS.find(x => x[0] === lvTf)[1];
@@ -4430,8 +4529,56 @@ function lvRender() {
     document.getElementById('lv-pbp').innerHTML = rpNotesHtml(bars, R.snaps.slice(n0), R.evs, bars.length - 1, R.sym, R.c.r, 'lv-pbp-list', { from: R.i0 - n0, newestFirst: true, noHead: true }); }
   else document.getElementById('lv-pbp').innerHTML = lvHtfNotes(R.sym, lvTf);
   document.getElementById('lv-conf').innerHTML = lvConf(R.sym);
+  document.getElementById('lv-off-sub').textContent = `· ${lvName(R.sym)}`;
+  document.getElementById('lv-off').innerHTML = lvOffHtml(R, R.off || []) + `<div class="fs-12 text-2" style="margin-top:6px">TJR only trades 9:50–11:00. These are the same sweep → break → gap rules at other hours, so you can watch and learn; an unfilled order is dropped after 1 hour and a trade is closed after 2. ${offShow ? 'The chart shows the latest one. ' : ''}History per session: Lab → Forecast study.</div>`;
   document.getElementById('lv-steps').innerHTML = stepsHtml(R.st, R.evs, effM(R));
 }
+// ---------- setups outside TJR hours: the same rules run around the clock (engine anyTime), shown with a warning ----------
+const LV_ANY = { anyTime: true, maxTrades: 50, restBars: 12, holdBars: 24 };
+const lvSessOf = m => m >= 1080 || m < 180 ? 'Asian (6 pm–3 am)' : m < 510 ? 'London (3–8:30 am)' : m < 590 ? 'NY open (8:30–9:50)' : m < 660 ? 'TJR window (9:50–11:00)' : 'NY late (11 am–5 pm)';
+function lvOffSetups(R) {
+  const res = window.TJR.run(R.bars, R.sym, { ...R.c.cfg, ...LV_ANY }, { keepOpen: true }), since = R.last.t - 24 * 3600, out = [];
+  let cur = null;
+  for (const e of res.events) {
+    if (e.type === 'order') { cur = { order: e, evs: [e] }; out.push(cur); continue; }
+    if (cur && ['fill', 'scale', 'exit', 'cancel'].includes(e.type)) cur.evs.push(e);
+  }
+  const W = WIN();
+  return out.filter(s => s.order.t >= since).map(s => { const m = window.TJR.et(s.order.t).m;
+    const ex = s.evs.find(e => e.type === 'exit'), fl = s.evs.find(e => e.type === 'fill'), cn = s.evs.find(e => e.type === 'cancel');
+    return { ...s, m, sess: lvSessOf(m), inHours: m >= W.entryStart && m < W.entryEnd, dir: s.order.data.dir, ex, fl, cn,
+      status: ex ? (ex.data.pts >= 0 ? `won +${ex.data.pts.toFixed(1)} pts` : `lost ${ex.data.pts.toFixed(1)} pts`) : cn ? 'not filled' : fl ? 'in the trade' : 'order working' }; })
+    .filter(s => !s.inHours).reverse();
+}
+// multi-timeframe confluence in the setup's direction at the moment the order went in (candles closed by then only)
+function lvConfAt(sym, t, dir) {
+  const S = mtf?.syms[sym], O = mtf?.syms[sym === 'ES=F' ? 'NQ=F' : 'ES=F']; if (!S) return [];
+  const SEC = { '5m': 300, '15m': 900, '1h': 3600, '4h': 14400 }, want = dir === 'long' ? 'bull' : 'bear', opp = want === 'bull' ? 'bear' : 'bull';
+  const has = (v, d) => v === d || v === 'both';
+  return ['5m', '15m', '1h', '4h'].map(tf => {
+    const upto = (S.tfs[tf]?.bars || []).filter(b => b.t + SEC[tf] <= t + 300).slice(-300), ou = (O?.tfs[tf]?.bars || []).filter(b => b.t + SEC[tf] <= t + 300).slice(-300);
+    if (upto.length < RECENT + 5) return null;
+    const c = confChecks({ bars: upto, gaps: scanFVGs(upto) });
+    c.smt = ou.length >= RECENT ? (sym === 'ES=F' ? smtCheck({ bars: upto }, { bars: ou }) : smtCheck({ bars: ou }, { bars: upto })) : { v: '' };
+    const n = CONF_ROWS.filter(r => has(c[r.key].v, want)).length, o = CONF_ROWS.filter(r => has(c[r.key].v, opp)).length;
+    return { tf, n, aligned: n >= 4 && n > o };
+  }).filter(Boolean);
+}
+function lvOffHtml(R, list) {
+  const RS = lvResearch?.syms?.[R.sym]?.offHours, pct = v => Math.round(v * 100) + '%';
+  const rec = name => { const x = RS?.bySession?.[name]; if (!x) return ''; const a = x.all, w = x.withConf;
+    return `<div class="fs-12 text-2">History, ${esc(name)}: ${a.n} setups, ${pct(a.winRate)} won, ${btMoney(a.net)}${w.n ? ` · with confluence ${w.n}, ${pct(w.winRate)} won` : ''} (${lvResearch.syms[R.sym].from} → ${lvResearch.syms[R.sym].to}).</div>`; };
+  if (!list.length) return `<div class="fs-13 text-2">No sweep → BOS → FVG setups outside 9:50–11:00 in the last 24 hours on ${lvName(R.sym)}.</div>`;
+  return list.slice(0, 6).map(s => { const d = s.order.data, cf = lvConfAt(R.sym, s.order.t, s.dir), al = cf.filter(x => x.aligned).length;
+    const tag = s.ex ? (s.ex.data.pts >= 0 ? 'badge-bull' : 'badge-bear') : s.cn ? 'badge-neutral' : 'badge-blue';
+    return `<div class="lv-off">
+      <div class="lv-off-h"><span class="badge badge-warn">⚠ outside TJR hours</span><b>${s.order.hm} · ${esc(s.sess)}</b><span class="badge ${s.dir === 'long' ? 'badge-bull' : 'badge-bear'}">${s.dir.toUpperCase()}</span><span class="badge ${tag}">${esc(s.status)}</span>${al >= 2 ? '<span class="badge badge-blue">with confluence</span>' : ''}</div>
+      <div class="fs-13">${s.dir === 'long' ? 'Buy' : 'Sell'} limit ${d.limit.toFixed(2)} · stop ${d.stop.toFixed(2)} (−${Math.abs(d.limit - d.stop).toFixed(1)} pts) · target ${d.target.toFixed(2)} (${esc(d.targetName)})${d.tp1 != null ? ` · ½ at ${d.tp1.toFixed(2)}` : ''}</div>
+      <div class="fs-12">Confluence when placed: ${cf.length ? cf.map(x => `<span class="${x.aligned ? 'cf-b' : 'text-2'}">${x.tf === '1h' ? '1H' : x.tf === '4h' ? '4H' : x.tf} ${x.n}/6${x.aligned ? ' ✓' : ''}</span>`).join(' · ') : 'not enough candles'}</div>
+      ${rec(s.sess)}
+    </div>`; }).join('');
+}
+
 // one note per higher-timeframe candle: displacement, sweeps of swing points, structure breaks, FVG / IFVG events
 function lvHtfNotes(sym, tf, n = 30) {
   const d = mtf?.syms[sym]?.tfs[tf]; if (!d || d.bars.length < 30) return '<div class="fs-12 text-2">No candles for this timeframe yet.</div>';
@@ -4493,60 +4640,81 @@ async function lvToggleForecast() {
   lvFc = !lvFc;
   if (lvFc && !rpData) { document.getElementById('lv-fc').hidden = false; document.getElementById('lv-fc-body').innerHTML = '<div class="fs-13 text-2">Loading past sessions…</div>';
     try { const res = await fetch('replay.json', { cache: 'no-store' }); if (res.ok) rpData = await res.json(); } catch(e) {} }
+  if (lvFc && !lvResearch) lvResearch = await loadJSON('research.json');
   lvRender();
 }
 const lvQ = (a, q) => { if (!a.length) return NaN; const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(q * (s.length - 1) + 0.5))]; };
+// Forecast = only what survived the out-of-sample test in scripts/research.mjs (research.json, Lab → Forecast study):
+//   1. which liquidity is likely first (the nearer level, ~75–78% in the test), 2. how far price typically moves in an hour
+//   (a range, not a direction), 3. what the rules have done historically. A next-hour direction call is NOT shown: the
+//   pattern-matching version was right 43–47% of the time out of sample, worse than a coin flip.
 function lvForecast(R) {
-  const E = window.TJR, m = R.last.m, sym = R.sym, nm = lvName(sym);
+  const E = window.TJR, m = R.last.m, sym = R.sym, nm = lvName(sym), RS = lvResearch;
   const msg = t => ({ html: `<div class="lv-h">🔮 FORECAST · ${nm}</div><div class="fs-13 text-2">${t}</div>` });
   if (!rpData || !rpData.days?.[sym]) return msg('Past sessions are not available here (open the hosted site).');
   if (!R.session || !R.sameDay || m < 450 || m > 745) return msg('The forecast compares this moment with past sessions between 7:30 and 12:30 ET (that is the stored history). It switches on at 7:30 ET on a trading day.');
-  // run the rules over every stored session once per setting
-  const key = sym + '|' + JSON.stringify(R.c.cfg);
-  if (!lvFcRuns[key]) lvFcRuns[key] = Object.entries(rpData.days[sym]).filter(([td]) => td !== R.td).map(([td, d]) => {
-    const pre = E.toBars(d.pre), bars = E.toBars(d.bars), res = E.run([...pre, ...bars], sym, R.c.cfg, { seed: d.seed, seedFrom: pre.length, snapshots: true });
-    return { td, bars, snaps: res.snapshots, trades: res.trades, events: res.events };
-  });
-  const runs = lvFcRuns[key], today = lvStageOf(R.st, m), mv = Math.sign(R.last.c - R.day[0].o);
-  const pts = runs.map(A => { const j = A.bars.findLastIndex(b => b.m <= m); if (j < 0 || A.bars[j].m < m - 5) return null;
-    const s = lvStageOf(A.snaps[j], A.bars[j].m); return { A, j, s, mv: Math.sign(A.bars[j].c - A.bars[0].o) }; }).filter(Boolean);
-  const tiers = [
-    [p => p.s.k === today.k && p.s.dir === today.dir, `at the same step by ${R.last.hm} (${LV_STAGE[today.k]}${today.dir ? ', leaning ' + today.dir : ''})`],
-    [p => p.mv === mv, `that were also ${mv >= 0 ? 'up' : 'down'} from the 7:30 open at ${R.last.hm}`],
-    [() => true, `at ${R.last.hm} (all stored sessions)`]];
-  let set = [], why = '';
-  for (const [f, w] of tiers) { set = pts.filter(f); why = w; if (set.length >= 8) break; }
-  if (set.length < 3) return msg('Not enough past sessions at this time of day to compare.');
-  const c0 = R.last.c, ret = (p, h) => p.j + h < p.A.bars.length ? p.A.bars[p.j + h].c / p.A.bars[p.j].c - 1 : null;
-  const band = []; for (let h = 1; h <= 12; h++) { const r = set.map(p => ret(p, h)).filter(v => v != null); if (r.length < 3) break; band.push([c0 * (1 + lvQ(r, 0.25)), c0 * (1 + lvQ(r, 0.5)), c0 * (1 + lvQ(r, 0.75))]); }
-  const hor = h => { const r = set.map(p => ret(p, h)).filter(v => v != null).map(v => v * c0); if (!r.length) return '<div class="v">–</div>';
-    const upP = r.filter(v => v > 0).length / r.length, med = lvQ(r, 0.5);
-    return `<div class="v ${med >= 0 ? 'bull' : 'bear'}">${med >= 0 ? '+' : ''}${med.toFixed(1)} pts</div><div>Up in ${Math.round(upP * 100)}% of ${r.length} · middle half ${lvQ(r, 0.25).toFixed(1)} to ${lvQ(r, 0.75) >= 0 ? '+' : ''}${lvQ(r, 0.75).toFixed(1)}</div>`; };
-  // liquidity race: nearest pool above vs below, as the same % distance on each past session, until 12:00
+  const c0 = R.last.c, F = RS?.syms?.[sym]?.forecast?.loo, W = RS?.syms?.[sym]?.forecast?.walk;
+  // 1. typical one-hour move size at this time of day, from every stored session (absolute, so no direction is implied)
+  const sizes = h => Object.entries(rpData.days[sym]).filter(([td]) => td !== R.td).map(([, d]) => { const bs = d.bars; const j = bs.findLastIndex(b => window.TJR.et(b[0]).m <= m);
+    return j >= 0 && j + h < bs.length ? Math.abs(bs[j + h][4] / bs[j][4] - 1) : null; }).filter(v => v != null);
+  const band = [], s12 = sizes(12);
+  for (let h = 1; h <= 12; h++) { const s = sizes(h); if (s.length < 8) break; const w = lvQ(s, 0.5) * c0; band.push([c0 - w, c0, c0 + w]); }
+  const half = lvQ(s12, 0.5) * c0, big = lvQ(s12, 0.9) * c0;
+  // 2. nearest liquidity on each side and the tested "nearer one first" rate
   const L = R.st.levels, pools = [['Asian high', L.asianH], ['Asian low', L.asianL], ['London high', L.londonH], ['London low', L.londonL], ['Prior-day high', L.pdH], ['Prior-day low', L.pdL], ['Midnight open', L.mOpen], ['NY high', L.nyH], ['NY low', L.nyL]].filter(([, p]) => p != null && !Number.isNaN(p));
   const ab = pools.filter(([, p]) => p > c0).sort((a, b) => a[1] - b[1])[0], be = pools.filter(([, p]) => p < c0).sort((a, b) => b[1] - a[1])[0];
-  let race = '<div class="v">–</div><div>No session level on one side of price.</div>';
-  if (ab && be) { const dU = ab[1] / c0 - 1, dD = 1 - be[1] / c0; let u = 0, d = 0, nn = 0, both = 0;
-    for (const p of set) { const b0 = p.A.bars[p.j].c; let hit = 0;
-      for (let k = p.j + 1; k < p.A.bars.length && p.A.bars[k].m <= 720; k++) { const b = p.A.bars[k], hu = b.h >= b0 * (1 + dU), hd = b.l <= b0 * (1 - dD); if (hu && hd) { both++; hit = 1; break; } if (hu) { u++; hit = 1; break; } if (hd) { d++; hit = 1; break; } }
-      if (!hit) nn++; }
-    const t = set.length, pc = v => Math.round(v / t * 100) + '%';
-    race = `<div class="v ${u >= d ? 'bull' : 'bear'}">${u >= d ? '▲ ' + pc(u) : '▼ ' + pc(d)}</div><div>${ab[0]} ${ab[1].toFixed(2)} (+${(ab[1] - c0).toFixed(1)}) first: <b>${pc(u)}</b> · ${be[0]} ${be[1].toFixed(2)} (−${(c0 - be[1]).toFixed(1)}) first: <b>${pc(d)}</b>${both ? ` · same candle ${pc(both)}` : ''} · neither by 12:00 ${pc(nn)}</div>`; }
-  // what the rules went on to do on those days
-  let ord = 0, fil = 0, won = 0, lost = 0;
-  for (const p of set) { const evs = p.A.events, tr = p.A.trades[0];
-    if (evs.some(e => e.type === 'order')) ord++; if (evs.some(e => e.type === 'fill')) fil++;
-    if (tr) { if (tr.pnl > 0) won++; else lost++; } }
-  const v = viaExit(R.c.r, R.c.exit).stats;
-  return { n: set.length, band, html: `<div class="lv-h">🔮 FORECAST · ${nm} from ${R.last.hm} ET</div>
-    <div class="fs-13">Built from <b>${set.length} past sessions</b> ${esc(why)}. The purple band on the 5m chart is where the middle half of them went over the next hour, scaled to today's price.</div>
+  let liq = '<div class="v">–</div><div>No session level on one side of price right now.</div>';
+  if (ab && be) { const up = ab[1] - c0 <= c0 - be[1], near = up ? ab : be, far = up ? be : ab, rate = F ? F.liquidityRace.nearerFirst : null;
+    liq = `<div class="v ${up ? 'bull' : 'bear'}">${up ? '▲' : '▼'} ${esc(near[0])}</div><div>${near[1].toFixed(2)} is ${Math.abs(near[1] - c0).toFixed(1)} pts away vs the ${esc(far[0])} ${far[1].toFixed(2)} at ${Math.abs(far[1] - c0).toFixed(1)}. ${rate != null ? `The nearer level was hit first <b>${Math.round(rate * 100)}%</b> of the time (${F.liquidityRace.n.toLocaleString()} tests, ${F.sessions} sessions).` : ''}</div>`; }
+  // 3. the rules' record for this setting and exit
+  const v = viaExit(R.c.r, R.c.exit).stats, stg = lvStageOf(R.st, m);
+  const rules = `<div class="v">${Math.round(v.winRate * 100)}% won</div><div>${v.trades} trades in ${BT.instruments[sym].nySessions} sessions (likely range ${Math.round(v.winRateLo * 100)}–${Math.round(v.winRateHi * 100)}%), ${v.avgR >= 0 ? '+' : ''}${v.avgR}R per trade. Right now: ${LV_STAGE[stg.k]}${stg.dir ? ', leaning ' + stg.dir : ''}.</div>`;
+  const dir = F ? `We tested a "what happened next in similar sessions" direction call on ${F.forecasts.toLocaleString()} moments (${F.sessions} sessions): it was right ${Math.round(F.next60.hitRate * 100)}% of the time over the next hour${W ? ` (${Math.round(W.next60.hitRate * 100)}% using only earlier days)` : ''}, no better than a coin flip. So no up/down call is shown.` : 'Direction calls are not shown: they did not beat a coin flip in testing.';
+  return { n: s12.length, band, label: 'typical 1-hour range', html: `<div class="lv-h">🔮 FORECAST · ${nm} from ${R.last.hm} ET · only what held up in testing</div>
     <div class="lv-fcg">
-      <div class="lv-fct"><div class="k">Next 30 min</div>${hor(6)}</div>
-      <div class="lv-fct"><div class="k">Next 60 min</div>${hor(12)}</div>
-      <div class="lv-fct"><div class="k">Which liquidity first</div>${race}</div>
+      <div class="lv-fct"><div class="k">Liquidity likely first</div>${liq}</div>
+      <div class="lv-fct"><div class="k">Typical move, next hour</div><div class="v">±${half.toFixed(1)} pts</div><div>Half of ${s12.length} past sessions moved less than this from ${R.last.hm} over the next hour (the purple cone); 1 in 10 moved more than ±${big.toFixed(1)}. Size only, not direction.</div></div>
+      <div class="lv-fct"><div class="k">If the rules trigger</div>${rules}</div>
     </div>
-    <div class="fs-13">The rules on those days: <b>${ord}</b> placed an order, <b>${fil}</b> filled, <b>${won}</b> won, <b>${lost}</b> lost. Over all ${BT.instruments[sym].nySessions} sessions this setting won ${Math.round(v.winRate * 100)}% of ${v.trades} trades (${Math.round(v.winRateLo * 100)}–${Math.round(v.winRateHi * 100)}% likely range).</div>
-    <div class="fs-12 text-2" style="margin-top:6px">Small sample (about 10 weeks of sessions), so treat this as "what usually happened", not a prediction. Rules-based, not a trade recommendation.</div>` };
+    <div class="fs-13"><b>Direction:</b> ${dir}</div>
+    <details class="fs-12 text-2" style="margin-top:6px"><summary>What this is based on</summary>Real 5-minute ES1!/NQ1! candles (Yahoo CME data), ${F ? F.sessions : 'about 50'} sessions. Each number above was checked out of sample in <b>Lab → Forecast study</b>: every 5-minute candle from 7:30 to 11:30 was forecast using only other days (and again using only earlier days), then scored against what really happened. Thousands of forecasts, but they come from only ~${F ? F.sessions : 50} separate days, so treat the percentages as rough. Rules-based, not a trade recommendation.</details>` };
+}
+
+// ============================================================
+// FORECAST STUDY (Lab) — research.json from scripts/research.mjs
+// ============================================================
+async function renderForecastStudy() {
+  const el = document.getElementById('lab-fs'); if (!el) return;
+  if (!lvResearch) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">Loading the forecast study…</div></div>'; lvResearch = await loadJSON('research.json');
+    if (!lvResearch) { el.innerHTML = '<div class="card"><div class="card-body fs-13 text-2">research.json not available here.</div></div>'; return; } }
+  const RS = lvResearch, p = v => (v * 100).toFixed(1) + '%', ci = c => c ? ` <span class="text-2">(${Math.round(c[0] * 100)}–${Math.round(c[1] * 100)}%)</span>` : '';
+  const verdict = (x, base) => x > base + 0.03 ? '<span class="cf-b">beats it</span>' : x < base - 0.03 ? '<span class="cf-s">worse</span>' : '<span class="text-2">no better</span>';
+  const fcTable = (sym) => { const S = RS.syms[sym], rows = [['Leave-one-session-out', S.forecast.loo], ['Walk-forward (earlier days only)', S.forecast.walk]];
+    return `<table class="bt-table"><tr><th>Test</th><th>Forecasts</th><th>Direction, next 30 min</th><th>Direction, next 60 min</th><th>Base rate / momentum (60 min)</th><th>Brier skill</th><th>"Up 70%+" right</th><th>Range band holds</th></tr>
+      ${rows.map(([n, f]) => `<tr><td>${n}</td><td>${f.forecasts.toLocaleString()} · ${f.sessions} days</td><td>${p(f.next30.hitRate)}${ci(f.next30.ci)}</td><td>${p(f.next60.hitRate)}${ci(f.next60.ci)} ${verdict(f.next60.hitRate, 0.5)}</td><td>${p(f.next60.baseRate)} / ${p(f.next60.momentum)}</td><td class="${f.next60.skill > 0 ? 'bull' : 'bear'}">${f.next60.skill > 0 ? '+' : ''}${f.next60.skill}</td><td>${p(f.confident.hitRate)} of ${f.confident.n}</td><td>${p(f.bandCoverage.inside)} <span class="text-2">(target 50%)</span></td></tr>`).join('')}</table>`; };
+  const liqTable = () => `<table class="bt-table"><tr><th>Contract</th><th>Tests</th><th>Forecast's pick hit first</th><th>"Nearer level first" rule</th></tr>${Object.entries(RS.syms).map(([sym, S]) => { const f = S.forecast.loo.liquidityRace;
+    return `<tr><td>${lvName(sym)}</td><td>${f.n.toLocaleString()}</td><td>${p(f.hitRate)}${ci(f.ci)}</td><td class="bull">${p(f.nearerFirst)}</td></tr>`; }).join('')}</table>`;
+  const leanTable = () => `<table class="bt-table"><tr><th>Contract</th><th>Rules stage</th><th>Moments / days</th><th>Price went the rules' way (60 min)</th></tr>${Object.entries(RS.syms).flatMap(([sym, S]) => Object.values(S.forecast.loo.rulesLean).map(x =>
+    `<tr><td>${lvName(sym)}</td><td>${esc(x.stage)}</td><td>${x.n} / ${x.sessions}</td><td class="${x.ci[0] > 0.5 ? 'bull' : x.ci[1] < 0.5 ? 'bear' : ''}">${p(x.hitRate)}${ci(x.ci)}</td></tr>`)).join('')}</table>`;
+  const offTable = sym => { const O = RS.syms[sym].offHours, g = x => x.n ? `${x.n} · ${Math.round(x.winRate * 100)}% · <span class="${btCls(x.net)}">${btMoney(x.net)}</span>` : '–';
+    return `<table class="bt-table"><tr><th>When the order went in</th><th>All setups (n · won · net)</th><th>With confluence</th><th>Without</th></tr>${Object.entries(O.bySession).map(([k, v]) =>
+      `<tr><td>${esc(k)}</td><td>${g(v.all)}</td><td>${g(v.withConf)}</td><td>${g(v.noConf)}</td></tr>`).join('')}<tr class="bt-row on"><td>All outside 9:50–11:00</td><td>${g(O.outside.all)}</td><td>${g(O.outside.withConf)}</td><td>${g(O.outside.noConf)}</td></tr></table>`; };
+  const any = Object.values(RS.syms)[0];
+  el.innerHTML = `<div class="card mb-md"><div class="card-body fs-13" style="line-height:1.55">
+    <div class="fw-600" style="font-size:16px;margin-bottom:6px">Does the Live forecast help you decide? Tested out of sample</div>
+    At every 5-minute candle from 7:30 to 11:30 ET of every session (${any.from} → ${any.to}), the Live tab's forecast was made using only <b>other</b> days, then again using only <b>earlier</b> days (what you'd have known at the time), and scored against what really happened next. That is ${Object.values(RS.syms).reduce((a, S) => a + S.forecast.loo.forecasts, 0).toLocaleString()} forecasts across ES1! and NQ1!.
+    <ul style="margin:8px 0 0 18px;display:flex;flex-direction:column;gap:4px">
+      <li><b>Direction (up or down over the next 30–60 minutes): no edge.</b> Matching today to similar past sessions was right 43–47% of the time, below a coin flip and below simply using the base rate. Its "70%+ up" calls weren't reliable either. The Live tab no longer shows a direction call.</li>
+      <li><b>Which liquidity gets hit first: ~75–78% right</b>, but only because the nearer level usually goes first. Pattern-matching added nothing on top of "nearer first", so the Live tab now shows that simple rule with its tested rate.</li>
+      <li><b>How far price moves in the next hour</b> (size, not direction) is stable enough to show as a range: about half of sessions stayed inside it.</li>
+      <li><b>The rules' own lean</b> after a sweep, break or gap doesn't predict the next hour consistently: on ES the break pointed the right way 62% of the time, on NQ only 41%. The edge in the Lab comes from the full trade (entry, stop, scale-out), not from calling direction.</li>
+    </ul>
+    <div class="fs-12 text-2" style="margin-top:6px">Honest sample size: thousands of forecasts, but they come from only ${any.forecast.loo.sessions} separate days, and forecasts within a day overlap, so the real uncertainty is wider than the ranges shown. Years of history would need a paid data source (not used). Rules-based research, not a recommendation.</div></div></div>
+    ${Object.keys(RS.syms).map(sym => `<div class="card mb-md"><div class="card-body"><div class="fs-13 fw-600 mb-sm">${lvName(sym)} · direction forecast</div><div style="overflow-x:auto">${fcTable(sym)}</div></div></div>`).join('')}
+    <div class="card mb-md"><div class="card-body"><div class="fs-13 fw-600 mb-sm">Which liquidity first (nearest level above vs below, until 12:00)</div><div style="overflow-x:auto">${liqTable()}</div></div></div>
+    <div class="card mb-md"><div class="card-body"><div class="fs-13 fw-600 mb-sm">Does the rules' lean predict the next hour?</div><div style="overflow-x:auto">${leanTable()}</div></div></div>
+    ${Object.keys(RS.syms).map(sym => `<div class="card mb-md"><div class="card-body"><div class="fs-13 fw-600 mb-sm">${lvName(sym)} · the same setups outside TJR hours (${esc(btLabel(BT.runs.find(r => r.sym === sym && r.id === RS.syms[sym].setting) || { id: RS.syms[sym].setting }))})</div><div style="overflow-x:auto">${offTable(sym)}</div>
+      <div class="fs-12 text-2" style="margin-top:6px">${esc(RS.syms[sym].offHours.rules)} Win % and net per 1 contract, after costs. Most rows have under 30 trades: suggestive only.</div></div></div>`).join('')}`;
 }
 
 // ============================================================
@@ -4603,7 +4771,7 @@ async function ensureBars(force) {
   if (!force && labRaw && Date.now() - labLoadedAt < 60000) return labRaw;
   try {
     const url = JC_API ? JC_API + '/bars' : BARS_URL + '?t=' + Math.floor(Date.now() / 60000);
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000), headers: JC_API ? jcKeyHdr() : {} });
     if (res.ok) { labRaw = await res.json(); labLoadedAt = Date.now(); }
   } catch(e) {}
   return labRaw;

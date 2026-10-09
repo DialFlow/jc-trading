@@ -46,6 +46,9 @@ function cutBars() {
     if (name === 'desktop') console.log(`${tag} ES banner:`, await g('#lv-banner'));
     await p.evaluate(() => lvSetSym('NQ=F')); await p.waitForTimeout(400);
     await p.screenshot({ path: path.join(__dirname, `live-${travel ? 'travel' : 'now'}-${name}.png`), fullPage: true });
+    if (!travel) { await p.click('.tab-btn:has-text("Lab")'); await p.evaluate(() => labView('fs')); await p.waitForTimeout(1500);
+      if (name === 'desktop') console.log(` LAB FORECAST STUDY:`, (await g('#lab-fs')).slice(0, 500));
+      await p.screenshot({ path: path.join(__dirname, `lab-fs-${name}.png`), fullPage: false }); }
     const hs = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     console.log(`${tag} hscroll: ${hs} http errors: ${bad.length} ${bad.join(',')} JS errors: ${errs.length} ${errs.join(' | ')}`);
     await p.close();

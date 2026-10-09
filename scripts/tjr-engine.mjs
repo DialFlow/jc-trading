@@ -70,7 +70,10 @@ export function run(bars, sym, cfg, opts = {}) {
     swH: NaN, swL: NaN, refH: NaN, refL: NaN, nTrades: 0, rearm: false,
     taken: { aH: false, aL: false, lH: false, lL: false, pdH: false, pdL: false } };
   const fresh = !!cfg.freshLevels;
-  const W0 = cfg.watchStart ?? 570, W1 = cfg.watchEnd ?? 610, E0 = cfg.entryStart ?? 590, E1 = cfg.entryEnd ?? 610, maxT = cfg.maxTrades || 1;
+  // anyTime: watch and enter around the clock (one session = 18:00 → 17:00), unfilled orders cancel after restBars candles,
+  // trades close at market after holdBars candles. Used to show off-hours setups; the TJR model and Pine parity don't use it.
+  const any = !!cfg.anyTime, restBars = cfg.restBars || 12, holdBars = cfg.holdBars || 24;
+  const W0 = any ? 1080 : cfg.watchStart ?? 570, W1 = any ? 1080 : cfg.watchEnd ?? 610, E0 = any ? 1080 : cfg.entryStart ?? 590, E1 = any ? 1080 : cfg.entryEnd ?? 610, maxT = cfg.maxTrades || 1;
   const fun = { days: 0, sweep: 0, bos: 0, fvg: 0, orders: 0 };
   let c = { sweep: false, bos: false, fvg: false, risk: false };
   let pending = null, pos = null, flatNext = false;
@@ -156,7 +159,7 @@ export function run(bars, sym, cfg, opts = {}) {
   for (let i = i0; i < bars.length; i++) {
     const b = bars[i], m = b.m;
     // 1. orders resting from the previous bar's close fill on this bar
-    if (flatNext && pos) { const lng = pos.dir === 'long'; close(b, lng ? b.o - cfg.slipTicks * tick : b.o + cfg.slipTicks * tick, '12:00 flat'); }
+    if (flatNext && pos) { const lng = pos.dir === 'long'; close(b, lng ? b.o - cfg.slipTicks * tick : b.o + cfg.slipTicks * tick, any ? 'time stop' : '12:00 flat'); }
     flatNext = false;
     if (pending || pos) emulate(b);
     if (pos) { if (pos.fillT === b.t) track(b.c); else { track(b.h); track(b.l); } }
@@ -244,15 +247,16 @@ export function run(bars, sym, cfg, opts = {}) {
         if (cfg.exitMode === 'liq') { tgtP = Math.round(p1 / tick) * tick; targetName = n1; }
         else if (lng ? p1 < tgtP : p1 > tgtP) { tp1 = Math.round(p1 / tick) * tick; tp1Name = n1; }
       }
-      pending = { dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, td: b.td };
+      pending = { dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, placedT: b.t, td: b.td };
       st.traded = true; st.nTrades++; st.rejected = '';
       ev(b, 'order', `${lng ? 'Buy' : 'Sell'} limit ${lim.toFixed(2)} · stop ${stop.toFixed(2)} · target ${pending.target.toFixed(2)} (${pending.targetName})`, { dir, limit: lim, stop, target: pending.target, targetName: pending.targetName, tp1, tp1Name });
       if (!c.risk) { c.risk = true; fun.orders++; }
     };
     if (canTrade() && !Number.isNaN(st.fvgMidL)) place('long', st.fvgMidL);
     if (canTrade() && !Number.isNaN(st.fvgMidS)) place('short', st.fvgMidS);
-    if (!inWin(m, SESS.rest[0], cfg.restEnd || SESS.rest[1]) && !pos && pending) { ev(b, 'cancel', `Unfilled order cancelled (${Math.floor((cfg.restEnd || 660) / 60)}:${String((cfg.restEnd || 660) % 60).padStart(2, '0')})`); pending = null; if (maxT > 1) st.rearm = true; }
-    if (inWin(m, ...SESS.flat) && pos) flatNext = true;
+    if (any && !pos && pending && b.t - pending.placedT >= restBars * 300) { ev(b, 'cancel', `Unfilled order cancelled (${restBars} candles)`); pending = null; st.rearm = true; }
+    if (!any && !inWin(m, SESS.rest[0], cfg.restEnd || SESS.rest[1]) && !pos && pending) { ev(b, 'cancel', `Unfilled order cancelled (${Math.floor((cfg.restEnd || 660) / 60)}:${String((cfg.restEnd || 660) % 60).padStart(2, '0')})`); pending = null; if (maxT > 1) st.rearm = true; }
+    if (pos && (any ? b.t - pos.fillT >= holdBars * 300 : inWin(m, ...SESS.flat))) flatNext = true;
     if (opts.snapshots) snaps.push(snapshot(b));
   }
   function snapshot(b) {
