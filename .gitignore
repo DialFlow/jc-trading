@@ -2,3 +2,7 @@
 node_modules/
 .DS_Store
 Thumbs.db
+
+# keys for the Worker / TradingView feed, never committed
+*.local.txt
+.wrangler/

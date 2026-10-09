@@ -1,0 +1,13 @@
+# Deploy: from this folder, `npx wrangler deploy` (CLOUDFLARE_API_TOKEN set, or `npx wrangler login`).
+# Secrets (SYNC_KEY, TV_KEY, INVITE_CODE) live in Cloudflare only and are kept on every deploy.
+name = "jc-trading"
+main = "worker.js"
+compatibility_date = "2026-10-08"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "JC"
+id = "f2cefc1267874931a1be2d830fa337e5"
+
+[observability]
+enabled = true

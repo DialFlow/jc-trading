@@ -357,6 +357,7 @@ body {
 @keyframes lvPulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .lv-pulse { animation: none; } }
 .lv-phase { font-size: 13px; }
+.lv-src-warn { background: rgba(255,149,0,0.18) !important; color: var(--warn) !important; }
 .lv-src { font-size: 11px; font-weight: 700; color: var(--text2); background: var(--surface); border-radius: 6px; padding: 3px 7px; }
 .lv-clock { margin-left: auto; font: 700 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .lv-team { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 14px; border-top: 1px solid var(--border); cursor: pointer; }
@@ -2255,7 +2256,7 @@ const Sync = (() => {
     const prev = userName() || (key() ? '@shared' : '');
     const switching = prev && prev !== j.name && !(prev === '@shared' && j.owner);
     if (switching) { if (pushTimer) await push(); wipeLocal(); }
-    try { _setItem.call(localStorage, 'jct_user_token', j.token); _setItem.call(localStorage, 'jct_user_name', j.name); localStorage.removeItem('jct_sync_key'); } catch(e) {}
+    try { _setItem.call(localStorage, 'jct_user_token', j.token); _setItem.call(localStorage, 'jct_user_name', j.name); _setItem.call(localStorage, 'jct_user_owner', j.owner ? '1' : ''); localStorage.removeItem('jct_sync_key'); } catch(e) {}
     if (prev === '') { meta.synced = false; saveMeta(); }   // a device used without an account: its entries merge into this account
     await pull();
     if (status === 'ok') { msg.textContent = '✓ Signed in as ' + j.name; msg.className = 'fs-12 cf-b'; setTimeout(() => location.reload(), 600); }
@@ -2264,7 +2265,7 @@ const Sync = (() => {
   async function signOut() {
     if (pushTimer || typeof flushJournal === 'function') { try { flushJournal(); } catch(e) {} await push(); }
     try { await fetch(JC_API + '/account/logout', { method: 'POST', headers: authHdr(), signal: AbortSignal.timeout(5000) }); } catch(e) {}
-    try { ['jct_user_token', 'jct_user_name', 'jct_sync_key'].forEach(k => localStorage.removeItem(k)); } catch(e) {}
+    try { ['jct_user_token', 'jct_user_name', 'jct_user_owner', 'jct_sync_key'].forEach(k => localStorage.removeItem(k)); } catch(e) {}
     wipeLocal(); location.reload();
   }
   async function save(off) { // old shared-key flow, kept for devices that haven't signed in yet
@@ -4487,6 +4488,9 @@ function lvRender() {
   const effM = r => r.sameDay ? now.m : 1439;
   // scoreboard
   const rt = tvLive(), live = ph.open && rt && R.ageMin <= 7;
+  // the real-time feed is the owner's (TradingView/CME licence): he gets a warning while it's off, everyone else a plain "delayed"
+  let owner = false; try { owner = localStorage.getItem('jct_user_token') ? !!localStorage.getItem('jct_user_owner') : !!localStorage.getItem('jct_sync_key'); } catch(e) {}
+  const src = rt ? 'TradingView real-time' : owner ? '⚠ TradingView not connected · Yahoo ~10 min late' : 'Yahoo · ~10 min delay';
   const left = ph.end != null ? ((ph.end - now.m + 1440) % 1440) : null;
   const team = ([s, nm]) => { const r = runs[s]; if (!r) return '';
     const [cls, title] = bannerFor(r.st, r.evs, effM(r), r.sameDay ? r.ageMin : null), chg = r.last.c - r.prevC;
@@ -4502,7 +4506,7 @@ function lvRender() {
     </div>`; };
   board.innerHTML = `<div class="lv-top">
       <span class="lv-onair${live ? '' : ' off'}"><span class="lv-dot${live ? ' lv-pulse' : ''}"></span>${live ? 'LIVE' : ph.open ? 'DELAYED' : 'CLOSED'}</span>
-      <span class="lv-src">${rt ? 'TradingView real-time' : 'Yahoo · ~10 min delay'}</span><span class="lv-phase">${esc(ph.name)}${left != null ? ` · ${left >= 60 ? Math.floor(left / 60) + 'h ' : ''}${left % 60}m left` : ''}</span>
+      <span class="lv-src${!rt && owner ? ' lv-src-warn' : ''}">${src}</span><span class="lv-phase">${esc(ph.name)}${left != null ? ` · ${left >= 60 ? Math.floor(left / 60) + 'h ' : ''}${left % 60}m left` : ''}</span>
       <span class="lv-clock" id="lv-clock">${getCurrentETTime().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })} ET</span>
     </div>${MTF_SYMS.map(team).join('')}`;
   // last play across both contracts
