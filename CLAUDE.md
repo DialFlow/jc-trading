@@ -129,10 +129,23 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - Setup still to do with Jacob: create Worker → paste worker.js → create KV namespace → bind as `JC` → add secret `SYNC_KEY` → put the workers.dev URL in `JC_API` → push → enter the key on each device (PC first).
 - Once live, the GitHub Actions price job can stay as a fallback or be removed.
 
-## Known bugs / open items (priority order)
-1. Prices are delayed, not real-time. GitHub's 5-min schedule only ran ~2×/11 h on Oct 7–8; the Cloudflare Worker above fixes this. For live futures numbers in the page you'd need a paid feed (Polygon/Databento) or a Cloudflare Worker proxy (free, but needs Jacob's account).
-2. GitHub disables scheduled workflows after 60 days with no repo activity. If prices go stale, re-enable it under Actions → Update prices.
-3. Morning Analysis card + Today's Events now come from `analysis.json` (written by Claude on request; card greys out when the date isn't today). The old hardcoded events (CPI, Waller…) were sample data and are gone.
+## STATUS AT HANDOFF (Oct 9, 2026) — read this first
+- Live site: https://dialflow.github.io/jc-trading/ · repo github.com/DialFlow/jc-trading (push from this folder works with Jacob's saved GitHub sign-in; Pages deploys from `main`, ~1 min).
+- Worker live (prices, bars, sectors, sync). Sync: phone connected; PC sync was being set up. The control is the blue "🔄 Set up sync" button in the header (in-page box; browser prompt() was blocked).
+- Jacob's account: MyFundedFutures Rapid EOD 50K. He trades ES1!/NQ1!; NQ is where the tested edge is, ES has none.
+- Lab model: sweeps count from 8:30, entries 9:50–11:00, 5-candle BOS, 1 setup/day, scale-out exit (half at liquidity). Default NQ: Fixed points 80 · PDH/PDL · displacement · scale = 20 trades, +$19,240, max DD $1,795 (Jul 30–Oct 8, 10 weeks, in-sample).
+
+## Open items / next steps (priority order)
+1. Confirm PC sync shows "Synced" and that phone + PC data merged.
+2. Update the Pine script (v6) with the Lab model (`watchStart` 8:30, entries to 11:00, scale-out exit at first liquidity ≥1R) so Jacob can verify the NQ edge on longer TradingView history. 10 weeks is too short to trust.
+3. Optional (costs money, ask first): AI-written Morning Analysis via the Anthropic API from the Worker, cached 5 min (est. Haiku 5.5 ~$1–2/mo, Sonnet 5.5 ~$8–30/mo).
+4. Yahoo CME data is ~10 min delayed; true real-time needs a paid feed.
+5. Forex Factory blocks Cloudflare; news comes from the GitHub Action's news.json (scheduled runs are sporadic, but they also run on every push).
+6. GitHub disables scheduled workflows after 60 days without repo activity.
+
+## Testing (tests/ folder, Playwright + the installed Microsoft Edge)
+- One-time setup: `npm i playwright` in a scratch folder (no browser download: tests use `channel: 'msedge'`). Serve the site: `node tests/serve.js . 8090`, then run e.g. `node tests/dualtest.js` (Replay ES+NQ), `htftest.js` (15m/1H), `dashtest.js` (Dashboard; needs DATA_DIR with prices/bars/news/sectors.json from `node scripts/fetch-prices.mjs <dir>`), `labtest.js`, `sctest.js`, `simtest.js` (MFF simulator unit cases), `synctest.js`. Each prints hscroll + JS errors for desktop and phone; 0 JS errors is the bar. Tests that time-travel "today at 10:05" fail after 6 pm ET (the futures session rolls).
+- Engine parity: `node scripts/backtest.mjs --validate` must still print the 7 TradingView trades for ES (−$2,760) and "replay seeding check: all sessions × all settings match".
 
 ## Real-data backtest (Oct 8)
 - `scripts/backtest.mjs` is a bar-by-bar port of `jc_tjr_backtest_v5.pine` on Yahoo 5m ES=F/NQ=F (60 days max). It includes TradingView's intrabar fill path (open → nearer extreme first), limit prices rounded to the tick (longs down, shorts up), 1 tick slippage on stop/market orders and $2.50/side. **Validated:** v4 settings reproduce the TradingView trade list for Aug 16–Oct 7 exactly (7 trades, −$2,760).
@@ -155,7 +168,12 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 - Log every run as a new entry in the Backtesting tab thread.
 
 ## Working rules for Claude Code
-- Keep it one self-contained `index.html` unless Jacob asks to split it.
-- After any edit, load the page headless (Playwright) and click all 9 tabs. Zero JS errors is the bar.
+- Keep the page in `index.html`; the only deliberate split is `scripts/tjr-engine.mjs` (shared strategy engine). Data files: backtest.json, replay.json, structure.json, confstats.json, analysis.json.
+- When editing index.html with scripts, use function replacements (`s.replace(a, () => b)`): `
+- After any edit, run the relevant tests in tests/ (desktop + phone). Zero JS errors is the bar. There are 8 tabs now.
+- Don't hardcode fake prices or present examples as real data.
+- Jacob develops on Windows.
+` in code broke a String.replace once. The repo forces LF line endings (.gitattributes).
+- After any edit, run the relevant tests in tests/ (desktop + phone). Zero JS errors is the bar. There are 8 tabs now.
 - Don't hardcode fake prices or present examples as real data.
 - Jacob develops on Windows.
