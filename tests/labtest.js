@@ -32,7 +32,7 @@ for (const [name,vp] of [['desktop',{width:1280,height:900}],['phone',{width:390
  if(name==='desktop')console.log('ES live:',JSON.stringify(esLive),'grid rows',grid);
  const hs=await p.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);
  const btns=p.locator('.tab-btn');for(let i=0;i<await btns.count();i++){await btns.nth(i).click();await p.waitForTimeout(120);}
- await p.click('.tab-btn:nth-child(1)'); await p.click('#ai-refresh-btn'); await p.waitForTimeout(2500);
+ await p.click('.tab-btn:nth-child(1)'); await p.evaluate(() => showPage('dashboard')); await p.click('#ai-refresh-btn'); await p.waitForTimeout(2500);
  console.log(name,'hscroll:',hs,'http errors:',bad.length,bad.join(','),'JS errors:',errs.length,errs.join(' | '));
 }
 await b.close();})();

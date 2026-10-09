@@ -22,7 +22,7 @@ function cutBars() {
       await p.clock.setFixedTime(new Date(CUT * 1000));
     }
     await p.goto('http://localhost:8090/'); await p.waitForTimeout(5000);
-    await p.click('.tab-btn:has-text("Live")'); await p.waitForTimeout(2500);
+    await p.click('.tab-btn:has-text("🎯 Trade")'); await p.waitForTimeout(2500);
     const g = sel => p.evaluate(s => (document.querySelector(s)?.innerText || '').replace(/\s+/g, ' ').trim(), sel);
     const tag = `${travel ? 'TRAVEL' : 'NOW'} ${name}`;
     const tabIdx = await p.evaluate(() => [...document.querySelectorAll('.tab-btn')].findIndex(b => b.classList.contains('active')));

@@ -4,7 +4,7 @@ const path = require('path'), D = process.env.DATA_DIR;
 for (const [name,vp] of [['desktop',{width:1280,height:900}],['phone',{width:390,height:844}]]){
  const p=await b.newPage({viewport:vp,colorScheme:'dark'}); const errs=[],bad=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('response',r=>{if(r.status()>=400)bad.push(r.status()+' '+r.url().slice(0,80))});
  await p.route('**/data/*.json*',r=>{const f=r.request().url().match(/data\/(\w+)\.json/)[1];r.fulfill({path:path.join(D,f+'.json'),headers:{'access-control-allow-origin':'*','content-type':'application/json'}})});
- await p.goto('http://localhost:8090/'); await p.waitForTimeout(6500);
+ await p.goto('http://localhost:8090/'); await p.waitForTimeout(6500); await p.evaluate(() => showPage('dashboard')); await p.waitForTimeout(500); // Market tab (was Dashboard)
  const g=sel=>p.evaluate(s=>document.querySelector(s)?.innerText.replace(/\s+/g,' ').trim(),sel);
  if(name==='desktop'){
   console.log('ORDER:',await p.evaluate(()=>[...document.querySelectorAll('#page-dashboard > div, #page-dashboard > .section-label')].map(e=>e.id||e.className.split(' ')[0]||e.textContent.slice(0,20)).filter(Boolean).join(' › ')));

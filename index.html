@@ -392,6 +392,26 @@ body {
 .lv-fct .k { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
 .lv-fct .v { font-size: 18px; font-weight: 800; margin: 2px 0; }
 .lvp { border: 1.5px solid var(--blue); }
+.tr-phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.tr-ph { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 8px 10px; text-align: left; cursor: pointer; color: var(--text); display: flex; flex-direction: column; gap: 2px; font: inherit; }
+.tr-ph b { font-size: 13px; } .tr-ph span { font-size: 11px; color: var(--text2); }
+.tr-ph.on { background: var(--blue); border-color: var(--blue); color: #fff; } .tr-ph.on span { color: rgba(255,255,255,0.85); }
+.tr-guard { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tr-g { font-size: 12px; padding: 6px 10px; border-radius: 8px; background: var(--fill); color: var(--text2); }
+.tr-g b { color: var(--text); } .tr-g.ok { background: rgba(52,199,89,0.12); } .tr-g.warn { background: rgba(255,149,0,0.14); } .tr-g.bad { background: rgba(255,59,48,0.14); }
+.tr-g.bad b { color: var(--bear); }
+.tr-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 12px; }
+@media (min-width: 900px) { .tr-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } }
+.tr-kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; align-items: baseline; }
+.tr-kv > span:first-child { color: var(--text2); font-size: 12px; }
+@media (max-width: 520px) { .tr-kv { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.tr-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.tr-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text2); }
+.tr-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 10px; }
+.tr-open { border: 1.5px solid var(--bull); }
+.tr-lock { background: rgba(255,59,48,0.10); border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 10px; }
+.tr-lock textarea, .tr-q textarea { width: 100%; box-sizing: border-box; margin-top: 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--fill); color: var(--text); padding: 8px; font: 13px Inter, system-ui, sans-serif; }
+.tr-q { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; font-weight: 600; }
 .sync-box input:not([type=checkbox]) { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--fill); color: var(--text); font: 14px Inter, system-ui, sans-serif; }
 .sync-box input:not([type=checkbox]):focus { outline: 2px solid var(--blue); outline-offset: 0; }
 .acct-terms { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.45; color: var(--text2); margin: 4px 0 8px; }
@@ -1362,9 +1382,8 @@ select { cursor: pointer; }
      TAB BAR
      ============================================================ -->
 <nav class="tab-bar" id="tab-bar">
-  <button class="tab-btn active" onclick="showPage('dashboard')">📊 Dashboard</button>
-  <button class="tab-btn" onclick="showPage('live')">🔴 Live</button>
-  <button class="tab-btn" onclick="showPage('charts')">📈 Charts</button>
+  <button class="tab-btn active" onclick="showPage('live')">🎯 Trade</button>
+  <button class="tab-btn" onclick="showPage('dashboard')">📊 Market</button>
   <button class="tab-btn" onclick="showPage('journal')">📓 Morning Journal</button>
   <button class="tab-btn" onclick="showPage('bias')">🎯 Daily Bias</button>
   <button class="tab-btn" onclick="showPage('strategy')">📘 Playbook</button>
@@ -1379,7 +1398,7 @@ select { cursor: pointer; }
 <main class="content-area">
 
 <!-- ===== TAB 1: DASHBOARD ===== -->
-<div class="tab-page active" id="page-dashboard">
+<div class="tab-page" id="page-dashboard">
   <div id="ready-wrap"></div>
 
   <!-- ===== AI TRADE SIGNAL ===== -->
@@ -1481,7 +1500,10 @@ select { cursor: pointer; }
 
 <!-- ===== TAB 2: CHARTS ===== -->
 <!-- ===== TAB 2: LIVE (play-by-play of the current session) ===== -->
-<div class="tab-page" id="page-live">
+<div class="tab-page active" id="page-live">
+  <div id="tr-phase"></div>
+  <div id="tr-guard"></div>
+  <div id="tr-panel"></div>
   <div id="lv-board" class="lv-board"></div>
   <div id="lv-ticker" class="lv-ticker"></div>
   <div class="card mb-md lvp"><div class="card-body"><div class="lv-h">🎯 TRADE PLAN · <span id="lv-plan-sym"></span></div><div id="lv-plan"></div></div></div>
@@ -1735,6 +1757,7 @@ select { cursor: pointer; }
       <div class="card"><div class="card-body pb-risk">
         <label>Max risk per trade ($) <input type="number" id="risk-trade" min="0" step="25" oninput="saveRisk()"></label>
         <label>Max daily loss ($) <input type="number" id="risk-day" min="0" step="50" oninput="saveRisk()"></label>
+        <label>Max trades per day <input type="number" id="risk-maxtrades" min="1" step="1" oninput="saveRisk()"></label>
         <label>Account trailing drawdown ($) <input type="number" id="risk-dd" min="0" step="100" oninput="saveRisk()"></label>
         <label>Min reward : risk <input type="number" id="risk-rr" min="0" step="0.1" oninput="saveRisk()"></label>
         <div class="fs-12 text-2">Saved on this device (and synced once Cloudflare sync is on).</div>
@@ -1811,11 +1834,9 @@ select { cursor: pointer; }
         <div>
           <div class="fs-11 fw-600 text-2 mb-sm" style="letter-spacing:.4px;text-transform:uppercase;">Setup</div>
           <select id="tl-setup">
-            <option>ORB</option>
-            <option>VWAP Reclaim</option>
-            <option>VWAP Rejection</option>
-            <option>Impulse Pullback</option>
-            <option>Failed Auction</option>
+            <option>TJR rules</option>
+            <option>TJR outside hours</option>
+            <option>Gap setup</option>
             <option>Other</option>
           </select>
         </div>
@@ -2079,6 +2100,7 @@ select { cursor: pointer; }
   <div class="site-foot">JC Trading is for personal tracking and learning only. <b>Not financial advice.</b> · <a href="terms.html">Terms &amp; Conditions</a></div>
 </main>
 <div id="gl-pop" class="gl-pop" hidden role="tooltip"></div>
+<div id="tr-modal" class="sync-modal" hidden><div class="sync-box" role="dialog" aria-label="Pre-flight check"></div></div>
 <div id="sync-modal" class="sync-modal" hidden>
   <div class="sync-box" role="dialog" aria-labelledby="sync-title">
     <div class="fw-600" id="sync-title" style="font-size:16px;margin-bottom:6px">Your account</div>
@@ -2892,7 +2914,7 @@ function showPage(name) {
   const page = document.getElementById('page-' + name);
   if (page) page.classList.add('active');
   const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabNames = ['dashboard','live','charts','journal','bias','strategy','tradelog','edge','backtest'];
+  const tabNames = ['live','dashboard','journal','bias','strategy','tradelog','edge','backtest'];
   const idx = tabNames.indexOf(name);
   if (idx >= 0 && tabBtns[idx]) tabBtns[idx].classList.add('active');
   currentTab = name;
@@ -3678,7 +3700,7 @@ function renderTradeLog() {
         <td class="fw-600">${t.sym}</td>
         <td><span class="badge ${t.dir === 'Long' ? 'badge-bull' : 'badge-bear'}">${t.dir}</span></td>
         <td class="mono">${parseFloat(t.entry).toFixed(2)}</td>
-        <td class="mono">${parseFloat(t.exit).toFixed(2)}</td>
+        <td class="mono">${t.status === 'open' ? '<span class="badge badge-blue">open</span>' : parseFloat(t.exit).toFixed(2)}</td>
         <td>${t.qty}</td>
         <td class="trade-pnl ${pnlCls} mono">${t.pnl >= 0 ? '+' : ''}$${parseFloat(t.pnl).toFixed(0)}</td>
         <td class="mono">${t.rr}</td>
@@ -3692,7 +3714,9 @@ function renderTradeLog() {
   updateTradeStats();
 }
 
+const tradesClosed = () => trades.filter(t => t.status !== 'open');
 function updateTradeStats() {
+  const trades = tradesClosed();
   const wins = trades.filter(t => t.pnl > 0);
   const losses = trades.filter(t => t.pnl <= 0);
   const winRate = trades.length ? ((wins.length / trades.length) * 100).toFixed(0) : 0;
@@ -4664,6 +4688,11 @@ function lvRender() {
   const GI = lvGapIdeas(R.sym), A = lvAnalyze(R, (() => { try { return readiness(R.sym); } catch(e) { return null; } })(), now, GI);
   document.getElementById('lv-plan-sym').textContent = lvName(R.sym);
   document.getElementById('lv-plan').innerHTML = lvPlanHtml(R, A);
+  trLastA = A; trLastR = R;
+  { const G = trGuard(), ph = trPhase(now, R), pn = document.getElementById('tr-panel');
+    document.getElementById('tr-phase').innerHTML = trPhaseHtml(ph);
+    document.getElementById('tr-guard').innerHTML = trGuardHtml(G);
+    if (!pn.dataset.dirty || pn.dataset.ph !== ph) { pn.innerHTML = ph === 'prepare' ? trPrepareHtml(R, G) : ph === 'review' ? trReviewHtml(R, G) : trOpenHtml(R); pn.dataset.ph = ph; delete pn.dataset.dirty; } }
   // levels for a plan that isn't already drawn as a position box
   const P = A.plan, lines = P && (P.est || A.kind === 'gap') ? [
     ...(A.trigger && A.kind === 'forming' && A.trigger.p !== P.entry ? [{ p: A.trigger.p, label: 'trigger', col: '#bf5af2' }] : []),
@@ -4686,6 +4715,199 @@ function lvRender() {
   document.getElementById('lv-off').innerHTML = lvOffHtml(R, R.off || []) + `<div class="fs-12 text-2" style="margin-top:6px">TJR only trades 9:50–11:00. These are the same sweep → break → gap rules at other hours, so you can watch and learn; an unfilled order is dropped after 1 hour and a trade is closed after 2. ${offShow ? 'The chart shows the latest one. ' : ''}History per session: Lab → Forecast study.</div>`;
   document.getElementById('lv-steps').innerHTML = stepsHtml(R.st, R.evs, effM(R));
 }
+// ============================================================
+// TRADE SCREEN (home): Prepare → Trade → Review, guardrails, pre-flight, open trade, review
+// Trades you take go into the Trade Log (jct_trades, status 'open' until closed); the mindset check-in, skips
+// and the review go into the journal day (jct_journal[date].mind / .skips / .review), so they sync per account.
+// ============================================================
+let trPhaseSel = null, trLastA = null, trLastR = null;
+const trToday = () => { const d = getCurrentETTime(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function trJournal() { try { return JSON.parse(localStorage.getItem('jct_journal') || '{}'); } catch(e) { return {}; } }
+function trDay(date) { return trJournal()[date || trToday()] || {}; }
+function trSaveDay(patch, date) {
+  const j = trJournal(), k = date || trToday();
+  j[k] = { ...(j[k] || {}), ...patch, u: Date.now() };
+  try { localStorage.setItem('jct_journal', JSON.stringify(j)); } catch(e) {}
+  try { journalData = j; } catch(e) {}
+}
+const trTradesToday = () => trades.filter(t => t.date === trToday());
+const trOpen = () => trades.find(t => t.status === 'open');
+function trGuard() {
+  const R = getRisk(), today = trTradesToday(), closed = today.filter(t => t.status !== 'open');
+  const pnl = closed.reduce((a, t) => a + (+t.pnl || 0), 0), maxT = R.maxTrades || 1;
+  const lastLoss = closed.filter(t => t.pnl < 0 && t.closedAt).sort((a, b) => b.closedAt - a.closedAt)[0];
+  const coolLeft = lastLoss ? Math.max(0, 15 - Math.floor((Date.now() - lastLoss.closedAt) / 60000)) : 0;
+  const mind = trDay().mind, mScore = mind ? Math.round((mind.sleep + mind.focus + (TR_MOODS[mind.mood] || 3)) / 3) : null;
+  const breaches = [];
+  if (today.length >= maxT) breaches.push(`You've taken ${today.length} of your ${maxT} trade${maxT > 1 ? 's' : ''} for today`);
+  if (R.day && pnl <= -R.day) breaches.push(`Today's P&L ($${Math.round(pnl)}) has hit your daily loss stop (−$${R.day})`);
+  if (coolLeft > 0) breaches.push(`Cool-down after a loss: ${coolLeft} more minute${coolLeft > 1 ? 's' : ''}`);
+  if (mScore != null && mScore <= 2) breaches.push(`Your check-in today was low (${mScore}/5): tired or emotional trading is where most rule breaks happen`);
+  return { maxT, n: today.length, pnl, dayStop: R.day, coolLeft, mind, mScore, breaches, streak: trStreak() };
+}
+// days in a row (most recent first) where you followed your plan; a day with no trade and no override counts too
+function trStreak() {
+  const j = trJournal(), byDate = {}; for (const t of trades) (byDate[t.date] ||= []).push(t);
+  let n = 0; const d = getCurrentETTime();
+  for (let k = 0; k < 60; k++) {
+    const x = new Date(d); x.setDate(d.getDate() - k); if (x.getDay() === 0 || x.getDay() === 6) continue;
+    const key = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`, rv = j[key]?.review;
+    if (rv && rv.followed === 'yes') n++; else if (k === 0) continue; else break;
+  }
+  return n;
+}
+const TR_MOODS = { calm: 5, confident: 4, neutral: 3, bored: 3, anxious: 2, frustrated: 1, fomo: 1, tired: 2 };
+const TR_MOOD_LABEL = { calm: 'Calm', confident: 'Confident', neutral: 'Neutral', bored: 'Bored', anxious: 'Anxious', frustrated: 'Frustrated', fomo: 'FOMO / chasing', tired: 'Tired' };
+function trPhase(now, R) {
+  if (trPhaseSel) return trPhaseSel;
+  if (trOpen()) return 'trade';
+  const m = now.m, wd = now.wd;
+  if (wd === 6 || (wd === 0 && m < 1080) || m >= 1080 || m < 570) return 'prepare';
+  if (m < 720) return 'trade';
+  return 'review';
+}
+function trSetPhase(p) { trPhaseSel = p; lvRender(); }
+function trPhaseHtml(ph) {
+  const P = [['prepare', '1 · Prepare', 'levels, bias, news, mindset'], ['trade', '2 · Trade', 'the plan, pre-flight, your trade'], ['review', '3 · Review', 'what happened, one lesson']];
+  return `<div class="tr-phases">${P.map(([k, t, s]) => `<button class="tr-ph${k === ph ? ' on' : ''}" onclick="trSetPhase('${k}')"><b>${t}</b><span>${s}</span></button>`).join('')}</div>`;
+}
+function trGuardHtml(G) {
+  const st = (bad, warn) => bad ? 'bad' : warn ? 'warn' : 'ok';
+  const item = (s, t) => `<span class="tr-g ${s}">${t}</span>`;
+  return `<div class="tr-guard">
+    ${item(st(G.n >= G.maxT, false), `🛡 Trades today <b>${G.n} / ${G.maxT}</b>`)}
+    ${item(st(G.dayStop && G.pnl <= -G.dayStop, G.pnl < 0), `P&amp;L today <b>${G.pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(G.pnl))}</b> · stop −$${G.dayStop || '–'}`)}
+    ${item(G.mScore == null ? 'warn' : st(G.mScore <= 2, G.mScore === 3), G.mScore == null ? 'Mindset: <a href="#" onclick="trSetPhase(\'prepare\');return false">check in</a>' : `Mindset <b>${G.mScore}/5</b>`)}
+    ${item(G.coolLeft ? 'bad' : 'ok', G.coolLeft ? `Cool-down <b>${G.coolLeft} min</b>` : 'No cool-down')}
+    ${item('ok', `🔥 Plan streak <b>${G.streak} day${G.streak === 1 ? '' : 's'}</b>`)}
+  </div>`;
+}
+// ---- 1 · Prepare ----
+function trPrepareHtml(R, G) {
+  let jb = {}; try { jb = JSON.parse(localStorage.getItem('jct_bias') || '{}'); } catch(e) {}
+  const mine = jb.state === 'bull' ? 'Bullish' : jb.state === 'bear' ? 'Bearish' : null, data = window.mtfScan?.syms?.[R.sym]?.label || '–';
+  const L = R.st.levels, lv = [['PDH', L.pdH], ['PDL', L.pdL], ['Asia H', L.asianH], ['Asia L', L.asianL], ['London H', L.londonH], ['London L', L.londonL], ['Midnight', L.mOpen]].filter(([, p]) => p != null && !Number.isNaN(p));
+  const ev = (() => { try { return todaysEvents(); } catch(e) { return []; } })(), m = G.mind || {};
+  const sel = (id, v, opts) => `<select id="${id}">${opts.map(([k, l]) => `<option value="${k}"${String(k) === String(v) ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+  const scale = [[1, '1 · poor'], [2, '2'], [3, '3 · ok'], [4, '4'], [5, '5 · great']];
+  return `<div class="tr-grid">
+    <div class="card"><div class="card-body">
+      <div class="lv-h">📋 GAME PLAN · ${lvName(R.sym)}</div>
+      <div class="tr-kv"><span>Your bias</span><b>${mine || '<a href="#" onclick="showPage(\'bias\');return false">set it</a>'}</b></div>
+      <div class="tr-kv"><span>Higher timeframes read</span><b>${esc(data)}</b>${mine && data !== '–' && data !== 'Mixed' && mine !== data ? ' <span class="badge badge-warn">disagrees with you</span>' : ''}</div>
+      <div class="tr-kv"><span>Levels the rules watch</span><span class="mono fs-12">${lv.map(([n, p]) => `${n} ${p.toFixed(2)}`).join(' · ') || '–'}</span></div>
+      <div class="tr-kv"><span>News today</span><span class="fs-12">${ev.length ? ev.map(e => `${esc((e.title || e.name || '').split('(')[0].trim())} ${e.time || ''}`).join(' · ') : 'none loaded'}</span></div>
+      <div class="tr-kv"><span>Your window</span><span class="fs-12">sweeps from ${WIN().wTxt} · no entries 9:30–9:50 · entries ${WIN().eTxt} · flat by 12:00</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="showPage('journal')">📓 Fill the journal numbers</button><button class="btn btn-secondary btn-sm" onclick="showPage('bias')">🎯 Set daily bias</button></div>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <div class="lv-h">🧠 MINDSET CHECK-IN ${G.mScore != null ? `· ${G.mScore}/5 ✓` : ''}</div>
+      <div class="tr-form">
+        <label>Sleep ${sel('tr-sleep', m.sleep ?? 3, scale)}</label>
+        <label>Focus ${sel('tr-focus', m.focus ?? 3, scale)}</label>
+        <label>Feeling ${sel('tr-mood', m.mood || 'neutral', Object.entries(TR_MOOD_LABEL))}</label>
+      </div>
+      <label class="acct-terms" style="margin-top:8px"><input type="checkbox" id="tr-accept"${m.accept ? ' checked' : ''}> <span>I accept that today I can lose up to <b>$${G.dayStop || '–'}</b>, and I'll stop there. One setup, my rules, no chasing.</span></label>
+      <button class="btn btn-primary btn-sm" onclick="trSaveMind()">Save check-in</button>
+      <div class="fs-12 text-2" style="margin-top:6px">A low score (2 or below) adds a pause before you can log a trade. Tired or upset is when rules get broken.</div>
+    </div></div>
+  </div>`;
+}
+document.addEventListener('input', e => { const pn = e.target.closest && e.target.closest('#tr-panel'); if (pn) pn.dataset.dirty = '1'; });
+function trSaveMind() {
+  delete document.getElementById('tr-panel').dataset.dirty;
+  const v = id => document.getElementById(id).value;
+  trSaveDay({ mind: { sleep: +v('tr-sleep'), focus: +v('tr-focus'), mood: v('tr-mood'), accept: document.getElementById('tr-accept').checked, at: Date.now() } });
+  showToast('Check-in saved'); lvRender();
+}
+// ---- 2 · Trade: open position ----
+function trOpenHtml(R) {
+  const t = trOpen(); if (!t) return '';
+  const src = /NQ/.test(t.sym) ? 'NQ=F' : 'ES=F', px = (src === R.sym ? R.last : (lvRun(src) || {}).last)?.c;
+  const lng = t.dir === 'Long', pts = px != null ? (lng ? px - t.entry : t.entry - px) : null, usd = pts != null ? pts / 0.25 * (TICK_VALS[t.sym] || 12.5) * t.qty : null;
+  return `<div class="card mb-md tr-open"><div class="card-body">
+    <div class="lv-h">📍 YOUR OPEN TRADE</div>
+    <div class="lvp-title">${lng ? 'LONG' : 'SHORT'} ${t.qty} ${t.sym} @ ${(+t.entry).toFixed(2)} ${pts != null ? `<span class="${pts >= 0 ? 'bull' : 'bear'}">${pts >= 0 ? '+' : ''}${pts.toFixed(2)} pts (${usd >= 0 ? '+' : '−'}$${Math.abs(Math.round(usd))})</span>` : ''}</div>
+    <div class="fs-13 text-2">Stop ${t.plan?.stop != null ? (+t.plan.stop).toFixed(2) : '–'} · ${t.plan?.tp1 != null ? `½ at ${(+t.plan.tp1).toFixed(2)} · ` : ''}target ${t.plan?.target != null ? (+t.plan.target).toFixed(2) : '–'} · price ${px != null ? px.toFixed(2) : '–'}${tvLive() ? '' : ' (delayed)'} · flat by 12:00</div>
+    <div class="fs-12 text-2" style="margin-top:4px">Manage it with the plan: don't move the stop further away, don't add to a loser.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
+      <input type="number" id="tr-exit" step="0.25" placeholder="Exit price" value="${px != null ? px.toFixed(2) : ''}" style="width:140px">
+      <button class="btn btn-primary btn-sm" onclick="trClose()">I closed it</button>
+      <button class="btn btn-secondary btn-sm" onclick="trCancelOpen()">Didn't fill / remove</button>
+    </div>
+  </div></div>`;
+}
+function trClose() {
+  const t = trOpen(), exit = parseFloat(document.getElementById('tr-exit').value); if (!t) return;
+  if (!(exit > 0)) { showToast('Enter the exit price', 'warn'); return; }
+  const pts = t.dir === 'Long' ? exit - t.entry : t.entry - exit, risk = t.plan?.stop != null ? Math.abs(t.entry - t.plan.stop) : null;
+  Object.assign(t, { exit, pnl: +(pts / 0.25 * (TICK_VALS[t.sym] || 12.5) * t.qty).toFixed(2), rr: risk ? (pts / risk).toFixed(2) : '0', status: 'closed', closedAt: Date.now() });
+  saveTrades(); renderTradeLog(); trPhaseSel = 'review'; showToast(t.pnl >= 0 ? 'Trade closed: logged' : 'Trade closed. A 15-minute cool-down starts now'); lvRender();
+}
+function trCancelOpen() { const t = trOpen(); if (!t) return; trades = trades.filter(x => x !== t); saveTrades(); renderTradeLog(); showToast('Removed'); lvRender(); }
+// ---- pre-flight (with the soft lock) ----
+function trTake() {
+  const A = trLastA, R = trLastR; if (!A || !A.plan) return;
+  const G = trGuard(), p = A.plan, I = window.TJR.INSTR[R.sym], full = I.name.replace('1!', ''), micro = I.micro;
+  const grade = A.grade, news = A.checks.find(c => c.label === 'News clear'), riskOk = A.size && A.size.n >= 1;
+  const auto = [[grade === 'A' || grade === 'B', `Grade ${grade || '–'}${grade === 'C' ? ': the rules or your conditions say stand aside' : ''}`], [riskOk, `Size: up to ${A.size ? A.size.n : 0} ${micro} within your $${getRisk().trade} per-trade limit`], [!news || news.state !== 'bad', news ? news.text : 'No news check']];
+  const box = document.getElementById('tr-modal'), lng = p.dir === 'long';
+  box.querySelector('.sync-box').innerHTML = `
+    <div class="fw-600" style="font-size:16px;margin-bottom:4px">Pre-flight · ${lng ? 'BUY' : 'SELL'} ${lvName(R.sym)} at ${p.entry.toFixed(2)}</div>
+    <div class="fs-12 text-2" style="margin-bottom:10px">${esc(A.head.replace(/<[^>]+>/g, ''))}</div>
+    ${G.breaches.length ? `<div class="tr-lock"><b>⏸ Pause.</b> ${G.breaches.map(esc).join('. ')}.<br>Your plan says to stop here. To go ahead anyway, write why (it's saved in your journal):<textarea id="tr-why" rows="2" placeholder="Why this trade is still in my plan"></textarea></div>` : ''}
+    ${auto.map(([ok, t]) => `<div class="lvp-ck">${ok ? '<span class="cf-b">✓</span>' : '<span class="cf-s">✗</span>'}<div>${esc(t)}</div></div>`).join('')}
+    ${[[`tr-c1`, `My stop is in the order at ${p.stop.toFixed(2)} (−${p.risk.toFixed(1)} pts)`], ['tr-c2', 'This is my plan, not revenge, boredom or FOMO'], ['tr-c3', `I'm fine losing this trade's risk`]].map(([id, t]) => `<label class="acct-terms" style="margin:6px 0"><input type="checkbox" id="${id}"> <span>${t}</span></label>`).join('')}
+    <div class="tr-form" style="margin-top:8px">
+      <label>Contract <select id="tr-sym"><option value="${micro}">${micro}</option><option value="${full}">${full}</option></select></label>
+      <label>Contracts <input type="number" id="tr-qty" min="1" value="${Math.max(1, Math.min(A.size ? A.size.n : 1, 1))}"></label>
+      <label>Entry <input type="number" id="tr-entry" step="0.25" value="${p.entry.toFixed(2)}"></label>
+    </div>
+    <div id="tr-msg" class="fs-12 cf-s" style="min-height:16px;margin-top:6px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('tr-modal').hidden=true">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="trConfirm()">Log the trade</button>
+    </div>
+    <div class="fs-12 text-2" style="margin-top:8px">This logs your trade; place the order yourself in your platform. Not financial advice.</div>`;
+  box.hidden = false;
+}
+function trConfirm() {
+  const A = trLastA, R = trLastR, p = A.plan, msg = document.getElementById('tr-msg'), G = trGuard();
+  if (!['tr-c1', 'tr-c2', 'tr-c3'].every(id => document.getElementById(id).checked)) { msg.textContent = 'Tick all three before logging the trade.'; return; }
+  const why = (document.getElementById('tr-why') || {}).value || '';
+  if (G.breaches.length && why.trim().length < 10) { msg.textContent = 'Write a short reason (10+ characters) to override your limits.'; return; }
+  const entry = parseFloat(document.getElementById('tr-entry').value), qty = parseInt(document.getElementById('tr-qty').value) || 1;
+  if (!(entry > 0)) { msg.textContent = 'Enter your entry price.'; return; }
+  trades.unshift({ id: Date.now(), date: trToday(), sym: document.getElementById('tr-sym').value, dir: p.dir === 'long' ? 'Long' : 'Short', entry, exit: null, qty, pnl: 0, rr: '', status: 'open', openedAt: Date.now(),
+    setup: A.kind === 'gap' ? 'Gap setup' : A.kind === 'off' ? 'TJR outside hours' : 'TJR rules', notes: '',
+    plan: { grade: A.grade, kind: A.kind, stop: p.stop, target: p.target, tp1: p.tp1 }, override: G.breaches.length ? { reasons: G.breaches, why: why.trim() } : null });
+  saveTrades(); renderTradeLog();
+  document.getElementById('tr-modal').hidden = true; showToast(G.breaches.length ? 'Logged, with your override reason' : 'Trade logged: manage it with the plan'); trPhaseSel = null; lvRender();
+}
+function trSkip() {
+  const A = trLastA; if (!A || !A.plan) return;
+  const d = trDay(); trSaveDay({ skips: [...(d.skips || []), { t: Date.now(), head: A.head.replace(/<[^>]+>/g, ''), grade: A.grade }] });
+  showToast('Skipped: noted in your journal. Not trading is a valid choice.');
+}
+// ---- 3 · Review ----
+function trReviewHtml(R, G) {
+  const d = trDay(), rv = d.review || {}, mine = trTradesToday();
+  const ruleLine = X => { if (!X) return 'no data'; const ex = X.evs.find(e => e.type === 'exit'), od = X.evs.find(e => e.type === 'order'), cn = X.evs.find(e => e.type === 'cancel');
+    return ex ? `traded: ${esc(ex.text)}` : cn ? 'an order that never filled' : od ? 'an order or trade still running' : 'no setup, so no trade was the plan'; };
+  const rules = MTF_SYMS.map(([s, nm]) => `<b>${nm}</b> ${ruleLine(s === R.sym ? R : lvRun(s))}`).join('<br>');
+  const sel = (v, opts) => opts.map(([k, l]) => `<button class="mtf-seg${v === k ? ' on' : ''}" onclick="trReviewSet('followed','${k}')">${l}</button>`).join('');
+  return `<div class="card mb-md"><div class="card-body">
+    <div class="lv-h">📝 REVIEW · ${trToday()}</div>
+    <div class="tr-kv"><span>What the rules did</span><span>${rules}</span></div>
+    <div class="tr-kv"><span>Your trades</span><span>${mine.length ? mine.map(t => `${t.dir} ${t.qty} ${t.sym} ${t.status === 'open' ? '(open)' : `<b class="${t.pnl >= 0 ? 'bull' : 'bear'}">${t.pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(t.pnl))}</b>`}${t.override ? ' <span class="badge badge-warn">override</span>' : ''}`).join(' · ') : 'none'}${d.skips?.length ? ` · skipped ${d.skips.length}` : ''}</span></div>
+    <div class="tr-q">Did you follow your plan?<div class="mtf-segs">${sel(rv.followed, [['yes', 'Yes'], ['partly', 'Partly'], ['no', 'No']])}</div></div>
+    <div class="tr-q">How did you feel while trading?<select id="tr-rv-feel" onchange="trReviewSet('feeling', this.value)">${[['', '–'], ...Object.entries(TR_MOOD_LABEL)].map(([k, l]) => `<option value="${k}"${rv.feeling === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="tr-q" style="display:block">One lesson for tomorrow<textarea id="tr-rv-lesson" rows="2" placeholder="e.g. waited for the 9:50 window instead of chasing the open" onchange="trReviewSet('lesson', this.value)">${esc(rv.lesson || '')}</textarea></div>
+    <div class="fs-12 text-2">${rv.followed === 'yes' ? `🔥 Plan streak: ${G.streak} day${G.streak === 1 ? '' : 's'}. Discipline is the edge you control.` : 'Saved to today\'s journal as you answer. Your streak counts days you followed the plan, win or lose.'}</div>
+  </div></div>`;
+}
+function trReviewSet(k, v) { delete document.getElementById('tr-panel').dataset.dirty; const d = trDay(); trSaveDay({ review: { ...(d.review || {}), [k]: v, at: Date.now() } }); if (k === 'followed') lvRender(); }
+
 // ---------- TRADE PLAN: one clear call per contract from the TJR rules, graded by the conditions behind it ----------
 // Signals come from the strategy engine (same rules as the Lab/backtest). The grade counts conditions; only the track
 // record is a tested edge (Lab → Forecast study shows direction calls on their own don't beat a coin flip).
@@ -4777,6 +4999,7 @@ function lvPlanHtml(R, A) {
     </div>` : '';
   return `<div class="lvp-head"><div><div class="lvp-title">${A.head}</div><div class="fs-13 text-2">${A.why}</div></div>${A.grade ? `<div class="lvp-grade g${A.grade}" title="A = every condition in place · B = some neutral/against · C = a key check fails or outside TJR hours">${A.grade}</div>` : ''}</div>
     ${ticket}
+    ${p && !p.est && A.kind !== 'in' ? (trOpen() ? '<div class="fs-12 text-2" style="margin:4px 0 8px">You already have an open trade: manage it at the top.</div>' : '<div class="tr-acts"><button class="btn btn-primary btn-sm" onclick="trTake()">I\'m taking it</button><button class="btn btn-secondary btn-sm" onclick="trSkip()">Skip this one</button><span class="fs-12 text-2">a quick pre-flight check, then it\'s logged</span></div>') : ''}
     ${!A.plan ? '' : `<details class="lvp-checks" open><summary>Why: ${A.checks.filter(c => c.state === 'ok').length} of ${A.checks.filter(c => c.state !== 'na').length} conditions met</summary>${A.checks.map(c => `<div class="lvp-ck">${icon(c.state)}<div><b>${c.label}</b> <span class="text-2">${c.text}</span></div></div>`).join('')}</details>`}
     <div class="fs-12 text-2" style="margin-top:8px">From your TJR rules (${esc(btLabel(R.c.r))}). The grade counts your conditions; only the track record is a tested edge. Not financial advice: you decide and place every trade.</div>`;
 }
@@ -5037,18 +5260,18 @@ async function renderForecastStudy() {
 // ============================================================
 // RISK LIMITS (Playbook tab) — used by Trade Readiness
 // ============================================================
-const RISK_DEFAULT = { trade: 200, day: 500, dd: 2000, rr: 2 };
+const RISK_DEFAULT = { trade: 200, day: 500, dd: 2000, rr: 2, maxTrades: 1 };
 function getRisk() {
   let r = {}; try { r = JSON.parse(localStorage.getItem('jct_risk') || '{}'); } catch(e) {}
   return { ...RISK_DEFAULT, ...r };
 }
 function loadRisk() {
   const r = getRisk();
-  for (const [k, id] of [['trade', 'risk-trade'], ['day', 'risk-day'], ['dd', 'risk-dd'], ['rr', 'risk-rr']]) { const el = document.getElementById(id); if (el) el.value = r[k]; }
+  for (const [k, id] of [['trade', 'risk-trade'], ['day', 'risk-day'], ['dd', 'risk-dd'], ['rr', 'risk-rr'], ['maxTrades', 'risk-maxtrades']]) { const el = document.getElementById(id); if (el) el.value = r[k]; }
 }
 function saveRisk() {
   const v = id => +document.getElementById(id).value || 0;
-  try { localStorage.setItem('jct_risk', JSON.stringify({ trade: v('risk-trade'), day: v('risk-day'), dd: v('risk-dd'), rr: v('risk-rr') })); } catch(e) {}
+  try { localStorage.setItem('jct_risk', JSON.stringify({ trade: v('risk-trade'), day: v('risk-day'), dd: v('risk-dd'), rr: v('risk-rr'), maxTrades: Math.max(1, v('risk-maxtrades') || 1) })); } catch(e) {}
   renderReadiness();
 }
 
@@ -6177,8 +6400,9 @@ function init() {
 
   // Restore last tab
   try {
-    const lastTab = localStorage.getItem('jct_tab');
-    if (lastTab) showPage(lastTab);
+    const lastTab = localStorage.getItem('jct_tab'), v2 = localStorage.getItem('jct_tab_v') === '2';
+    showPage(v2 && lastTab && lastTab !== 'charts' ? lastTab : 'live');
+    localStorage.setItem('jct_tab_v', '2');
   } catch(e) {}
 }
 
