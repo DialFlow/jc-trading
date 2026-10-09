@@ -344,6 +344,16 @@ body {
 .rpn:last-child { border-bottom: 0; }
 .rpn-t { font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--blue); padding-top: 1px; }
 .rpn-now { background: rgba(0,122,255,0.08); }
+.rpn-in { background: rgba(10,132,255,0.14); box-shadow: inset 4px 0 0 #0a84ff; }
+.rpn-hold { background: rgba(10,132,255,0.05); box-shadow: inset 4px 0 0 rgba(10,132,255,0.35); }
+.rpn-half { background: rgba(48,161,78,0.10); box-shadow: inset 4px 0 0 #30a14e; }
+.rpn-win { background: rgba(52,199,89,0.16); box-shadow: inset 4px 0 0 #248a3d; }
+.rpn-loss { background: rgba(255,59,48,0.13); box-shadow: inset 4px 0 0 #c9302c; }
+.rpn-tag { display: block; width: fit-content; margin-top: 4px; font: 800 10px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 2px 5px; border-radius: 4px; color: #fff; white-space: nowrap; }
+.rpn-tag.in { background: #0a84ff; } .rpn-tag.win { background: #248a3d; } .rpn-tag.loss { background: #c9302c; } .rpn-tag.half { background: #30a14e; }
+.tr-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.tr-tag { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 6px; color: #fff; }
+.tr-tag.in { background: #0a84ff; } .tr-tag.win { background: #248a3d; } .tr-tag.loss { background: #c9302c; } .tr-tag.half { background: #30a14e; } .tr-tag.none { background: var(--fill); color: var(--text2); }
 .rpn b { font-weight: 700; }
 
 /* Live tab: ESPN-style scoreboard, play-by-play, drive tracker */
@@ -4385,13 +4395,16 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
     svg += `<text x="${xa + 4}" y="${(y(ent) + y(d.stop)) / 2 + 4}" class="mtf-ax" style="fill:#ff6961;font-weight:700">−${riskPts.toFixed(1)} pts</text>`;
     svg += `<text x="${xa + 4}" y="${(y(ent) + y(d.target)) / 2 + 4}" class="mtf-ax" style="fill:#30d158;font-weight:700">+${rewPts.toFixed(1)} pts (${(rewPts / riskPts).toFixed(1)}R)</text>`;
     // event markers with times
-    const mark = (e, px, col, txt, up) => { const i = idx(e.t); if (i < 0) return; const cy = y(px), ty = up ? cy - 10 : cy + 16;
-      svg += `<circle cx="${x(i)}" cy="${cy}" r="5" fill="${col}" stroke="var(--bg)" stroke-width="1.5"/><text x="${Math.min(right - 90, x(i) + 6)}" y="${ty}" class="mtf-ax" style="fill:var(--text);font-weight:600">${txt}</text>`; };
+    const mark = (e, px, col, txt, up) => { const i = idx(e.t); if (i < 0) return; const cy = y(px), ty = up ? cy - 22 : cy + 8, w = txt.length * 6.4 + 12, tx = Math.max(0, Math.min(right - w, x(i) + 6));
+      svg += `<circle cx="${x(i)}" cy="${cy}" r="6" fill="${col}" stroke="#fff" stroke-width="2"/><rect x="${tx}" y="${ty}" width="${w}" height="16" rx="4" fill="${col}"/><text x="${tx + 6}" y="${ty + 12}" class="mtf-ax" style="fill:#fff;font-weight:800">${txt}</text>`; };
+    // the time you were in the trade: a light band from the entry candle to the exit candle
+    if (fill) { const i0 = idx(fill.t), i1 = exit ? idx(exit.t) : bars.length - 1; if (i0 >= 0)
+      svg += `<rect x="${x(i0) - cw / 2}" y="${PT}" width="${Math.max(cw, x(Math.max(i0, i1)) - x(i0) + cw)}" height="${H - PT - PB}" fill="#0a84ff" fill-opacity="0.07"/><line x1="${x(i0) - cw / 2}" x2="${x(i0) - cw / 2}" y1="${PT}" y2="${H - PB}" stroke="#0a84ff" stroke-width="1.2" stroke-opacity="0.7"/>${exit && i1 >= 0 ? `<line x1="${x(i1) + cw / 2}" x2="${x(i1) + cw / 2}" y1="${PT}" y2="${H - PB}" stroke="${exit.data && exit.data.pts >= 0 ? '#30d158' : '#ff453a'}" stroke-width="1.2" stroke-opacity="0.8"/>` : ''}`; }
     const io = idx(order.t);
     if (io >= 0) svg += `<path d="M${x(io)},${y(d.limit) + (lng ? 12 : -12)} l-5,${lng ? 7 : -7} h10 z" fill="var(--blue)"/><text x="${Math.max(0, x(io) - 70)}" y="${y(d.limit) + (lng ? 30 : -22)}" class="mtf-ax" style="fill:var(--blue);font-weight:600">order ${order.hm}</text>`;
-    if (fill) mark(fill, fill.data.px, 'var(--blue)', `filled ${fill.hm}`, !lng);
-    if (scale) mark(scale, scale.data.px, '#30d158', `½ out ${scale.hm}`, lng);
-    if (exit) mark(exit, exit.data.px, exit.data.pts >= 0 ? '#30d158' : '#ff453a', `exit ${exit.hm} ${exit.data.pts >= 0 ? '+' : ''}${exit.data.pts.toFixed(1)}`, exit.data.pts >= 0 === lng);
+    if (fill) mark(fill, fill.data.px, '#0a84ff', `▶ IN ${fill.hm} @ ${fill.data.px.toFixed(2)}`, !lng);
+    if (scale) mark(scale, scale.data.px, '#30a14e', `½ OUT ${scale.hm}`, lng);
+    if (exit) mark(exit, exit.data.px, exit.data.pts >= 0 ? '#248a3d' : '#c9302c', `■ OUT ${exit.hm} ${exit.data.pts >= 0 ? '+' : ''}${exit.data.pts.toFixed(1)} pts`, exit.data.pts >= 0 === lng);
     if (cancel && !fill) { const i = idx(cancel.t); if (i >= 0) svg += `<text x="${Math.min(right - 110, x(i) - 40)}" y="${y(d.limit) - 6}" class="mtf-ax" style="fill:var(--text2)">not filled · cancelled ${cancel.hm}</text>`; }
   }
   // candles on top
@@ -5242,10 +5255,12 @@ function hmRenderDay() {
   // rules: plan + result
   const rules = MTF_SYMS.map(([s, nm]) => { const x = D[s]; if (!x) return '';
     const od = x.evs.find(e => e.type === 'order'), fl = x.evs.find(e => e.type === 'fill'), ex = x.evs.find(e => e.type === 'exit'), cn = x.evs.find(e => e.type === 'cancel'), I = window.TJR.INSTR[s];
-    const res = ex && ex.data ? `<b class="${ex.data.pts >= 0 ? 'bull' : 'bear'}">${ex.data.pts >= 0 ? '+' : ''}${ex.data.pts.toFixed(2)} pts (${ex.data.pts >= 0 ? '+' : '−'}$${Math.abs(Math.round(ex.data.pts * I.pointValue / 10))} per ${I.micro})</b> · ${esc(ex.data.why)} at ${ex.hm}` : cn ? 'not filled, cancelled' : fl ? 'still open at the end of the data' : '';
-    return `<div class="hd-row"><b>${nm}</b><span>${od && od.data ? `${od.hm} ${od.data.dir === 'long' ? 'BUY' : 'SELL'} limit ${f2(od.data.limit)} · stop ${f2(od.data.stop)} · target ${f2(od.data.target)} (${esc(od.data.targetName || '')})${od.data.tp1 != null ? ` · ½ at ${f2(od.data.tp1)}` : ''}<br>${fl ? `filled ${fl.hm} · ` : ''}${res}` : 'no setup: sweep → break → gap never lined up in the window'}</span></div>`; }).join('');
+    const sc = x.evs.find(e => e.type === 'scale');
+    const res = ex && ex.data ? `<span class="tr-tag ${ex.data.pts >= 0 ? 'win' : 'loss'}">■ OUT ${ex.hm} @ ${f2(ex.data.px)} · ${ex.data.pts >= 0 ? '+' : ''}${ex.data.pts.toFixed(2)} pts (${ex.data.pts >= 0 ? '+' : '−'}$${Math.abs(Math.round(ex.data.pts * I.pointValue / 10))} per ${I.micro})</span> <span class="text-2">${esc(ex.data.why)}</span>` : cn ? '<span class="tr-tag none">not filled · cancelled</span>' : fl ? 'still open at the end of the data' : '';
+    return `<div class="hd-row"><b>${nm}</b><span>${od && od.data ? `${od.hm} ${od.data.dir === 'long' ? 'BUY' : 'SELL'} limit ${f2(od.data.limit)} · stop ${f2(od.data.stop)} · target ${f2(od.data.target)} (${esc(od.data.targetName || '')})${od.data.tp1 != null ? ` · ½ at ${f2(od.data.tp1)}` : ''}<div class="tr-tags">${fl ? `<span class="tr-tag in">▶ IN ${fl.hm} @ ${f2(fl.data.px)}</span>` : ''}${sc ? `<span class="tr-tag half">½ OUT ${sc.hm} @ ${f2(sc.data.px)}</span>` : ''}${res}</div>` : 'no setup: sweep → break → gap never lined up in the window'}</span></div>`; }).join('');
   // you
-  const mineHtml = mine.length ? mine.map(t => `${t.dir} ${t.qty} ${t.sym} @ ${(+t.entry).toFixed(2)}${t.status === 'open' ? ' (open)' : ` → ${(+t.exit).toFixed(2)} <b class="${t.pnl >= 0 ? 'bull' : 'bear'}">${t.pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(t.pnl))}</b>`}${t.plan?.grade ? ` · grade ${t.plan.grade}` : ''}${t.override ? ` · <span class="badge badge-warn">override: ${esc(t.override.why)}</span>` : ''}`).join('<br>') : 'no trades logged';
+  const hhmm = ms => ms ? new Date(ms).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) + ' ' : '';
+  const mineHtml = mine.length ? mine.map(t => `<div class="tr-tags"><b>${t.dir} ${t.qty} ${t.sym}</b><span class="tr-tag in">▶ IN ${hhmm(t.openedAt)}@ ${(+t.entry).toFixed(2)}</span>${t.status === 'open' ? '<span class="tr-tag none">still open</span>' : `<span class="tr-tag ${t.pnl >= 0 ? 'win' : 'loss'}">■ OUT ${hhmm(t.closedAt)}@ ${(+t.exit).toFixed(2)} · ${t.pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(t.pnl))}</span>`}</div>${t.plan?.grade ? ` · grade ${t.plan.grade}` : ''}${t.override ? ` · <span class="badge badge-warn">override: ${esc(t.override.why)}</span>` : ''}`).join('') : 'no trades logged';
   const mood = J.mind ? `${TR_MOOD_LABEL[J.mind.mood] || J.mind.mood} · sleep ${J.mind.sleep}/5 · focus ${J.mind.focus}/5` : 'no check-in';
   const rv = J.review ? `followed the plan: <b>${J.review.followed || '–'}</b>${J.review.feeling ? ` · felt ${TR_MOOD_LABEL[J.review.feeling] || J.review.feeling}` : ''}${J.review.lesson ? `<br>Lesson: “${esc(J.review.lesson)}”` : ''}` : 'no review';
   const bias = J.bias ? `<b class="${J.bias.state === 'bull' ? 'bull' : J.bias.state === 'bear' ? 'bear' : ''}">${J.bias.state === 'bull' ? 'Bullish' : J.bias.state === 'bear' ? 'Bearish' : 'Neutral'}</b>${J.bias.conf ? ` (${J.bias.conf}%)` : ''}${J.bias.notes ? ` · ${esc(J.bias.notes)}` : ''}${J.bias.inv ? ` · wrong if: ${esc(J.bias.inv)}` : ''}` : '<span class="text-2">not recorded (saved daily from Oct 9 on)</span>';
@@ -6596,6 +6611,14 @@ function rpNotesHtml(bars, snaps, events, upto, sym, r, listId, o = {}) {
   const start = o.from != null ? Math.max(1, o.from) : Math.max(1, bars.findIndex(b => b.m >= W.watchStart - 5));
   let avg = 0; { const rs = bars.slice(0, start).map(b => b.h - b.l); avg = rs.length ? rs.reduce((a, v) => a + v, 0) / rs.length : 0; }
   const f2 = v => v.toFixed(2);
+  // trade windows: each fill until its exit (or the end), for row colors
+  const tradeWins = events.filter(e => e.type === 'fill').map(f => ({ a: f.t, ex: events.find(e => e.type === 'exit' && e.t >= f.t) }));
+  const rowKind = b => { const here = events.filter(e => e.t === b.t), ex = here.find(e => e.type === 'exit');
+    if (ex) return ex.data && ex.data.pts >= 0 ? ['rpn-win', '<span class="rpn-tag win">■ OUT</span>'] : ['rpn-loss', '<span class="rpn-tag loss">■ OUT</span>'];
+    if (here.some(e => e.type === 'fill')) return ['rpn-in', '<span class="rpn-tag in">▶ IN</span>'];
+    if (here.some(e => e.type === 'scale')) return ['rpn-half', '<span class="rpn-tag half">½ OUT</span>'];
+    if (tradeWins.some(w => b.t > w.a && (!w.ex || b.t < w.ex.t))) return ['rpn-hold', ''];
+    return ['', '']; };
   for (let k = start; k <= upto; k++) {
     const b = bars[k], p = bars[k - 1], s = snaps[k], ps = snaps[k - 1] || s; if (!s) continue;
     const L = s.levels, notes = [];
@@ -6641,7 +6664,8 @@ function rpNotesHtml(bars, snaps, events, upto, sym, r, listId, o = {}) {
     else if (b.m >= 570 && b.m < W.entryStart && b.m === 570) notes.push(`9:30 open: manipulation window until 9:50 — no entries.`);
     if (s.pending) notes.push(`Order working: ${s.pending.dir === 'long' ? 'buy' : 'sell'} limit ${f2(s.pending.limit)}, ${Math.abs(b.c - s.pending.limit).toFixed(1)} pts from price.`);
     if (s.pos) { const op = s.pos.dir === 'long' ? b.c - s.pos.entry : s.pos.entry - b.c; notes.push(`In the trade: <span class="${op >= 0 ? 'bull' : 'bear'}">${op >= 0 ? '+' : ''}${op.toFixed(1)} pts open</span> · stop ${f2(s.pos.stop)} · ${s.pos.tp1 != null && !s.pos.scaled ? `½ at ${f2(s.pos.tp1)} (${Math.abs(s.pos.tp1 - b.c).toFixed(1)} away) · ` : ''}target ${f2(s.pos.target)} (${Math.abs(s.pos.target - b.c).toFixed(1)} away).`); }
-    out.push(`<div class="rpn${k === upto ? ' rpn-now' : ''}"><div class="rpn-t">${b.hm}</div><div>${notes.map(n => `<div>${n}</div>`).join('')}</div></div>`);
+    const [rk, rtag] = rowKind(b);
+    out.push(`<div class="rpn${k === upto ? ' rpn-now' : ''}${rk ? ' ' + rk : ''}"><div class="rpn-t">${b.hm}${rtag}</div><div>${notes.map(n => `<div>${n}</div>`).join('')}</div></div>`);
   }
   if (o.newestFirst) out.reverse();
   return `${o.noHead ? '' : `<div class="fs-12 fw-600 text-2" style="margin:12px 0 6px">CANDLE BY CANDLE · 5-MINUTE · ${esc(WIN().label || '')}</div>`}<div class="rpn-list" id="${listId || 'rpn-list'}">${out.join('')}</div>`;
