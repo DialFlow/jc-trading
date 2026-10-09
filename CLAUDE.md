@@ -7,6 +7,7 @@ A single-file personal trading dashboard (`index.html`) for Jacob, who day-trade
 - `index.html`: the whole site. HTML + CSS + JS in one file, no build step. All user data is saved in `localStorage` (keys prefixed `jct_`).
 - `jc_tjr_backtest_v4.pine`: the TradingView Pine Script v6 strategy used for the backtest.
 - `jc_tjr_backtest_v5.pine`: v4 plus toggles for stop mode (sweep wick / fixed points / second sweep), sweep level (Any / London / Asian / PDH-PDL) and a displacement filter on the BOS. Not yet run in TradingView. v4 settings reproduce v4 (Sweep wick, max stop 15, Any, displacement off).
+- `jc_tjr_backtest_v6.pine` (Oct 9): v5 + the Lab model, so TradingView can check the NQ edge on its own data. Model preset (Lab: watch 8:30–11:00, entries 9:50–11:00, cancel 11:30 · or v4/v5 windows), exit (Rules / First liquidity ≥1R / Half at liquidity + break-even, default), roll-gap skip, Test from/to dates, auto stops (ES 20/25, NQ 80/100). Defaults = Lab NQ setting (Fixed points · PDH/PDL · displacement · scale) with 2 contracts so half can come off; the table shows setups, win %, net/PF/max DD **per contract** (TradingView lists each half as its own trade). Known difference: Pine moves the runner's stop to break-even at the close of the TP1 candle, the engine inside it (0 such cases Jul 31–Oct 9). v5 parity: Model v4/v5, Exit Rules, Contracts 1, roll filter off. **Not yet run in TradingView.** Expected on NQ1! 5m, Jul 31–Oct 9 (engine): 49 sessions, funnel sweep 37 · BOS 27 · FVG 24 · orders 24, 19 setups, 53% won, +$16,915/contract, PF 3.31, max DD $1,795. ES1! same model: 16 setups, −$7,411.
 - `.nojekyll`, `.gitignore`: for GitHub Pages. Folder is a git repo on `main`.
 - `backtest.json` + `scripts/backtest.mjs`: the real-data backtest shown on the Backtesting tab (see below). The old `bt/` screenshots were removed Oct 8.
 - `.gitattributes`: forces LF line endings (a CRLF checkout once broke multi-line edits).
@@ -137,7 +138,7 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 
 ## Open items / next steps (priority order)
 1. Confirm PC sync shows "Synced" and that phone + PC data merged.
-2. Update the Pine script (v6) with the Lab model (`watchStart` 8:30, entries to 11:00, scale-out exit at first liquidity ≥1R) so Jacob can verify the NQ edge on longer TradingView history. 10 weeks is too short to trust.
+2. Done Oct 9: `jc_tjr_backtest_v6.pine`. Jacob to paste it into TradingView on NQ1! 5m, first compare Jul 31–Oct 9 with the expected numbers above, then extend the dates. Note: TradingView's free plan loaded less 5m history (Aug 16 on) than Yahoo's 60 days; longer history needs a paid plan (Deep Backtesting), so ask before suggesting it.
 3. Optional (costs money, ask first): AI-written Morning Analysis via the Anthropic API from the Worker, cached 5 min (est. Haiku 5.5 ~$1–2/mo, Sonnet 5.5 ~$8–30/mo).
 4. Yahoo CME data is ~10 min delayed; true real-time needs a paid feed.
 5. Forex Factory blocks Cloudflare; news comes from the GitHub Action's news.json (scheduled runs are sporadic, but they also run on every push).

@@ -19,9 +19,9 @@ for (const [name,vp] of [['desktop',{width:1280,height:900}],['phone',{width:390
  // pick a day with a trade and step to the end
  const tday=await p.evaluate(()=>{const o=[...document.querySelectorAll('#rp-day option')].find(o=>o.textContent.includes('trade'));if(o){document.getElementById('rp-day').value=o.value;rpLoad();}return o&&o.value;});
  await p.waitForTimeout(600);
- const rpStart=await p.evaluate(()=>document.getElementById('rp-banner').innerText.replace(/\s+/g,' '));
+ const rpStart=await p.evaluate(()=>document.getElementById('rp-banner-'+labSym.slice(0,2)).innerText.replace(/\s+/g,' '));
  await p.evaluate(()=>rpAt(rpBars.length-1)); await p.waitForTimeout(400);
- const rpEnd=await p.evaluate(()=>({banner:document.getElementById('rp-banner').innerText.replace(/\s+/g,' '),steps:document.getElementById('rp-events').innerText.replace(/\s+/g,' ').slice(0,500)}));
+ const rpEnd=await p.evaluate(()=>({banner:document.getElementById('rp-banner-'+labSym.slice(0,2)).innerText.replace(/\s+/g,' '),steps:document.getElementById('rp-events-'+labSym.slice(0,2)).innerText.replace(/\s+/g,' ').slice(0,500)}));
  const ref=await p.evaluate(d=>labCfg().trades.filter(t=>t.td===d).map(t=>t.entryTime+' '+t.entry+'→'+t.exit+' '+t.why),tday);
  if(name==='desktop'){console.log('REPLAY days:',days.length,'trade day',tday);console.log(' at 9:25:',rpStart);console.log(' at end:',JSON.stringify(rpEnd));console.log(' backtest trade that day:',JSON.stringify(ref));}
  await p.screenshot({path:__dirname+'/lab-replay-'+name+'.png'});

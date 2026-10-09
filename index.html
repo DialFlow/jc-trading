@@ -3704,7 +3704,7 @@ async function loadBacktest() {
   const v4 = BT.runs.find(r => r.sym === 'ES=F' && r.id === 'v4');
   document.getElementById('bt-about').innerHTML = `<p><strong>What this is:</strong> your strategy (<span class="mono">jc_tjr_backtest_v5.pine</span>) re-run bar by bar on real ES1! and NQ1! 5-minute candles (${esc(es.contract)} / ${esc(nq.contract)}, CME front month). Same sessions, sweep, BOS, FVG-midpoint limit entry in the 9:50–10:10 macro, stop, target and 12:00 flat as the Pine script.</p>
     <p style="margin-top:6px;"><strong>Checked against TradingView:</strong> with the v4 settings it reproduces your TradingView Strategy Tester trade list exactly: the same 7 trades from Aug 16 to Oct 7 at the same prices, −$2,760. This run also covers Jul 30 – Aug 15 and Oct 8, which TradingView's free plan didn't load.</p>
-    <p style="margin-top:6px;"><strong>Structure model:</strong> ${esc((BT.struct && BT.struct.label) || 'Pine windows')} (see Structure study). TradingView parity is checked with the original Pine windows.</p>
+    <p style="margin-top:6px;"><strong>Structure model:</strong> ${esc((BT.struct && BT.struct.label) || 'Pine windows')} (see Structure study). TradingView parity is checked with the original Pine windows. <span class="mono">jc_tjr_backtest_v6.pine</span> runs this Lab model (and its exits) in TradingView, so the NQ result can be checked on TradingView's own data. It hasn't been run in TradingView yet.</p>
     <p style="margin-top:6px;" class="text-2">NQ1! uses stops scaled 4× (fixed 80 pts, max 100; v4 max 60) because NQ moves about 4× ES in points. Point values: ES $50, NQ $20.</p>`;
   btRenderSym(); btPickV4();
   btRenderGrid(); btRenderVerdict();

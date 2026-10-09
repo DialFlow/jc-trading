@@ -1,0 +1,385 @@
+//@version=6
+strategy("JC TJR Backtest v6 (Lab model)", overlay=true, initial_capital=50000, default_qty_type=strategy.fixed, default_qty_value=2, margin_long=5, margin_short=5, commission_type=strategy.commission.cash_per_contract, commission_value=2.5, slippage=1, process_orders_on_close=false)
+
+// v6 = v5 + the site's Lab model (scripts/tjr-engine.mjs with MODEL from scripts/backtest.mjs):
+//   sweeps / BOS / FVG count from 8:30 to 11:00 ET, orders may be placed 9:50-11:00 (none 9:30-9:50),
+//   unfilled orders cancel at 11:30, one setup per day, and three exit modes (default: half out at the first
+//   liquidity pool >= 1R, stop to break-even, rest to the rules target).
+// Defaults = the Lab's NQ1! setting: Fixed points 80 · PDH/PDL · displacement on · scale-out exit.
+// To reproduce v5 exactly: Model = "v4/v5 windows", Exit = "Rules target", Contracts = 1, Roll-gap filter off.
+// P&L: use the "per contract" rows of the table. With the scale-out exit each half is its own trade in
+// TradingView's List of Trades, so TradingView's "Total trades" counts a scaled setup twice.
+
+// ---- Inputs ----
+tz         = input.string("America/New_York", "Timezone")
+LAB        = "Lab: sweeps from 8:30, entries 9:50-11:00"
+PINE       = "v4/v5 windows: 9:30-10:10"
+model      = input.string(LAB, "Model", options=[LAB, PINE])
+qtyN       = input.int(2, "Contracts", minval=1, tooltip="2 lets the scale-out exit take exactly half off. Results per contract are shown in the table.")
+rrFallback = input.float(2.0, "Fallback target (R) if no liquidity target")
+useRoll    = input.bool(true, "Skip roll-gap sessions (open > 2% from prior close)", tooltip="Same as the site's engine: no prior-day levels and no trade on a session that opens with a contract-roll jump.")
+fromT      = input.time(timestamp("2000-01-01T00:00:00"), "Test from")
+toT        = input.time(timestamp("2100-01-01T00:00:00"), "Test to")
+
+grpStop    = "Stop"
+stopMode   = input.string("Fixed points", "Stop mode", options=["Sweep wick", "Fixed points", "Second sweep"], group=grpStop, tooltip="Sweep wick: 1 tick past the sweep extreme (v4).\nFixed points: entry -/+ the fixed size below.\nSecond sweep: 1 tick past the extreme of the second sweep of the level; falls back to the sweep wick if the level was only swept once.")
+fixedIn    = input.float(0, "Fixed stop size (points, 0 = auto)", minval=0, group=grpStop, tooltip="0 = the Lab's size: 20 on ES/MES, 80 on NQ/MNQ.")
+maxIn      = input.float(0, "Max stop size (points, 0 = auto)", minval=0, group=grpStop, tooltip="Orders whose stop is farther than this are skipped. 0 = the Lab's size: 25 on ES/MES, 100 on NQ/MNQ. v4 used 15.")
+
+grpSweep   = "Sweep"
+sweepLvl   = input.string("PDH/PDL", "Sweep level", options=["Any", "London H/L", "Asian H/L", "PDH/PDL"], group=grpSweep, tooltip="Only the chosen level counts as a sweep and as the rules target. Any = nearest of Asian, London and prior-day (v4).")
+
+grpDisp    = "Displacement"
+useDisp    = input.bool(true, "Require displacement candle for BOS", group=grpDisp)
+dispMult   = input.float(1.5, "Body > X × average body", minval=0.1, step=0.1, group=grpDisp)
+dispLen    = input.int(20, "Average body length (bars)", minval=1, group=grpDisp)
+
+grpExit    = "Exit"
+EX_RULES   = "Rules target"
+EX_LIQ     = "First liquidity >= 1R"
+EX_SCALE   = "Half at liquidity, rest runs"
+exitMode   = input.string(EX_SCALE, "Exit", options=[EX_RULES, EX_LIQ, EX_SCALE], group=grpExit, tooltip="Rules target: the v5 target (next chosen level beyond 1R, else the fallback R).\nFirst liquidity: all out at the nearest pool at or beyond 1R (Asian/London/prior-day H/L, midnight open, NY high/low since 9:30).\nHalf at liquidity: half out at that pool, stop to break-even, the rest runs to the rules target. Only used when the pool is nearer than the rules target.")
+
+isNQ       = syminfo.root == "NQ" or syminfo.root == "MNQ"
+fixedStop  = fixedIn > 0 ? fixedIn : (isNQ ? 80.0 : 20.0)
+maxRiskPts = maxIn > 0 ? maxIn : (isNQ ? 100.0 : 25.0)
+
+// ---- Session windows (ET) ----
+isLab   = model == LAB
+inSess(s) => not na(time(timeframe.period, s, tz))
+asian   = inSess("1800-0300")
+london  = inSess("0300-0830")
+manip   = inSess("0930-0950")
+watch   = inSess(isLab ? "0830-1100" : "0930-1010")
+macro   = inSess(isLab ? "0950-1100" : "0950-1010")
+restWin = inSess(isLab ? "0950-1130" : "0950-1100")
+nyWin   = inSess("0930-1200")
+flatT   = inSess("1200-1201")
+inRange = time >= fromT and time <= toT
+
+// ---- Track Asian / London / prior-day ranges, midnight open, NY high/low ----
+var float aH = na
+var float aL = na
+var float lH = na
+var float lL = na
+var float pdH = na
+var float pdL = na
+var float dH = na
+var float dL = na
+var float mOpen = na
+var float nyH = na
+var float nyL = na
+var bool rollDay = false
+newDay = ta.change(time("D", "", tz)) != 0
+if newDay
+    rollDay := useRoll and not na(close[1]) and math.abs(open - close[1]) / close[1] > 0.02
+    pdH := rollDay ? na : dH
+    pdL := rollDay ? na : dL
+    dH := high
+    dL := low
+    mOpen := na
+else
+    dH := math.max(nz(dH, high), high)
+    dL := math.min(nz(dL, low), low)
+if asian and not asian[1]
+    aH := high
+    aL := low
+else if asian
+    aH := math.max(aH, high)
+    aL := math.min(aL, low)
+if london and not london[1]
+    lH := high
+    lL := low
+else if london
+    lH := math.max(lH, high)
+    lL := math.min(lL, low)
+if hour(time, tz) == 0 and minute(time, tz) == 0
+    mOpen := open
+if nyWin and not nyWin[1]
+    nyH := high
+    nyL := low
+else if nyWin
+    nyH := math.max(nyH, high)
+    nyL := math.min(nyL, low)
+
+// Liquidity levels allowed by the "Sweep level" input
+f_levels(isHigh) =>
+    arr = array.new_float()
+    if sweepLvl == "Any" or sweepLvl == "Asian H/L"
+        array.push(arr, isHigh ? aH : aL)
+    if sweepLvl == "Any" or sweepLvl == "London H/L"
+        array.push(arr, isHigh ? lH : lL)
+    if sweepLvl == "Any" or sweepLvl == "PDH/PDL"
+        array.push(arr, isHigh ? pdH : pdL)
+    arr
+// nearest level (max of lows / min of highs)
+f_nearest(arr, isHigh) =>
+    float v = na
+    for x in arr
+        if not na(x)
+            v := na(v) ? x : (isHigh ? math.min(v, x) : math.max(v, x))
+    v
+// first level beyond `edge` (above for longs, below for shorts)
+f_target(arr, isHigh, edge) =>
+    float v = na
+    for x in arr
+        if not na(x) and (isHigh ? x >= edge : x <= edge)
+            v := na(v) ? x : (isHigh ? math.min(v, x) : math.max(v, x))
+    v
+// nearest liquidity pool at or beyond `edge` in the trade's direction (all session levels, midnight open, NY high/low)
+f_liq(isLong, edge) =>
+    vals  = array.from(aH, aL, lH, lL, pdH, pdL, mOpen, nyH, nyL)
+    names = array.from("Asian high", "Asian low", "London high", "London low", "Prior-day high", "Prior-day low", "Midnight open", "NY high", "NY low")
+    float best = na
+    string nm = ""
+    for i = 0 to 8
+        p = array.get(vals, i)
+        if not na(p) and (isLong ? p >= edge : p <= edge)
+            if na(best) or (isLong ? p < best : p > best)
+                best := p
+                nm := array.get(names, i)
+    [best, nm]
+f_tick(x) => math.round(x / syminfo.mintick) * syminfo.mintick
+
+// ---- Step 1: Potential — liquidity sweep inside the watch window ----
+var bool sslSwept = false
+var bool bslSwept = false
+var float sweepLow = na
+var float sweepHigh = na
+var bool tradedToday = false
+// sweep counting for "Second sweep" stops: a new sweep starts when price re-enters beyond the level
+var int sslCount = 0
+var int bslCount = 0
+var bool wasBelow = false
+var bool wasAbove = false
+var float ssl2Low = na
+var float bsl2High = na
+startWatch = watch and not watch[1]
+if startWatch
+    sslSwept := false
+    bslSwept := false
+    tradedToday := false
+    sweepLow := low
+    sweepHigh := high
+    sslCount := 0
+    bslCount := 0
+    wasBelow := false
+    wasAbove := false
+    ssl2Low := na
+    bsl2High := na
+lowArr  = f_levels(false)
+highArr = f_levels(true)
+lowLiq  = f_nearest(lowArr, false)
+highLiq = f_nearest(highArr, true)
+if watch
+    belowNow = not na(lowLiq) and low < lowLiq
+    aboveNow = not na(highLiq) and high > highLiq
+    if belowNow
+        sslSwept := true
+        sweepLow := na(sweepLow) ? low : math.min(sweepLow, low)
+        if not wasBelow
+            sslCount += 1
+        if sslCount >= 2
+            ssl2Low := na(ssl2Low) ? low : math.min(ssl2Low, low)
+    if aboveNow
+        bslSwept := true
+        sweepHigh := na(sweepHigh) ? high : math.max(sweepHigh, high)
+        if not wasAbove
+            bslCount += 1
+        if bslCount >= 2
+            bsl2High := na(bsl2High) ? high : math.max(bsl2High, high)
+    wasBelow := belowNow
+    wasAbove := aboveNow
+
+// ---- Step 2: Confirmation — BOS after the sweep, then a fresh FVG ----
+body    = math.abs(close - open)
+avgBody = ta.sma(body, dispLen)
+dispUp  = close > open and body > dispMult * avgBody
+dispDn  = close < open and body > dispMult * avgBody
+bullFVG = low > high[2]
+bearFVG = high < low[2]
+bullBOS = close > ta.highest(high, 5)[1] and (not useDisp or dispUp)
+bearBOS = close < ta.lowest(low, 5)[1] and (not useDisp or dispDn)
+var bool bosUp = false
+var bool bosDn = false
+var float fvgMidL = na
+var float fvgMidS = na
+if startWatch
+    bosUp := false
+    bosDn := false
+    fvgMidL := na
+    fvgMidS := na
+if watch
+    if sslSwept and bullBOS
+        bosUp := true
+    if bslSwept and bearBOS
+        bosDn := true
+    if bosUp and bullFVG
+        fvgMidL := (low + high[2]) / 2
+    if bosDn and bearFVG
+        fvgMidS := (high + low[2]) / 2
+
+// ---- Diagnostics: how many days reach each step ----
+counted = inRange and not rollDay
+var int dDays = 0
+var int dSweep = 0
+var int dBos = 0
+var int dFvg = 0
+var int dRiskOk = 0
+var bool cSweep = false
+var bool cBos = false
+var bool cFvg = false
+var bool cRisk = false
+if startWatch
+    cSweep := false
+    cBos := false
+    cFvg := false
+    cRisk := false
+    if counted
+        dDays += 1
+if watch and counted and (sslSwept or bslSwept) and not cSweep
+    cSweep := true
+    dSweep += 1
+if watch and counted and (bosUp or bosDn) and not cBos
+    cBos := true
+    dBos += 1
+if watch and counted and (not na(fvgMidL) or not na(fvgMidS)) and not cFvg
+    cFvg := true
+    dFvg += 1
+
+// ---- Stop placement per "Stop mode" ----
+f_stop(isLong, entry) =>
+    float s = na
+    if stopMode == "Fixed points"
+        s := isLong ? entry - fixedStop : entry + fixedStop
+    else if stopMode == "Second sweep" and (isLong ? sslCount >= 2 : bslCount >= 2)
+        s := isLong ? ssl2Low - syminfo.mintick : bsl2High + syminfo.mintick
+    else
+        s := isLong ? sweepLow - syminfo.mintick : sweepHigh + syminfo.mintick
+    s
+
+// ---- Step 3: Continuation — limit at FVG equilibrium; Step 4: exit at liquidity ----
+var float tp1Px = na
+var float runTgt = na
+var bool beDone = false
+half = math.floor(qtyN / 2)
+
+f_place(isLong, entry) =>
+    stop = f_stop(isLong, entry)
+    risk = isLong ? entry - stop : stop - entry
+    bool placed = false
+    float tp1 = na
+    float tgt = na
+    if risk > 0 and risk <= maxRiskPts
+        // TradingView rounds limit prices to the tick: longs down, shorts up
+        lim = isLong ? math.floor(entry / syminfo.mintick) * syminfo.mintick : math.ceil(entry / syminfo.mintick) * syminfo.mintick
+        lt  = f_target(isLong ? highArr : lowArr, isLong, isLong ? entry + risk : entry - risk)
+        tgt := f_tick(na(lt) ? (isLong ? entry + risk * rrFallback : entry - risk * rrFallback) : lt)
+        if exitMode != EX_RULES
+            [L, _] = f_liq(isLong, isLong ? lim + risk : lim - risk)
+            p1 = f_tick(na(L) ? (isLong ? lim + risk : lim - risk) : L)
+            if exitMode == EX_LIQ
+                tgt := p1
+            else if (isLong ? p1 < tgt : p1 > tgt) and half >= 1
+                tp1 := p1
+        id = isLong ? "L" : "S"
+        strategy.entry(id, isLong ? strategy.long : strategy.short, qty=qtyN, limit=lim)
+        if na(tp1)
+            strategy.exit(id + "-x", id, qty=qtyN, stop=stop, limit=tgt)
+        else
+            strategy.exit(id + "-tp1", id, qty=half, stop=stop, limit=tp1)
+            strategy.exit(id + "-run", id, qty=qtyN - half, stop=stop, limit=tgt)
+        placed := true
+    [placed, tp1, tgt]
+
+canTrade = macro and inRange and not rollDay and not tradedToday and strategy.position_size == 0
+if canTrade and not na(fvgMidL)
+    [ok, t1, tg] = f_place(true, fvgMidL)
+    if ok
+        tradedToday := true
+        tp1Px := t1
+        runTgt := tg
+        beDone := false
+        if not cRisk
+            cRisk := true
+            dRiskOk += 1
+if canTrade and not tradedToday and not na(fvgMidS)
+    [ok, t1, tg] = f_place(false, fvgMidS)
+    if ok
+        tradedToday := true
+        tp1Px := t1
+        runTgt := tg
+        beDone := false
+        if not cRisk
+            cRisk := true
+            dRiskOk += 1
+
+// Half is off: move the runner's stop to break-even (the fill price). Takes effect from the next candle;
+// the site's engine moves it inside the same candle, so the two can differ when one 5m candle
+// reaches TP1 and then comes all the way back to the entry.
+pos = strategy.position_size
+if pos != 0 and math.abs(pos) < qtyN and not na(tp1Px) and not beDone
+    id = pos > 0 ? "L" : "S"
+    strategy.exit(id + "-run", id, qty=math.abs(pos), stop=strategy.position_avg_price, limit=runTgt)
+    beDone := true
+
+// Orders are placed only in the entry window; unfilled limits rest until 11:30 (Lab) / 11:00 (v4/v5). Flat by 12:00 ET
+if not restWin and pos == 0
+    strategy.cancel("L")
+    strategy.cancel("S")
+if flatT
+    strategy.close_all("12:00 flat")
+
+// ---- Results per setup (TradingView lists each half separately) ----
+var int nSetups = 0
+var int nWins = 0
+var float lastNet = 0.0
+var float grossW = 0.0
+var float grossL = 0.0
+var float peak = 0.0
+var float maxDD = 0.0
+if strategy.closedtrades > strategy.closedtrades[1] and strategy.opentrades == 0
+    pnl = (strategy.netprofit - lastNet) / qtyN
+    lastNet := strategy.netprofit
+    nSetups += 1
+    if pnl > 0
+        nWins += 1
+        grossW += pnl
+    else
+        grossL -= pnl
+    eq = strategy.netprofit / qtyN
+    peak := math.max(peak, eq)
+    maxDD := math.max(maxDD, peak - eq)
+
+var table t = table.new(position.top_right, 2, 15, bgcolor=color.new(color.black, 20), border_width=1)
+f_row(r, k, v) =>
+    table.cell(t, 0, r, k, text_color=color.white, text_size=size.small)
+    table.cell(t, 1, r, v, text_color=color.white, text_size=size.small)
+if barstate.islast
+    f_row(0, "Model", isLab ? "Lab (8:30 / 9:50-11:00)" : "v4/v5 (9:30-10:10)")
+    f_row(1, "Sessions tested", str.tostring(dDays))
+    f_row(2, "1 Sweep", str.tostring(dSweep))
+    f_row(3, "2 BOS", str.tostring(dBos))
+    f_row(4, "3 FVG", str.tostring(dFvg))
+    f_row(5, "Orders (risk ok)", str.tostring(dRiskOk))
+    f_row(6, "Stop", stopMode == "Fixed points" ? "Fixed " + str.tostring(fixedStop) + " pts" : stopMode + " (max " + str.tostring(maxRiskPts) + ")")
+    f_row(7, "Sweep level", sweepLvl)
+    f_row(8, "Displacement", useDisp ? "On, body > " + str.tostring(dispMult) + "× avg(" + str.tostring(dispLen) + ")" : "Off")
+    f_row(9, "Exit", exitMode)
+    f_row(10, "Setups filled", str.tostring(nSetups) + (nSetups > 0 ? " · " + str.tostring(math.round(100.0 * nWins / nSetups)) + "% won" : ""))
+    f_row(11, "Net per contract", "$" + str.tostring(strategy.netprofit / qtyN, "#,##0.00"))
+    f_row(12, "Profit factor", grossL > 0 ? str.tostring(grossW / grossL, "0.00") : "n/a")
+    f_row(13, "Max DD per contract", "$" + str.tostring(maxDD, "#,##0.00"))
+    f_row(14, "Contracts", str.tostring(qtyN))
+
+// ---- Visuals ----
+bgcolor(manip ? color.new(color.red, 88) : na, title="Manipulation 9:30-9:50 (no entries)")
+bgcolor(macro and not manip ? color.new(color.green, 90) : na, title="Entry window")
+plot(aH, "Asian H", color.new(color.purple, 40), style=plot.style_linebr)
+plot(aL, "Asian L", color.new(color.purple, 40), style=plot.style_linebr)
+plot(lH, "London H", color.new(color.teal, 40), style=plot.style_linebr)
+plot(lL, "London L", color.new(color.teal, 40), style=plot.style_linebr)
+plot(pdH, "Prior-day H", color.new(color.orange, 40), style=plot.style_linebr)
+plot(pdL, "Prior-day L", color.new(color.orange, 40), style=plot.style_linebr)
+plot(mOpen, "Midnight open", color.new(color.gray, 50), style=plot.style_linebr)
+plot(pos != 0 and not na(tp1Px) ? tp1Px : na, "TP1 (half)", color.new(color.green, 0), style=plot.style_linebr, linewidth=2)
