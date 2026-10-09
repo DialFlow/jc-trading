@@ -31,6 +31,9 @@ function cutBars() {
       console.log(`${tag} BOARD:`, (await g('#lv-board')).slice(0, 600));
       console.log(`${tag} TICKER:`, await g('#lv-ticker'));
       console.log(`${tag} BANNER:`, await g('#lv-banner'));
+      console.log(`${tag} TRADE PLAN:`, (await g('#lv-plan')).slice(0, 900));
+      console.log(`${tag} GAP IDEAS:`, (await g('#lv-gaps')).slice(0, 700));
+      console.log(`${tag} plan lines on chart:`, await p.evaluate(() => [...document.querySelectorAll('#lv-chart text')].filter(x => /est.|BUY|SELL|stop|TP|trigger/.test(x.textContent)).map(x => x.textContent).join(' | ')));
       console.log(`${tag} PBP notes:`, await p.evaluate(() => document.querySelectorAll('#lv-pbp .rpn').length), '| first:', (await g('#lv-pbp .rpn')).slice(0, 300));
       console.log(`${tag} CONF:`, (await g('#lv-conf')).slice(0, 300));
     }

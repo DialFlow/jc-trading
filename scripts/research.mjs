@@ -162,5 +162,88 @@ for (const sym of ['ES=F', 'NQ=F']) {
   console.log(`${sym} forecast (walk-forward): ${W.forecasts} forecasts · 60m ${(W.next60.hitRate * 100).toFixed(1)}% vs base ${(W.next60.baseRate * 100).toFixed(1)}% · skill ${W.next60.skill} · race ${(W.liquidityRace.hitRate * 100).toFixed(1)}% vs nearer ${(W.liquidityRace.nearerFirst * 100).toFixed(1)}%`);
   for (const [k, v] of Object.entries(off)) console.log(`   ${k.padEnd(26)} ${String(v.all.n).padStart(4)} trades  win ${(v.all.winRate * 100).toFixed(0)}%  net ${v.all.net}  | with confluence ${v.withConf.n} @ ${(v.withConf.winRate * 100).toFixed(0)}% net ${v.withConf.net}`);
 }
+// C. Gap trades (any hour): every FVG and IFVG from the site's scanFVGs, traded on its FIRST retest.
+//    FVG: price comes back to the near edge → enter there in the gap's direction (bull gap = long), stop 0.1 ATR beyond the
+//    far edge, target 2R. IFVG: a gap that was closed through flips sides → on the first retest of it, trade the new way.
+//    Conservative fills: on the entry candle only the stop counts; stop before target when a candle hits both; time stop
+//    after a fixed number of candles. Costs: $2.50/side + 1 tick slippage on stop exits, in R.
+//    Splits: with / against the 4H trend (4H close vs its 20-candle average) and inside / outside the TJR window.
+const INSTR_PV = { 'ES=F': 50, 'NQ=F': 20 };
+async function loadTf(sym, interval, range) {
+  const r = (await (await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}&includePrePost=true`, { headers: { 'User-Agent': 'Mozilla/5.0' } })).json()).chart.result[0], qq = r.indicators.quote[0];
+  return r.timestamp.map((t, i) => ({ t, o: qq.open[i], h: qq.high[i], l: qq.low[i], c: qq.close[i] })).filter(x => [x.o, x.h, x.l, x.c].every(v => v != null));
+}
+const etMin = t => toBars([[t, 0, 0, 0, 0]])[0].m;
+function atrSeries(bs) { const a = []; for (let i = 0; i < bs.length; i++) { let s = 0, n = 0; for (let k = Math.max(1, i - 13); k <= i; k++) { s += Math.max(bs[k].h, bs[k - 1].c) - Math.min(bs[k].l, bs[k - 1].c); n++; } a.push(n ? s / n : bs[i].h - bs[i].l); } return a; }
+function gapTrades(sym, bars, hold, trendAt, htfGaps, mode = 'edge') {
+  const gaps = core.scanFVGs(bars), atr = atrSeries(bars), pv = INSTR_PV[sym], out = [];
+  const sim = (dir, j, edge, far, kind, g) => {
+    const lng = dir === 'long', b0 = bars[j], buf = 0.1 * atr[g.i];
+    // mid entry: the limit sits at the gap's midpoint; it may fill on a later candle (within the hold) or never
+    if (mode === 'mid') { const mid = (g.lo + g.hi) / 2, end = Math.min(bars.length, j + hold); let k = j;
+      while (k < end && !(lng ? bars[k].l <= mid : bars[k].h >= mid)) k++;
+      if (k >= end) return; j = k; edge = mid; }
+    const bj = bars[j]; if (!bj) return;
+    const entry = lng ? Math.min(bj.o, edge) : Math.max(bj.o, edge), stop = lng ? far - buf : far + buf, risk = lng ? entry - stop : stop - entry;
+    if (!(risk >= 4 * 0.25)) return;
+    const target = lng ? entry + 2 * risk : entry - 2 * risk, cost = 2 * 2.5 / (risk * pv), slip = 0.25 / risk;
+    let R = null;
+    if (lng ? bj.l <= stop : bj.h >= stop) R = -1 - slip;
+    for (let k = j + 1; R == null && k < Math.min(bars.length, j + 1 + hold); k++) { const b = bars[k];
+      if (lng ? b.l <= stop : b.h >= stop) R = -1 - slip; else if (lng ? b.h >= target : b.l <= target) R = 2; }
+    if (R == null) { const e = bars[Math.min(bars.length - 1, j + hold)]; R = (lng ? e.c - entry : entry - e.c) / risk; }
+    const m = etMin(bj.t), size = (g.hi - g.lo) / atr[g.i];
+    // stacked: the entry sits inside an older, still-intact 1H gap pointing the same way
+    const stacked = !!htfGaps && htfGaps.some(h => h.t0 < bj.t && (h.tEnd == null || h.tEnd > bj.t) && h.dir === dir && entry >= h.lo && entry <= h.hi);
+    out.push({ kind, dir, R: R - cost, t: bj.t, withTrend: trendAt(bj.t) === dir, tjr: m >= 590 && m < 660, big: size >= 1, stacked });
+  };
+  for (const g of gaps) {
+    if (g.i < 30) continue;
+    const bull = g.dir === 'bull';
+    // FVG: first touch of the near edge after it formed
+    for (let j = g.i + 1; j < bars.length; j++) { const b = bars[j];
+      if (bull ? b.l <= g.hi : b.h >= g.lo) { sim(bull ? 'long' : 'short', j, bull ? g.hi : g.lo, bull ? g.lo : g.hi, 'fvg', g); break; } }
+    // IFVG: after the close through, first retest of the flipped gap
+    if (g.status === 'disrespected' && g.at != null) for (let j = g.at + 1; j < bars.length; j++) { const b = bars[j];
+      if (bull ? b.h >= g.lo : b.l <= g.hi) { sim(bull ? 'short' : 'long', j, bull ? g.lo : g.hi, bull ? g.hi : g.lo, 'ifvg', g); break; } }
+  }
+  return out;
+}
+const summarize = ts => { const n = ts.length, w = ts.filter(x => x.R > 0).length, pos = ts.filter(x => x.R > 0).reduce((a, x) => a + x.R, 0), neg = -ts.filter(x => x.R <= 0).reduce((a, x) => a + x.R, 0);
+  const srt = ts.slice().sort((x, y) => x.t - y.t), half = srt.length >> 1, avg = a => a.length ? r3(a.reduce((s, x) => s + x.R, 0) / a.length) : 0;
+  return { n, winRate: n ? r3(w / n) : 0, ci: wilson(w, n), avgR: n ? r3(ts.reduce((a, x) => a + x.R, 0) / n) : 0, pf: neg ? r3(pos / neg) : null, halves: [avg(srt.slice(0, half)), avg(srt.slice(half))] }; };
+out.gaps = { method: 'First retest of every fair value gap (scanFVGs: 3-candle gaps ≥ 0.3× ATR) and of every inverse FVG. Entry at the near edge, stop 0.1 ATR beyond the far edge, target 2R, conservative fills, $2.50/side + 1 tick on stops. Breakeven win rate at 2R ≈ 34–36% after costs.', syms: {} };
+for (const sym of ['ES=F', 'NQ=F']) {
+  const h1 = await loadTf(sym, '60m', '730d'), h4 = core.to4h(h1), m15 = await loadTf(sym, '15m', '60d'), m5 = data[sym].map(({ t, o, h, l, c }) => ({ t, o, h, l, c }));
+  const sma = h4.map((_, i) => i >= 19 ? h4.slice(i - 19, i + 1).reduce((a, x) => a + x.c, 0) / 20 : NaN);
+  const trendAt = t => { let lo = 0, hi = h4.length - 1, k = -1; while (lo <= hi) { const mid = (lo + hi) >> 1; if (h4[mid].t + 14400 <= t) { k = mid; lo = mid + 1; } else hi = mid - 1; }
+    return k < 0 || Number.isNaN(sma[k]) ? '' : h4[k].c > sma[k] ? 'long' : 'short'; };
+  // 1H gaps as support/resistance zones over time: FVG = its own direction until closed through; IFVG = the opposite way until voided
+  const g1 = core.scanFVGs(h1).flatMap(g => { const z = [{ dir: g.dir === 'bull' ? 'long' : 'short', lo: g.lo, hi: g.hi, t0: h1[g.i].t + 3600, tEnd: g.at != null && g.status === 'disrespected' ? h1[g.at].t : null }];
+    if (g.status === 'disrespected') z.push({ dir: g.dir === 'bull' ? 'short' : 'long', lo: g.lo, hi: g.hi, t0: h1[g.at].t + 3600, tEnd: g.invEnd != null ? h1[g.invEnd].t : null }); return z; });
+  const res = {};
+  for (const [tf, bs, hold] of [['5m', m5, 36], ['15m', m15, 24], ['1h', h1, 24], ['4h', h4, 18]]) {
+    const ts = gapTrades(sym, bs, hold, trendAt, tf === '5m' || tf === '15m' ? g1 : null), tm = gapTrades(sym, bs, hold, trendAt, null, 'mid');
+    res[tf] = { from: new Date(bs[0].t * 1000).toISOString().slice(0, 10), to: new Date(bs[bs.length - 1].t * 1000).toISOString().slice(0, 10) };
+    for (const kind of ['fvg', 'ifvg']) { const k = ts.filter(x => x.kind === kind);
+      const km = tm.filter(x => x.kind === kind);
+      res[tf][kind] = { all: summarize(k), withTrend: summarize(k.filter(x => x.withTrend)), against: summarize(k.filter(x => !x.withTrend)), outsideTJR: summarize(k.filter(x => !x.tjr)),
+        midEntry: summarize(km), big: summarize(k.filter(x => x.big)), bigWithTrend: summarize(k.filter(x => x.big && x.withTrend)),
+        ...(tf === '5m' || tf === '15m' ? { stacked: summarize(k.filter(x => x.stacked)), stackedWithTrend: summarize(k.filter(x => x.stacked && x.withTrend)) } : {}) };
+      const s = res[tf][kind];
+      console.log(`${sym} ${tf.padEnd(3)} ${kind.padEnd(4)} n ${String(s.all.n).padStart(5)} win ${(s.all.winRate * 100).toFixed(1)}% avgR ${s.all.avgR} · with 4H trend ${s.withTrend.n} @ ${(s.withTrend.winRate * 100).toFixed(1)}% avgR ${s.withTrend.avgR} · against ${s.against.n} avgR ${s.against.avgR}`);
+    }
+  }
+  out.gaps.syms[sym] = res;
+}
+const VARIANTS = ['all', 'withTrend', 'big', 'bigWithTrend', 'stacked', 'stackedWithTrend', 'outsideTJR'];
+out.gaps.proven = [];
+for (const tf of ['5m', '15m', '1h', '4h']) for (const kind of ['fvg', 'ifvg']) for (const v of VARIANTS) {
+  const s = ['ES=F', 'NQ=F'].map(sym => out.gaps.syms[sym][tf][kind][v]).filter(Boolean); if (s.length < 2) continue;
+  const each = s.map(x => x.n >= 100 && x.ci[0] > 0.36 && x.halves[0] > 0 && x.halves[1] > 0);
+  const both = s.every(x => x.avgR > 0);
+  if (both) out.gaps.proven.push({ tf, kind, variant: v, es: s[0], nq: s[1], strict: each });
+}
+console.log('gap variants positive on both contracts:', out.gaps.proven.map(p => `${p.tf} ${p.kind} ${p.variant} ES ${p.es.n}:${p.es.avgR} h${p.es.halves} | NQ ${p.nq.n}:${p.nq.avgR} h${p.nq.halves} strict ${p.strict}`).join('\n  '));
 writeFileSync(here('research.json'), JSON.stringify(out));
 console.log('wrote research.json');

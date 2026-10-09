@@ -391,6 +391,18 @@ body {
 .lv-fct { background: var(--fill); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
 .lv-fct .k { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
 .lv-fct .v { font-size: 18px; font-weight: 800; margin: 2px 0; }
+.lvp { border: 1.5px solid var(--blue); }
+.lvp-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.lvp-title { font-size: 18px; font-weight: 800; line-height: 1.3; margin-bottom: 2px; }
+.lvp-grade { flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; color: #fff; }
+.lvp-grade.gA { background: #248a3d; } .lvp-grade.gB { background: #c98a00; } .lvp-grade.gC { background: #8e8e93; }
+.lvp-tkt { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; margin: 12px 0 8px; }
+.lvp-row { background: var(--fill); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text2); }
+.lvp-row b { font-size: 16px; color: var(--text); } .lvp-row b.bull { color: var(--bull); } .lvp-row b.bear { color: var(--bear); }
+.lvp-row small { font-size: 11px; font-weight: 600; opacity: .8; }
+.lvp-checks summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--blue); padding: 4px 0; }
+.lvp-ck { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 6px; font-size: 13px; padding: 4px 0; border-top: 1px solid var(--border); }
+.lv-gap-edge { border-color: var(--bull); }
 .lv-off { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
 .lv-off-h { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 
@@ -1456,6 +1468,7 @@ select { cursor: pointer; }
 <div class="tab-page" id="page-live">
   <div id="lv-board" class="lv-board"></div>
   <div id="lv-ticker" class="lv-ticker"></div>
+  <div class="card mb-md lvp"><div class="card-body"><div class="lv-h">🎯 TRADE PLAN · <span id="lv-plan-sym"></span></div><div id="lv-plan"></div></div></div>
   <div class="lv-ctrl">
     <div class="mtf-segs" id="lv-sym"></div>
     <div class="mtf-segs" id="lv-tf"></div>
@@ -1476,6 +1489,10 @@ select { cursor: pointer; }
       <div class="card mb-md"><div class="card-body">
         <div class="lv-h">⚠ SETUPS OUTSIDE TJR HOURS · last 24h <span class="fs-12 text-2" id="lv-off-sub"></span></div>
         <div id="lv-off"></div>
+      </div></div>
+      <div class="card mb-md"><div class="card-body">
+        <div class="lv-h">🟣 GAP IDEAS · FVG / IFVG · any hour <span class="fs-12 text-2" id="lv-gap-sub"></span></div>
+        <div id="lv-gaps"></div>
       </div></div>
       <div class="card mb-md"><div class="card-body">
         <div class="lv-h">CONFLUENCES · 5m → Daily</div>
@@ -4053,6 +4070,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   for (const [, p] of pools) if (p > lo - span0 * 0.6 && p < hi + span0 * 0.6) { lo = Math.min(lo, p); hi = Math.max(hi, p); }
   if (order) for (const p of [order.data.stop, order.data.target, order.data.limit]) { lo = Math.min(lo, p); hi = Math.max(hi, p); }
   if (opts.fc) for (const s of opts.fc.band) { lo = Math.min(lo, s[0]); hi = Math.max(hi, s[2]); }
+  if (opts.lines) { const sp = hi - lo; for (const L of opts.lines) if (L.p > lo - sp && L.p < hi + sp) { lo = Math.min(lo, L.p); hi = Math.max(hi, L.p); } }
   const pad = (hi - lo) * 0.05; lo -= pad; hi += pad;
   const n = opts.slots || bars.length, cw = (W - PR) / n, right = W - PR;
   const x = i => i * cw + cw / 2, y = p => PT + (hi - p) / (hi - lo) * (H - PT - PB);
@@ -4123,6 +4141,8 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   });
   const last = bars[bars.length - 1];
   svg += `<line x1="0" x2="${right}" y1="${y(last.c)}" y2="${y(last.c)}" stroke="var(--text2)" stroke-dasharray="2 2" stroke-width="0.6"/>`;
+  if (opts.lines) for (const L of opts.lines) { if (!(L.p >= lo && L.p <= hi)) continue;
+    svg += `<line x1="0" x2="${right}" y1="${y(L.p)}" y2="${y(L.p)}" stroke="${L.col}" stroke-width="1.3" stroke-dasharray="6 4"/><rect x="${right + 2}" y="${y(L.p) - 8}" width="${PR - 4}" height="16" rx="3" fill="${L.col}"/><text x="${right + 6}" y="${y(L.p) + 4}" class="mtf-ax" style="fill:#fff">${esc(L.label)}</text>`; }
   // forecast: middle-50% band and median path of similar past sessions, in the empty slots after the last candle
   if (opts.fc && opts.fc.band.length) {
     const i0 = bars.length - 1, pts = [[i0, last.c, last.c, last.c], ...opts.fc.band.map((s, k) => [i0 + k + 1, ...s])].filter(p => x(p[0]) <= right);
@@ -4524,7 +4544,18 @@ function lvRender() {
   document.getElementById('lv-fc').hidden = !lvFc;
   if (lvFc) document.getElementById('lv-fc-body').innerHTML = F.html;
   const offShow = !R.evs.some(e => e.type === 'order') && (R.off || []).find(o => o.order.t >= R.day[0].t);
-  if (lvTf === '5m') drawSetupChart(document.getElementById('lv-chart'), R.day, R.st, offShow ? [...R.evs, ...offShow.evs] : R.evs, { slots: Math.max(R.session ? 61 : 0, R.day.length + (F && F.band ? 13 : 0)), fc: F && F.band ? { band: F.band, n: F.n, label: F.label } : null });
+  lvConf(R.sym);   // sets lvConfC for the gap ideas' timeframe check
+  const GI = lvGapIdeas(R.sym), A = lvAnalyze(R, (() => { try { return readiness(R.sym); } catch(e) { return null; } })(), now, GI);
+  document.getElementById('lv-plan-sym').textContent = lvName(R.sym);
+  document.getElementById('lv-plan').innerHTML = lvPlanHtml(R, A);
+  // levels for a plan that isn't already drawn as a position box
+  const P = A.plan, lines = P && (P.est || A.kind === 'gap') ? [
+    ...(A.trigger && A.kind === 'forming' && A.trigger.p !== P.entry ? [{ p: A.trigger.p, label: 'trigger', col: '#bf5af2' }] : []),
+    { p: P.entry, label: (P.est ? 'est. ' : '') + (P.dir === 'long' ? 'BUY ' : 'SELL ') + P.entry.toFixed(2), col: '#0a84ff' },
+    { p: P.stop, label: 'stop −' + P.risk.toFixed(0), col: '#c9302c' },
+    ...(P.tp1 != null ? [{ p: P.tp1, label: '½ ' + P.tp1Name, col: '#30a14e' }] : []),
+    { p: P.target, label: 'TP ' + P.targetName, col: '#248a3d' }] : null;
+  if (lvTf === '5m') drawSetupChart(document.getElementById('lv-chart'), R.day, R.st, offShow ? [...R.evs, ...offShow.evs] : R.evs, { slots: Math.max(R.session ? 61 : 0, R.day.length + (F && F.band ? 13 : 0)), fc: F && F.band ? { band: F.band, n: F.n, label: F.label } : null, lines });
   else drawCandles('lv-chart', R.sym, lvTf, { n: 80, h: 340 });
   // play-by-play: one note per candle, newest first
   const tfl = LV_TFS.find(x => x[0] === lvTf)[1];
@@ -4534,9 +4565,175 @@ function lvRender() {
   else document.getElementById('lv-pbp').innerHTML = lvHtfNotes(R.sym, lvTf);
   document.getElementById('lv-conf').innerHTML = lvConf(R.sym);
   document.getElementById('lv-off-sub').textContent = `· ${lvName(R.sym)}`;
+  document.getElementById('lv-gap-sub').textContent = `· ${lvName(R.sym)}`;
+  document.getElementById('lv-gaps').innerHTML = lvGapHtml(R, GI);
   document.getElementById('lv-off').innerHTML = lvOffHtml(R, R.off || []) + `<div class="fs-12 text-2" style="margin-top:6px">TJR only trades 9:50–11:00. These are the same sweep → break → gap rules at other hours, so you can watch and learn; an unfilled order is dropped after 1 hour and a trade is closed after 2. ${offShow ? 'The chart shows the latest one. ' : ''}History per session: Lab → Forecast study.</div>`;
   document.getElementById('lv-steps').innerHTML = stepsHtml(R.st, R.evs, effM(R));
 }
+// ---------- TRADE PLAN: one clear call per contract from the TJR rules, graded by the conditions behind it ----------
+// Signals come from the strategy engine (same rules as the Lab/backtest). The grade counts conditions; only the track
+// record is a tested edge (Lab → Forecast study shows direction calls on their own don't beat a coin flip).
+const LV_TICK = 0.25;
+// stop / half-off / target for an entry, the way the engine would set them (used for estimates before the order exists)
+function lvPlanFrom(R, dir, entry) {
+  const r = R.c.r, st = R.st, lng = dir === 'long', L = st.levels;
+  let stop = r.stopMode === 'Fixed points' ? (lng ? entry - r.fixedStop : entry + r.fixedStop)
+    : lng ? st.sweepLow - LV_TICK : st.sweepHigh + LV_TICK;
+  if (Number.isNaN(stop)) stop = lng ? entry - r.fixedStop : entry + r.fixedStop;
+  const risk = Math.abs(entry - stop);
+  const chosen = (r.sweepLvl === 'Any' ? [['Asian high', L.asianH, 'Asian low', L.asianL], ['London high', L.londonH, 'London low', L.londonL], ['Prior-day high', L.pdH, 'Prior-day low', L.pdL]]
+    : r.sweepLvl === 'Asian H/L' ? [['Asian high', L.asianH, 'Asian low', L.asianL]] : r.sweepLvl === 'London H/L' ? [['London high', L.londonH, 'London low', L.londonL]] : [['Prior-day high', L.pdH, 'Prior-day low', L.pdL]])
+    .map(x => lng ? [x[0], x[1]] : [x[2], x[3]]).filter(([, p]) => p != null && !Number.isNaN(p) && (lng ? p >= entry + risk : p <= entry - risk)).sort((a, b) => lng ? a[1] - b[1] : b[1] - a[1])[0];
+  const target = chosen ? chosen[1] : lng ? entry + 2 * risk : entry - 2 * risk, targetName = chosen ? chosen[0] : '2R';
+  const pools = [['Asian high', L.asianH], ['Asian low', L.asianL], ['London high', L.londonH], ['London low', L.londonL], ['Prior-day high', L.pdH], ['Prior-day low', L.pdL], ['Midnight open', L.mOpen], ['NY high', L.nyH], ['NY low', L.nyL]]
+    .filter(([, p]) => p != null && !Number.isNaN(p) && (lng ? p >= entry + risk : p <= entry - risk)).sort((a, b) => lng ? a[1] - b[1] : b[1] - a[1]);
+  const ex = R.c.exit || 'rules', p1 = pools[0];
+  let tp1 = null, tp1Name = null, tgt = target, tgtName = targetName;
+  if (ex === 'liq') { tgt = p1 ? p1[1] : (lng ? entry + risk : entry - risk); tgtName = p1 ? p1[0] : '1R'; }
+  if (ex === 'scale' && p1 && (lng ? p1[1] < target : p1[1] > target)) { tp1 = p1[1]; tp1Name = p1[0]; }
+  return { dir, entry, stop, risk, tp1, tp1Name, target: tgt, targetName: tgtName, est: true };
+}
+function lvAnalyze(R, rd, now, GI) {
+  const st = R.st, W = WIN(), m = R.sameDay ? now.m : 1439, stg = lvStageOf(st, m), r = R.c.r, rv = viaExit(r, R.c.exit);
+  const robust = isRobust(rv), inWin = m >= W.entryStart && m < W.entryEnd, rt = tvLive(), fresh = rt || R.ageMin <= 6;
+  const offNow = (R.off || []).find(o => !o.ex && !o.cn);   // a live setup outside TJR hours
+  let kind = 'none', plan = null, head = '', why = '', trigger = null;
+  const o = st.pending || st.pos;
+  if (o) { kind = st.pos ? 'in' : 'order';
+    plan = { dir: o.dir, entry: o.limit ?? o.entry, stop: o.stop, risk: Math.abs((o.limit ?? o.entry) - (o.stop0 ?? o.stop)), tp1: o.tp1, tp1Name: o.tp1Name, target: o.target, targetName: o.targetName, est: false }; }
+  else if (offNow) { kind = 'off'; const d = offNow.order.data;
+    plan = { dir: d.dir, entry: d.limit, stop: d.stop, risk: Math.abs(d.limit - d.stop), tp1: d.tp1, tp1Name: d.tp1Name, target: d.target, targetName: d.targetName, est: false, filled: !!offNow.fl }; }
+  else if (stg.k >= 1 && stg.k <= 3 && R.sameDay && m < W.entryEnd && R.st.levels) {
+    kind = 'forming';
+    const lng = stg.dir === 'long';
+    if (stg.k === 1 && stg.dir) { const lvl = lng ? st.refH : st.refL; if (!Number.isNaN(lvl)) { trigger = { p: lvl, text: `5-minute close ${lng ? 'above' : 'below'} ${lvl.toFixed(2)}` }; plan = lvPlanFrom(R, stg.dir, lvl); } }
+    else if (stg.k === 2 && stg.dir) { trigger = { p: R.last.c, text: `a ${lng ? 'bullish' : 'bearish'} gap (FVG) on the next candles` }; plan = lvPlanFrom(R, stg.dir, R.last.c); }
+    else if (stg.k === 3) { const mid = !Number.isNaN(st.fvgMidL) ? st.fvgMidL : st.fvgMidS, d = !Number.isNaN(st.fvgMidL) ? 'long' : 'short';
+      trigger = { p: mid, text: m < W.entryStart ? `the entry window at ${W.f(W.entryStart)} (gap already formed)` : 'the order on this candle close' }; plan = lvPlanFrom(R, d, mid); }
+  }
+  const gi = GI && GI.ideas.find(i => i.tier === 'edge');
+  if (!plan && gi) { kind = 'gap'; plan = { dir: gi.dir, entry: gi.entry, stop: gi.stop, risk: gi.risk, tp1: null, tp1Name: null, target: gi.target, targetName: '2R', est: false, gap: gi }; }
+  // conditions: from Trade Readiness, plus timing, data and confluence at this moment
+  const checks = [];
+  const add = (label, state, text) => checks.push({ label, state, text });
+  if (kind === 'gap') { const s = plan.gap.stats; add('Track record', 'ok', `Gap study: ${s.n} trades like this, ${Math.round(s.winRate * 100)}% won, ${s.avgR >= 0 ? '+' : ''}${s.avgR}R each, profitable in both halves of 2 years (ES and NQ)`); }
+  else add('Track record', robust ? 'ok' : 'bad', robust ? `${lvName(R.sym)} with these settings passed every history check (${rv.stats.trades} trades, ${Math.round(rv.stats.winRate * 100)}% won)` : `No proven edge on ${lvName(R.sym)}: the rules fire, but history doesn't back them`);
+  if (kind === 'gap') add('TJR hours', 'wait', 'A gap setup, not a TJR one: any hour'); else add('TJR hours', kind === 'off' ? 'bad' : inWin || kind === 'in' ? 'ok' : kind === 'forming' && m < W.entryEnd ? 'wait' : 'na', kind === 'off' ? `Outside ${W.eTxt}: ${esc(offNow.sess)}` : `Entries ${W.eTxt}`);
+  add('Live data', rt ? 'ok' : R.ageMin <= 6 ? 'wait' : 'bad', rt ? 'TradingView real-time feed' : `Candles are ~${Math.max(0, Math.round(R.ageMin))} min behind (Yahoo): confirm on your TradingView chart before acting`);
+  if (plan) {
+    const cf = lvConfAt(R.sym, R.last.t, plan.dir), al = cf.filter(x => x.aligned).length;
+    add('Confluence', al >= 2 ? 'ok' : al === 1 ? 'wait' : 'bad', `${al} of ${cf.length} timeframes (5m/15m/1H/4H) aligned ${plan.dir === 'long' ? 'bullish' : 'bearish'}: ${cf.map(x => `${x.tf === '1h' ? '1H' : x.tf === '4h' ? '4H' : x.tf} ${x.n}/6`).join(' · ')}`);
+    const ms = window.mtfScan?.syms?.[R.sym], want = plan.dir === 'long' ? 'Bullish' : 'Bearish';
+    if (ms) add('HTF FVG bias', ms.label === want ? 'ok' : ms.label === 'Mixed' ? 'wait' : 'bad', `Higher-timeframe gaps read ${ms.label}`);
+    const rr = Math.abs(plan.target - plan.entry) / plan.risk, minRR = getRisk().rr;
+    const I0 = window.TJR.INSTR[R.sym], per0 = plan.risk * I0.pointValue / 10 + 1.5, lim = getRisk().trade, nMax = Math.min(Math.floor(lim / per0), getPlan().base.maxMicro);
+    add('Risk fits your limit', nMax >= 1 ? 'ok' : 'bad', `Stop ${plan.risk.toFixed(1)} pts = $${Math.round(per0)} per ${I0.micro}; your limit $${lim} → ${nMax >= 1 ? 'up to ' + nMax + ' ' + I0.micro : 'even 1 is over it'}`);
+    add('Reward : risk', rr >= minRR ? 'ok' : 'bad', `${rr.toFixed(1)}R to the final target (your minimum ${minRR}R)`);
+  }
+  for (const c of (rd?.checks || []).filter(c => ['News clear', 'Your daily bias'].includes(c.label))) add(c.label, c.state, c.text);
+  const bad = checks.filter(c => c.state === 'bad'), ok = checks.filter(c => c.state === 'ok'), counted = checks.filter(c => c.state !== 'na');
+  const hardBad = bad.find(c => c.label === 'Track record' || c.label === 'Risk fits your limit');
+  let grade = !plan ? '' : hardBad || kind === 'off' || bad.length >= 3 ? 'C' : bad.length === 0 && ok.length >= counted.length - 1 ? 'A' : 'B';
+  if (kind === 'gap' && grade === 'A') grade = 'B';   // a small tested edge, below the TJR model's
+  // size: micros that fit the risk limit and the plan
+  const I = window.TJR.INSTR[R.sym], P = getPlan();
+  const size = plan ? (() => { const per = plan.risk * I.pointValue / 10 + 1.5, n = Math.min(Math.floor(getRisk().trade / per), P.base.maxMicro); return { n, per }; })() : null;
+  const side = plan ? (plan.dir === 'long' ? 'BUY' : 'SELL') : '';
+  if (kind === 'in') { head = `🟢 In the trade: ${plan.dir.toUpperCase()} from ${plan.entry.toFixed(2)}`; why = 'Manage it: stop and targets below. Flat by 12:00.'; }
+  else if (kind === 'order') { head = `${grade === 'A' ? '🟢' : grade === 'B' ? '🟡' : '🔴'} Rules say ${side} LIMIT ${plan.entry.toFixed(2)}`; why = grade === 'A' ? 'Every condition you track is in place.' : grade === 'B' ? 'The rules fired; some conditions are neutral or against. Consider a smaller size.' : `Rules fired, but ${hardBad ? hardBad.label.toLowerCase() + ' fails' : bad.length + ' conditions are against'}: stand aside or learn from it.`; }
+  else if (kind === 'off') { head = `🟠 Outside TJR hours: ${side} LIMIT ${plan.entry.toFixed(2)}${plan.filled ? ' (filled)' : ''}`; why = `Same rules at ${offNow.order.hm} (${esc(offNow.sess)}). Not part of the tested TJR model: watch and learn, or treat as a lower-grade idea.`; }
+  else if (kind === 'gap') { head = `🟣 Gap setup (any hour): ${side} LIMIT ${plan.entry.toFixed(2)}`; why = `${esc(plan.gap.label)}: zone ${plan.gap.lo.toFixed(2)}–${plan.gap.hi.toFixed(2)}, ${plan.gap.dist.toFixed(1)} pts from price. The order only fills if price comes back to the gap.`; }
+  else if (kind === 'forming' && plan) { head = `🔵 Setup forming: ${plan.dir.toUpperCase()} · needs ${trigger.text}`; why = `${LV_STAGE[stg.k]}. If it completes, the order would be roughly as below (estimate until the gap forms).`; }
+  else { const evs = R.evs, ex = evs.find(e => e.type === 'exit');
+    head = ex ? `✅ Done for today: ${ex.text}` : !R.sameDay || m >= 720 ? '⚪ Nothing to do now' : m < W.watchStart ? '⏳ Pre-market: no setup yet' : '⚪ No setup right now';
+    why = ex ? '' : m < W.watchStart ? `The rules start watching for a sweep at ${W.wTxt}; entries ${W.eTxt}.` : m >= W.entryEnd ? `The TJR entry window (${W.eTxt}) is over. Setups outside it show here in orange.` : 'Waiting for price to sweep a level.'; }
+  return { kind, plan, head, why, grade, checks, size, trigger, I, robust };
+}
+function lvPlanHtml(R, A) {
+  const p = A.plan, f = v => v.toFixed(2), pts = v => Math.abs(v - p.entry).toFixed(1);
+  const icon = s => s === 'ok' ? '<span class="cf-b">✓</span>' : s === 'bad' ? '<span class="cf-s">✗</span>' : s === 'wait' ? '<span class="text-2">~</span>' : '<span class="text-2">·</span>';
+  const ticket = p ? `<div class="lvp-tkt">
+      <div class="lvp-row"><span>${p.dir === 'long' ? 'Buy' : 'Sell'} limit${p.est ? ' (est.)' : ''}</span><b class="mono">${f(p.entry)}</b></div>
+      <div class="lvp-row"><span>Stop</span><b class="mono bear">${f(p.stop)} <small>−${pts(p.stop)} pts</small></b></div>
+      ${p.tp1 != null ? `<div class="lvp-row"><span>Take half · ${esc(p.tp1Name)}</span><b class="mono bull">${f(p.tp1)} <small>+${pts(p.tp1)} · ${(Math.abs(p.tp1 - p.entry) / p.risk).toFixed(1)}R</small></b></div>` : ''}
+      <div class="lvp-row"><span>Target · ${esc(p.targetName)}</span><b class="mono bull">${f(p.target)} <small>+${pts(p.target)} · ${(Math.abs(p.target - p.entry) / p.risk).toFixed(1)}R</small></b></div>
+      <div class="lvp-row"><span>Size (your $${getRisk().trade} limit)</span><b>${A.size.n >= 1 ? `up to ${A.size.n} ${A.I.micro}` : `even 1 ${A.I.micro} is over it`} <small>$${Math.round(A.size.per)} risk each</small></b></div>
+    </div>` : '';
+  return `<div class="lvp-head"><div><div class="lvp-title">${A.head}</div><div class="fs-13 text-2">${A.why}</div></div>${A.grade ? `<div class="lvp-grade g${A.grade}" title="A = every condition in place · B = some neutral/against · C = a key check fails or outside TJR hours">${A.grade}</div>` : ''}</div>
+    ${ticket}
+    ${!A.plan ? '' : `<details class="lvp-checks" open><summary>Why: ${A.checks.filter(c => c.state === 'ok').length} of ${A.checks.filter(c => c.state !== 'na').length} conditions met</summary>${A.checks.map(c => `<div class="lvp-ck">${icon(c.state)}<div><b>${c.label}</b> <span class="text-2">${c.text}</span></div></div>`).join('')}</details>`}
+    <div class="fs-12 text-2" style="margin-top:8px">From your TJR rules (${esc(btLabel(R.c.r))}). The grade counts your conditions; only the track record is a tested edge. Not financial advice: you decide and place every trade.</div>`;
+}
+// ---------- GAP IDEAS (any hour): FVG / IFVG imbalances across timeframes, graded by the gap study in research.json ----------
+// Only "1H gap ≥ 1 ATR with the 4H trend" passed the study's checks (both contracts, both halves of 2 years). 15m gaps stacked
+// inside a same-way 1H gap with the 4H trend were positive on a small sample. Every other gap trade lost money after costs.
+function lvAtr(bs) { const a = []; for (let i = 0; i < bs.length; i++) { let s = 0, n = 0; for (let k = Math.max(1, i - 13); k <= i; k++) { s += Math.max(bs[k].h, bs[k - 1].c) - Math.min(bs[k].l, bs[k - 1].c); n++; } a.push(n ? s / n : bs[i].h - bs[i].l); } return a; }
+function lvTrend4h(sym) {
+  const b = mtf?.syms[sym]?.tfs['4h']?.bars; if (!b || b.length < 21) return '';
+  const k = b.length - 2, sma = b.slice(k - 19, k + 1).reduce((a, x) => a + x.c, 0) / 20;   // last closed 4H candle
+  return b[k].c > sma ? 'long' : 'short';
+}
+function lvGapIdeas(sym) {
+  const S = mtf?.syms[sym]; if (!S) return { ideas: [], trend: '' };
+  const trend = lvTrend4h(sym), G = lvResearch?.gaps?.syms?.[sym] || {}, ideas = [];
+  const px0 = (S.tfs['5m']?.bars || S.tfs['15m'].bars).slice(-1)[0].c;
+  const zones1h = []; // live 1H zones for stacking: FVG its way until closed through; IFVG the other way until voided
+  const h1 = S.tfs['1h'];
+  if (h1) for (const g of h1.gaps) { if (g.status !== 'disrespected') zones1h.push({ dir: g.dir === 'bull' ? 'long' : 'short', lo: g.lo, hi: g.hi });
+    else if (g.invEnd == null) zones1h.push({ dir: g.dir === 'bull' ? 'short' : 'long', lo: g.lo, hi: g.hi }); }
+  for (const tf of ['5m', '15m', '1h', '4h']) {
+    const d = S.tfs[tf]; if (!d) continue;
+    const atr = lvAtr(d.bars), n = d.bars.length, recent = n - 200;
+    for (const g of d.gaps) {
+      if (g.i < recent) continue;
+      const bull = g.dir === 'bull';
+      // FVG not yet retested → trade the first touch of its near edge; IFVG (closed through) not yet retested → trade it the other way
+      let kind = null, dir, edge, far;
+      if (g.status === 'untested') { kind = 'fvg'; dir = bull ? 'long' : 'short'; edge = bull ? g.hi : g.lo; far = bull ? g.lo : g.hi; }
+      else if (g.status === 'disrespected' && g.invEnd == null) {
+        const after = d.bars.slice(g.at + 1), touched = after.some(b => bull ? b.h >= g.lo : b.l <= g.hi);
+        if (!touched) { kind = 'ifvg'; dir = bull ? 'short' : 'long'; edge = bull ? g.lo : g.hi; far = bull ? g.hi : g.lo; } }
+      if (!kind) continue;
+      if (dir === 'long' ? edge > px0 : edge < px0) continue;   // price has to come back to it
+      const buf = 0.1 * atr[g.i], stop = dir === 'long' ? far - buf : far + buf, risk = Math.abs(edge - stop); if (risk < 1) continue;
+      const big = (g.hi - g.lo) / atr[g.i] >= 1, withTrend = trend === dir;
+      const stacked = (tf === '5m' || tf === '15m') && zones1h.some(z => z.dir === dir && edge >= z.lo && edge <= z.hi);
+      // which tested group this gap belongs to, best first
+      const st = G[tf]?.[kind] || {};
+      let tier = 'none', group = 'all', label = `${tf === '1h' ? '1H' : tf === '4h' ? '4H' : tf} ${kind === 'fvg' ? 'FVG' : 'IFVG'} first retest`;
+      if (tf === '1h' && kind === 'fvg' && big && withTrend) { tier = 'edge'; group = 'bigWithTrend'; label = '1H gap ≥ 1 ATR, with the 4H trend'; }
+      else if (tf === '15m' && kind === 'fvg' && stacked && withTrend) { tier = 'promising'; group = 'stackedWithTrend'; label = '15m gap inside a 1H gap, with the 4H trend'; }
+      else if (stacked && st.stacked) group = withTrend ? 'stackedWithTrend' : 'stacked';
+      else if (big) group = withTrend ? 'bigWithTrend' : 'big';
+      else group = withTrend ? 'withTrend' : 'against';
+      ideas.push({ tf, kind, dir, lo: g.lo, hi: g.hi, entry: edge, stop, risk, target: dir === 'long' ? edge + 2 * risk : edge - 2 * risk, dist: Math.abs(px0 - edge),
+        big, withTrend, stacked, tier, label, stats: st[group] || st.all, group, formed: tf === '1h' || tf === '4h' ? etLabel(d.bars[g.i].t, true) : etLabel(d.bars[g.i].t, false) });
+    }
+  }
+  const rank = { edge: 0, promising: 1, none: 2 };
+  ideas.sort((a, b) => rank[a.tier] - rank[b.tier] || a.dist - b.dist);
+  return { ideas, trend, px: px0 };
+}
+function lvGapHtml(R, GI) {
+  if (!lvResearch?.gaps) return '<div class="fs-12 text-2">Loading the gap study…</div>';
+  const nm = lvName(R.sym), f = v => v.toFixed(2), pct = v => Math.round(v * 100) + '%';
+  const tfConf = ['15m', '1h'].map(tf => { const c = lvConfC.C?.[tf]; return c ? { tf, v: c.bull >= 4 && c.bull > c.bear ? 'long' : c.bear >= 4 && c.bear > c.bull ? 'short' : '' } : null; }).filter(Boolean);
+  const clash = GI.trend && tfConf.find(x => x.v && x.v !== GI.trend);
+  const top = GI.ideas.filter(i => i.tier !== 'none').slice(0, 3), ctx = GI.ideas.filter(i => i.tier === 'none').slice(0, 3);
+  const card = (i) => { const s = i.stats;
+    const badge = i.tier === 'edge' ? '<span class="badge badge-bull">✔ tested edge</span>' : i.tier === 'promising' ? '<span class="badge badge-blue">~ promising · small sample</span>' : '<span class="badge badge-neutral">context only · no tested edge</span>';
+    return `<div class="lv-off${i.tier === 'edge' ? ' lv-gap-edge' : ''}">
+      <div class="lv-off-h">${badge}<b>${esc(i.label)}</b><span class="badge ${i.dir === 'long' ? 'badge-bull' : 'badge-bear'}">${i.dir.toUpperCase()}</span></div>
+      <div class="fs-13">Zone ${f(i.lo)}–${f(i.hi)} (formed ${i.formed}) · ${i.dist.toFixed(1)} pts away${i.withTrend ? '' : ' · <span class="cf-s">against the 4H trend</span>'}${i.stacked ? ' · inside a 1H gap' : ''}</div>
+      ${i.tier !== 'none' ? `<div class="fs-13">${i.dir === 'long' ? 'Buy' : 'Sell'} limit <b class="mono">${f(i.entry)}</b> · stop <span class="mono bear">${f(i.stop)}</span> (−${i.risk.toFixed(1)}) · target <span class="mono bull">${f(i.target)}</span> (2R)</div>` : ''}
+      ${s ? `<div class="fs-12 text-2">History (${esc(i.group === 'all' ? 'all such gaps' : i.group.replace(/([A-Z])/g, ' $1').toLowerCase())}): ${s.n} trades, ${pct(s.winRate)} won (needs ~36% at 2R), ${s.avgR >= 0 ? '+' : ''}${s.avgR}R per trade${s.halves ? `, halves ${s.halves.map(h => (h >= 0 ? '+' : '') + h).join(' / ')}` : ''}.</div>` : ''}
+    </div>`; };
+  return `<div class="fs-12" style="margin-bottom:8px">4H trend: <b class="${GI.trend === 'long' ? 'bull' : GI.trend === 'short' ? 'bear' : ''}">${GI.trend === 'long' ? 'up' : GI.trend === 'short' ? 'down' : 'unclear'}</b>${clash ? ` · <span class="cf-s">⚠ timeframes disagree: ${clash.tf === '1h' ? '1H' : clash.tf} confluence leans ${clash.v === 'long' ? 'bullish' : 'bearish'}</span>` : ''}</div>
+    ${top.length ? top.map(card).join('') : `<div class="fs-13 text-2" style="margin-bottom:8px">No tested gap setup on ${nm} right now. The one that held up: a 1H gap of at least 1 ATR that price hasn't come back to yet, in the direction of the 4H trend.</div>`}
+    ${ctx.length ? `<details class="lvp-checks"><summary>Other nearby gaps (${ctx.length}) · context only</summary>${ctx.map(card).join('')}</details>` : ''}
+    <div class="fs-12 text-2" style="margin-top:6px">Tested on ${(lvResearch.gaps.syms[R.sym]['1h'].fvg.all.n + lvResearch.gaps.syms[R.sym]['1h'].ifvg.all.n).toLocaleString()} 1H and thousands of 5m/15m/4H gaps (Lab → Forecast study): plain gap retests, IFVGs and midpoint entries lost money after costs. Entry at the gap edge, stop just past the far edge, 2R target. Any hour; not part of the TJR rules.</div>`;
+}
+
 // ---------- setups outside TJR hours: the same rules run around the clock (engine anyTime), shown with a warning ----------
 const LV_ANY = { anyTime: true, maxTrades: 50, restBars: 12, holdBars: 24 };
 const lvSessOf = m => m >= 1080 || m < 180 ? 'Asian (6 pm–3 am)' : m < 510 ? 'London (3–8:30 am)' : m < 590 ? 'NY open (8:30–9:50)' : m < 660 ? 'TJR window (9:50–11:00)' : 'NY late (11 am–5 pm)';
