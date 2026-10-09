@@ -393,6 +393,27 @@ body {
 .lv-fct .v { font-size: 18px; font-weight: 800; margin: 2px 0; }
 .lvp { border: 1.5px solid var(--blue); }
 .wl-x { border: 0; background: transparent; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0 2px; } .wl-x:hover { color: var(--bear); }
+.ev-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 12px; }
+@media (min-width: 900px) { .ev-grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); } }
+.ev-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ev-big { font: 800 40px ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.05; } .ev-big.blue { color: var(--blue); } .ev-big.warn { color: var(--warn); }
+.ev-zone { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.ev-gauge { position: relative; display: grid; grid-template-columns: 1fr 1fr 2fr 2fr; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 14px; }
+.ev-gauge .z1 { background: rgba(52,199,89,0.55); } .ev-gauge .z2 { background: rgba(0,122,255,0.45); } .ev-gauge .z3 { background: rgba(255,149,0,0.55); } .ev-gauge .z4 { background: rgba(255,59,48,0.55); }
+.ev-gauge i { position: absolute; top: -3px; bottom: -3px; width: 4px; margin-left: -2px; background: var(--text); border-radius: 2px; }
+.ev-ticks { display: grid; grid-template-columns: 1fr 1fr 2fr 2fr 0; font-size: 10px; color: var(--text3); margin-top: 3px; }
+.ev-moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin-top: 12px; }
+.ev-moves > div { background: var(--fill); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; } .ev-moves b { font-size: 16px; }
+.ev-p { font-size: 14px; line-height: 1.55; margin: 0 0 10px; }
+.hm-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: stretch; }
+.hm-top > #hm-meter > .hm-meter { margin-bottom: 10px; height: calc(100% - 10px); box-sizing: border-box; }
+.hm-pick { margin-bottom: 10px; display: flex; } .hm-pick select { min-width: 220px; max-width: 300px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: 600 13px Inter, system-ui, sans-serif; padding: 0 12px; }
+@media (max-width: 760px) { .hm-top { grid-template-columns: minmax(0, 1fr); } .hm-pick select { max-width: none; width: 100%; height: 42px; } }
+.hm-day { border: 1.5px solid var(--blue); }
+.hd-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.hd-sec { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--text2); margin: 14px 0 4px; }
+.hd-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.5; }
+@media (max-width: 520px) { .hd-row { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 .hm-meter { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
 .hm-meter.hot { border: 1.5px solid var(--bull); }
 .hm-cd { text-align: center; min-width: 96px; } .hm-big { font: 800 26px ui-monospace, SFMono-Regular, Menlo, monospace; } .hm-lbl { font-size: 11px; color: var(--text2); max-width: 130px; }
@@ -401,6 +422,27 @@ body {
 .hm-ticks { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 2px; }
 .hm-other { font-size: 13px; font-weight: 700; text-align: center; background: var(--fill); border-radius: 10px; padding: 8px 10px; cursor: pointer; } .hm-other small { font-weight: 500; color: var(--text2); font-size: 11px; }
 @media (max-width: 640px) { .wl-x { border: 0; background: transparent; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0 2px; } .wl-x:hover { color: var(--bear); }
+.ev-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 12px; }
+@media (min-width: 900px) { .ev-grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); } }
+.ev-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ev-big { font: 800 40px ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.05; } .ev-big.blue { color: var(--blue); } .ev-big.warn { color: var(--warn); }
+.ev-zone { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.ev-gauge { position: relative; display: grid; grid-template-columns: 1fr 1fr 2fr 2fr; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 14px; }
+.ev-gauge .z1 { background: rgba(52,199,89,0.55); } .ev-gauge .z2 { background: rgba(0,122,255,0.45); } .ev-gauge .z3 { background: rgba(255,149,0,0.55); } .ev-gauge .z4 { background: rgba(255,59,48,0.55); }
+.ev-gauge i { position: absolute; top: -3px; bottom: -3px; width: 4px; margin-left: -2px; background: var(--text); border-radius: 2px; }
+.ev-ticks { display: grid; grid-template-columns: 1fr 1fr 2fr 2fr 0; font-size: 10px; color: var(--text3); margin-top: 3px; }
+.ev-moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin-top: 12px; }
+.ev-moves > div { background: var(--fill); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; } .ev-moves b { font-size: 16px; }
+.ev-p { font-size: 14px; line-height: 1.55; margin: 0 0 10px; }
+.hm-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: stretch; }
+.hm-top > #hm-meter > .hm-meter { margin-bottom: 10px; height: calc(100% - 10px); box-sizing: border-box; }
+.hm-pick { margin-bottom: 10px; display: flex; } .hm-pick select { min-width: 220px; max-width: 300px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: 600 13px Inter, system-ui, sans-serif; padding: 0 12px; }
+@media (max-width: 760px) { .hm-top { grid-template-columns: minmax(0, 1fr); } .hm-pick select { max-width: none; width: 100%; height: 42px; } }
+.hm-day { border: 1.5px solid var(--blue); }
+.hd-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.hd-sec { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--text2); margin: 14px 0 4px; }
+.hd-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.5; }
+@media (max-width: 520px) { .hd-row { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 .hm-meter { grid-template-columns: minmax(0, 1fr); } .hm-cd { text-align: left; display: flex; gap: 10px; align-items: baseline; } .hm-lbl { max-width: none; } }
 .hm-switch { background: rgba(0,122,255,0.10); color: var(--blue); border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
 .hm-bias-me { display: flex; justify-content: space-between; align-items: center; gap: 10px; } .hm-bias-v { font-size: 20px; font-weight: 800; } .hm-bias-v small { font-size: 12px; font-weight: 600; color: var(--text2); }
@@ -1515,8 +1557,9 @@ select { cursor: pointer; }
 <!-- ===== TAB 2: CHARTS ===== -->
 <!-- ===== TAB 2: LIVE (play-by-play of the current session) ===== -->
 <div class="tab-page active" id="page-live">
-  <div id="hm-meter"></div>
+  <div class="hm-top"><div id="hm-meter"></div><div id="hm-daypick" class="hm-pick"></div></div>
   <div id="hm-switch"></div>
+  <div id="hm-day-card" class="card mb-md hm-day" hidden></div>
   <div id="tr-open-slot"></div>
   <div class="lv-ctrl">
     <div class="mtf-segs" id="lv-sym"></div>
@@ -1925,6 +1968,10 @@ select { cursor: pointer; }
 
 <!-- ===== TAB 8: EDGE ===== -->
 <div class="tab-page" id="page-edge">
+  <div class="ev-grid">
+    <div class="card mb-md"><div class="card-body"><div class="lv-h">📉 VIX · LIVE FEAR GAUGE</div><div id="edge-vix"></div></div></div>
+    <div class="card mb-md"><div class="card-body"><div class="lv-h">🧭 MARKET READ <span class="fs-12 text-2" id="edge-read-at"></span></div><div id="edge-read"></div></div></div>
+  </div>
 
   <div class="section-label">Edge Conditions</div>
   <div class="card mb-md">
@@ -2968,6 +3015,7 @@ function showPage(name) {
   if (name === 'journal') { initJournalDate(); trJournalOpen(); }
   if (name === 'watch') watchOpen();
   if (name === 'tradelog') renderTradeLog();
+  if (name === 'edge') edgeOpen();
   if (name === 'charts') renderFuturesCharts();
   if (name === 'strategy') readyCycle(false);
   if (name === 'live') lvRefresh(false);
@@ -3600,6 +3648,7 @@ function saveBias() {
     const notes = document.getElementById('bias-notes') ? document.getElementById('bias-notes').value : '';
     const inv = document.getElementById('bias-invalid') ? document.getElementById('bias-invalid').value : '';
     localStorage.setItem('jct_bias', JSON.stringify({ state: biasState, conf, notes, inv }));
+    if (typeof trSaveDay === 'function') trSaveDay({ bias: { state: biasState, conf, notes, inv, at: Date.now() } });
   } catch(e) {}
   if (typeof refreshAISignal === 'function') refreshAISignal();
 }
@@ -4698,6 +4747,7 @@ function lvDrive(R, inPlay) {
   return html;
 }
 async function lvRefresh(force) {
+  if (!rpData) setTimeout(hmDaysLoad, 4000);   // older days for the picker, after the screen is up
   if (!lvClockTimer) lvClockTimer = setInterval(lvClock, 1000);
   if (lvBusy) return; lvBusy = true;
   try { await Promise.all([ensureBars(force), loadMTF(force), lvResearch ? null : loadJSON('research.json').then(r => { lvResearch = r; })]); } catch(e) {}
@@ -4766,6 +4816,7 @@ function lvRender() {
   trLastA = A; trLastR = R;
   { const G = trGuard(), other = MTF_SYMS.map(([s]) => runs[s]).find(r => r && r.sym !== R.sym);
     document.getElementById('hm-meter').innerHTML = hmMeterHtml(R, now, ph, other);
+    if (document.activeElement?.id !== 'hm-day') hmRenderDayPicker();
     document.getElementById('hm-switch').innerHTML = switchNote ? `<div class="hm-switch">↪ ${esc(switchNote)} · <a href="#" onclick="lvSetSym('${other ? other.sym : R.sym}');return false">show ${other ? lvName(other.sym) : ''}</a></div>` : '';
     document.getElementById('tr-open-slot').innerHTML = trOpenHtml(R);
     document.getElementById('tr-guard').innerHTML = trGuardHtml(G);
@@ -5069,6 +5120,159 @@ async function trJournalOpen() {
   try { await ensureBars(false); } catch(e) {}
   whenTJR(() => { if (!BT || !labRaw) return; const R = lvRun(lvSym) || lvRun('NQ=F'); if (R) { R.off = lvOffSetups(R); trRenderJournalPanels(R, trGuard()); } });
 }
+
+// ============================================================
+// EDGE: live VIX + a plain-English market read (rule-based, from the site's own data; free)
+// ============================================================
+const VIX_ZONES = [[0, 15, 'Calm', 'bull'], [15, 20, 'Normal', 'blue'], [20, 30, 'Elevated', 'warn'], [30, 99, 'High fear', 'bear']];
+function vixZone(v) { return VIX_ZONES.find(([a, b]) => v >= a && v < b) || VIX_ZONES[3]; }
+// VIX is the market's expected yearly S&P move in %; one trading day ≈ VIX / √252
+const vixDayPct = v => v / Math.sqrt(252);
+function edgeVixHtml() {
+  const q = PriceCache['VIX'];
+  if (!q || !q.price) return '<div class="fs-13 text-2">Loading VIX…</div>';
+  const v = q.price, z = vixZone(v), day = vixDayPct(v), es = PriceCache['ES1!']?.price, nq = PriceCache['NQ1!']?.price;
+  const pos = Math.max(0, Math.min(100, (v - 10) / 30 * 100));
+  const qt = q.time > 1e11 ? q.time / 1000 : q.time, age = qt ? Math.max(0, Math.round((Date.now() / 1000 - qt) / 60)) : null;   // time may arrive in s or ms
+  return `<div class="ev-top">
+      <div><div class="ev-big ${z[3]}">${v.toFixed(2)}</div><div class="fs-13 ${q.change >= 0 ? 'bear' : 'bull'}">${q.change >= 0 ? '▲' : '▼'} ${Math.abs(q.change).toFixed(2)} (${q.changePct >= 0 ? '+' : ''}${q.changePct.toFixed(2)}%) today</div></div>
+      <div class="ev-zone"><span class="badge badge-${z[3] === 'blue' ? 'blue' : z[3] === 'warn' ? 'warn' : z[3]}">${z[2]}</span><div class="fs-12 text-2">${age != null ? `as of ${age} min ago · ` : ''}CBOE VIX via Yahoo (delayed)</div></div>
+    </div>
+    <div class="ev-gauge"><span class="z1"></span><span class="z2"></span><span class="z3"></span><span class="z4"></span><i style="left:${pos}%"></i></div>
+    <div class="ev-ticks"><span>10</span><span>15</span><span>20</span><span>30</span><span>40</span></div>
+    <div class="ev-moves">
+      <div><span class="text-2 fs-12">Typical day now</span><b>±${day.toFixed(2)}%</b></div>
+      ${es ? `<div><span class="text-2 fs-12">ES1! ≈</span><b>±${Math.round(es * day / 100)} pts</b></div>` : ''}
+      ${nq ? `<div><span class="text-2 fs-12">NQ1! ≈ (NQ moves more)</span><b>±${Math.round(nq * day * 1.25 / 100)} pts</b></div>` : ''}
+    </div>
+    <div class="fs-12 text-2" style="margin-top:6px">VIX is the market's priced-in expected move. About 2 days in 3 stay inside the "typical day" range. Higher VIX = wider swings: size down, since the same stop in points is hit more easily.</div>`;
+}
+// one paragraph per topic, built from live numbers
+function edgeReadHtml() {
+  const parts = [], q = PriceCache['VIX'];
+  if (q && q.price) { const z = vixZone(q.price), d = vixDayPct(q.price);
+    parts.push(`<b>Volatility:</b> ${z[2].toLowerCase()} (VIX ${q.price.toFixed(1)}, ${q.change >= 0 ? 'up' : 'down'} ${Math.abs(q.changePct).toFixed(1)}% today). ${q.price < 15 ? 'Quiet markets: moves are smaller and breakouts fail more often.' : q.price < 20 ? 'Normal conditions for intraday setups.' : q.price < 30 ? 'Bigger, faster swings: stops get hit more easily, so size down.' : 'Fear is high: wide, fast moves. Many traders sit out or trade very small.'} A typical day is about ±${d.toFixed(1)}%.`); }
+  const runs = {}; try { for (const [s] of MTF_SYMS) runs[s] = lvRun(s); } catch(e) {}
+  const read = sym => { const tr = lvTrend4h(sym), cf = mtf?.conf?.[sym], fv = window.mtfScan?.syms?.[sym]?.label;
+    const s = (tr === 'long' ? 1 : tr === 'short' ? -1 : 0) + (cf ? Math.sign(cf.bullTFs - cf.bearTFs) : 0) + (fv === 'Bullish' ? 1 : fv === 'Bearish' ? -1 : 0);
+    return { lean: s >= 2 ? 'bullish' : s <= -2 ? 'bearish' : 'mixed', tr, cf, fv }; };
+  const leans = {};
+  for (const [s, nm] of MTF_SYMS) { const r = read(s), R = runs[s]; leans[s] = r.lean; if (!R) continue;
+    const L = R.st.levels, c = R.last.c, where = [];
+    if (L.pdH != null && !Number.isNaN(L.pdH)) where.push(c > L.pdH ? "above yesterday's high" : c < L.pdL ? "below yesterday's low" : "inside yesterday's range");
+    if (L.londonH != null && !Number.isNaN(L.londonH)) where.push(c > L.londonH ? 'above the London high' : c < L.londonL ? 'below the London low' : 'inside the London range');
+    const chg = R.last.c - R.prevC;
+    parts.push(`<b>${nm}:</b> ${r.lean === 'mixed' ? 'no clear direction' : `leans ${r.lean}`} (4H trend ${r.tr === 'long' ? 'up' : r.tr === 'short' ? 'down' : 'unclear'}${r.cf ? `, ${r.cf.bullTFs} bullish / ${r.cf.bearTFs} bearish timeframes` : ''}${r.fv ? `, higher-timeframe gaps ${r.fv.toLowerCase()}` : ''}). Price ${c.toFixed(2)} is ${Number.isNaN(chg) ? '' : `${chg >= 0 ? 'up' : 'down'} ${Math.abs(chg).toFixed(2)} on the session, `}${where.join(' and ') || 'near its levels'}. Rules today: ${hmStatusWord(R)}.`); }
+  if (leans['ES=F'] && leans['NQ=F'] && leans['ES=F'] !== leans['NQ=F']) parts.push(`<b>ES vs NQ disagree</b> (${leans['ES=F']} vs ${leans['NQ=F']}): TJR treats that split at a key level as SMT divergence, a reason for extra caution or a sign one of them is about to reverse.`);
+  try { const ev = todaysEvents(); if (ev.length) parts.push(`<b>News today:</b> ${ev.map(e => `${esc((e.title || e.name || '').split('(')[0].trim())} at ${e.time || ''}`).join(', ')}. Big releases can spike volatility for a few minutes.`); } catch(e) {}
+  return parts.length ? parts.map(p => `<p class="ev-p">${p}</p>`).join('') + '<div class="fs-12 text-2">Written by the site\'s rules from live data (VIX, trend, timeframe alignment, levels, news). It describes the market; it doesn\'t predict it, and it isn\'t financial advice.</div>' : '<div class="fs-13 text-2">Loading the market data…</div>';
+}
+let edgeTimer = null;
+function renderEdgeMarket() {
+  const a = document.getElementById('edge-vix'), b = document.getElementById('edge-read'); if (!a || !b) return;
+  a.innerHTML = edgeVixHtml(); b.innerHTML = edgeReadHtml();
+  const t = document.getElementById('edge-read-at'); if (t) t.textContent = 'updated ' + getCurrentETTime().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + ' ET';
+}
+async function edgeOpen() {
+  renderEdgeMarket();
+  try { await Promise.all([ensureBars(false), loadMTF(false), fetchPriceBatch(['VIX', 'ES1!', 'NQ1!'])]); } catch(e) {}
+  whenTJR(renderEdgeMarket);
+  if (!edgeTimer) edgeTimer = setInterval(() => { if (currentTab === 'edge') renderEdgeMarket(); }, 30000);
+}
+
+// ---------- PAST DAYS: pick a session from the home meter → full recap (market, rules' trade, yours, bias, play-by-play) ----------
+// Sources: today's / yesterday's candles from bars.json (labRaw) when they cover the day, else replay.json (7:30–12:30, ~10 weeks);
+// your side from jct_trades and jct_journal[date] (mind, review, skips, notes, bias snapshot).
+let hmDay = '', hmDaysBusy = false, hmDayFocus = null;
+async function hmDaysLoad() {
+  if (rpData || hmDaysBusy) return; hmDaysBusy = true;
+  try { const res = await fetch('replay.json', { cache: 'no-store' }); if (res.ok) rpData = await res.json(); } catch(e) {}
+  hmDaysBusy = false; if (currentTab === 'live') hmRenderDayPicker();
+}
+// one contract on one day: candles from 7:30, engine snapshots, events, final state
+function hmDayData(sym, td) {
+  const E = window.TJR, c = lvCfg(sym), rows = labRaw?.bars?.[sym]?.['5m'];
+  if (rows && rows.length) { const bars = E.toBars(rows);
+    if (bars.some(b => b.td === td && b.m >= 450 && b.m <= 750)) {
+      const res = E.run(bars, sym, c.cfg, { keepOpen: true, snapshots: true }), i0 = bars.findIndex(b => b.td === td && b.m >= 450 && b.m < 1080);
+      let i1 = bars.length - 1; while (i1 > i0 && bars[i1].td !== td) i1--;
+      return { sym, c, bars: bars.slice(i0, i1 + 1), snaps: res.snapshots.slice(i0, i1 + 1), pre: bars.slice(Math.max(0, i0 - 12), i0), evs: res.events.filter(e => e.td === td), st: res.snapshots[i1], src: 'candles' };
+    } }
+  const d = rpData?.days?.[sym]?.[td]; if (!d) return null;
+  const pre = E.toBars(d.pre), day = E.toBars(d.bars), res = E.run([...pre, ...day], sym, c.cfg, { seed: d.seed, seedFrom: pre.length, keepOpen: true, snapshots: true });
+  return { sym, c, bars: day, snaps: res.snapshots, pre, evs: res.events, st: res.state, src: 'replay' };
+}
+function hmDayList() {
+  const set = new Set();
+  for (const [s] of MTF_SYMS) { Object.keys(rpData?.days?.[s] || {}).forEach(d => set.add(d)); (labRaw?.bars?.[s]?.['5m'] || []).forEach(r => { const e = window.TJR.et(r[0]); if (e.m >= 450 && e.m <= 750) set.add(e.td); }); }
+  for (const d of Object.keys(trJournal())) if (/^\d{4}-\d{2}-\d{2}$/.test(d)) set.add(d);
+  trades.forEach(t => t.date && set.add(t.date));
+  const today = trToday();
+  return [...set].filter(d => d < today || (d === today && etNow().m >= 720)).sort().reverse().slice(0, 80);
+}
+function hmDayLabel(td) {
+  const bits = [], mine = trades.filter(t => t.date === td && t.status !== 'open');
+  const pnl = mine.reduce((a, t) => a + (+t.pnl || 0), 0);
+  if (mine.length) bits.push(`you ${pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(pnl))}`);
+  const rules = MTF_SYMS.filter(([s]) => (lvCfg(s).r.trades || []).some(t => t.td === td)).map(([, n]) => n.replace('1!', ''));
+  if (rules.length) bits.push('rules traded ' + rules.join('+'));
+  const j = trJournal()[td]; if (j && (j.review || j.mind || j.obs)) bits.push('📝');
+  return new Date(td + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + (bits.length ? ' · ' + bits.join(' · ') : '');
+}
+function hmRenderDayPicker() {
+  const el = document.getElementById('hm-daypick'); if (!el) return;
+  const days = hmDayList();
+  el.innerHTML = `<select id="hm-day" onchange="hmPickDay(this.value)" aria-label="Look at a past day">
+    <option value="">📅 Today (live)</option>${days.map(d => `<option value="${d}"${d === hmDay ? ' selected' : ''}>${esc(hmDayLabel(d))}</option>`).join('')}
+    ${rpData ? '' : '<option value="__more" disabled>Loading older days…</option>'}</select>`;
+}
+function hmPickDay(td) { hmDayFocus = null; hmDay = td === '__more' ? '' : td; hmRenderDay(); if (hmDay) document.getElementById('hm-day-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function hmRenderDay() {
+  const box = document.getElementById('hm-day-card'); if (!box) return;
+  if (!hmDay) { box.hidden = true; box.innerHTML = ''; return; }
+  const td = hmDay, J = trJournal()[td] || {}, mine = trades.filter(t => t.date === td);
+  const D = {}; for (const [s] of MTF_SYMS) { try { D[s] = hmDayData(s, td); } catch(e) { D[s] = null; } }
+  const focus = (hmDayFocus && D[hmDayFocus] ? hmDayFocus : null) || [lvSym, ...MTF_SYMS.map(([s]) => s)].find(s => D[s] && D[s].evs.some(e => e.type === 'order')) || (D[lvSym] ? lvSym : MTF_SYMS.map(([s]) => s).find(s => D[s]));
+  const f2 = v => v == null || Number.isNaN(v) ? '–' : v.toFixed(2);
+  // market: open → close, range, levels taken
+  const market = MTF_SYMS.map(([s, nm]) => { const x = D[s]; if (!x || !x.bars.length) return `<div class="hd-row"><b>${nm}</b><span class="text-2">no candles stored for this day</span></div>`;
+    const o = x.bars[0].o, cl = x.bars[x.bars.length - 1].c, hi = Math.max(...x.bars.map(b => b.h)), lo = Math.min(...x.bars.map(b => b.l)), L = x.snaps[0]?.levels || x.st.levels;
+    const took = [['PDH', L.pdH, 1], ['PDL', L.pdL, 0], ['Asia H', L.asianH, 1], ['Asia L', L.asianL, 0], ['London H', L.londonH, 1], ['London L', L.londonL, 0]].filter(([, p, up]) => p != null && !Number.isNaN(p) && (up ? hi > p : lo < p)).map(([n]) => n);
+    return `<div class="hd-row"><b>${nm}</b><span>${f2(o)} → <b>${f2(cl)}</b> <span class="${cl >= o ? 'bull' : 'bear'}">${cl >= o ? '+' : ''}${(cl - o).toFixed(2)}</span> · range ${f2(lo)}–${f2(hi)} (${(hi - lo).toFixed(1)} pts)${took.length ? ` · took ${took.join(', ')}` : ' · no session level taken'}</span></div>`; }).join('');
+  // rules: plan + result
+  const rules = MTF_SYMS.map(([s, nm]) => { const x = D[s]; if (!x) return '';
+    const od = x.evs.find(e => e.type === 'order'), fl = x.evs.find(e => e.type === 'fill'), ex = x.evs.find(e => e.type === 'exit'), cn = x.evs.find(e => e.type === 'cancel'), I = window.TJR.INSTR[s];
+    const res = ex && ex.data ? `<b class="${ex.data.pts >= 0 ? 'bull' : 'bear'}">${ex.data.pts >= 0 ? '+' : ''}${ex.data.pts.toFixed(2)} pts (${ex.data.pts >= 0 ? '+' : '−'}$${Math.abs(Math.round(ex.data.pts * I.pointValue / 10))} per ${I.micro})</b> · ${esc(ex.data.why)} at ${ex.hm}` : cn ? 'not filled, cancelled' : fl ? 'still open at the end of the data' : '';
+    return `<div class="hd-row"><b>${nm}</b><span>${od && od.data ? `${od.hm} ${od.data.dir === 'long' ? 'BUY' : 'SELL'} limit ${f2(od.data.limit)} · stop ${f2(od.data.stop)} · target ${f2(od.data.target)} (${esc(od.data.targetName || '')})${od.data.tp1 != null ? ` · ½ at ${f2(od.data.tp1)}` : ''}<br>${fl ? `filled ${fl.hm} · ` : ''}${res}` : 'no setup: sweep → break → gap never lined up in the window'}</span></div>`; }).join('');
+  // you
+  const mineHtml = mine.length ? mine.map(t => `${t.dir} ${t.qty} ${t.sym} @ ${(+t.entry).toFixed(2)}${t.status === 'open' ? ' (open)' : ` → ${(+t.exit).toFixed(2)} <b class="${t.pnl >= 0 ? 'bull' : 'bear'}">${t.pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(t.pnl))}</b>`}${t.plan?.grade ? ` · grade ${t.plan.grade}` : ''}${t.override ? ` · <span class="badge badge-warn">override: ${esc(t.override.why)}</span>` : ''}`).join('<br>') : 'no trades logged';
+  const mood = J.mind ? `${TR_MOOD_LABEL[J.mind.mood] || J.mind.mood} · sleep ${J.mind.sleep}/5 · focus ${J.mind.focus}/5` : 'no check-in';
+  const rv = J.review ? `followed the plan: <b>${J.review.followed || '–'}</b>${J.review.feeling ? ` · felt ${TR_MOOD_LABEL[J.review.feeling] || J.review.feeling}` : ''}${J.review.lesson ? `<br>Lesson: “${esc(J.review.lesson)}”` : ''}` : 'no review';
+  const bias = J.bias ? `<b class="${J.bias.state === 'bull' ? 'bull' : J.bias.state === 'bear' ? 'bear' : ''}">${J.bias.state === 'bull' ? 'Bullish' : J.bias.state === 'bear' ? 'Bearish' : 'Neutral'}</b>${J.bias.conf ? ` (${J.bias.conf}%)` : ''}${J.bias.notes ? ` · ${esc(J.bias.notes)}` : ''}${J.bias.inv ? ` · wrong if: ${esc(J.bias.inv)}` : ''}` : '<span class="text-2">not recorded (saved daily from Oct 9 on)</span>';
+  const x = D[focus];
+  box.hidden = false;
+  box.innerHTML = `<div class="card-body">
+    <div class="hd-head"><div class="lv-h" style="margin:0">📅 DAY RECAP · ${new Date(td + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-secondary btn-sm" onclick="hmOpenReplay('${td}')">▶ Open in Replay</button><button class="btn btn-secondary btn-sm" onclick="hmPickDay('');document.getElementById('hm-day').value=''">Back to today</button></div></div>
+    <div class="hd-sec">MARKET (7:30 → close)</div>${market}
+    <div class="hd-sec">THE RULES' TRADE PLAN AND RESULT</div>${rules}
+    ${x ? `<div class="mtf-segs" style="margin-top:10px">${MTF_SYMS.filter(([s]) => D[s]).map(([s, nm]) => `<button class="mtf-seg${s === focus ? ' on' : ''}" onclick="hmDayFocus='${s}';hmRenderDay()">${nm} chart</button>`).join('')}</div><div id="hm-day-chart" class="rp-chart" style="margin-top:8px"></div>` : ''}
+    <div class="hd-sec">YOU</div>
+    <div class="hd-row"><b>Trades</b><span>${mineHtml}</span></div>
+    <div class="hd-row"><b>Bias</b><span>${bias}</span></div>
+    <div class="hd-row"><b>Mindset</b><span>${mood}</span></div>
+    <div class="hd-row"><b>Review</b><span>${rv}</span></div>
+    ${J.skips?.length ? `<div class="hd-row"><b>Skipped</b><span>${J.skips.map(s => esc(s.head)).join('<br>')}</span></div>` : ''}
+    ${J.obs || J.edge ? `<div class="hd-row"><b>Notes</b><span>${esc(J.obs || '')}${J.obs && J.edge ? '<br>' : ''}${esc(J.edge || '')}</span></div>` : ''}
+    ${x ? `<details class="rp-steps" style="margin-top:8px"><summary>Play-by-play · ${lvName(focus)} · every 5-minute candle</summary><div id="hm-day-pbp"></div></details>` : ''}
+  </div>`;
+  if (x) {
+    drawSetupChart(document.getElementById('hm-day-chart'), x.bars, x.st, x.evs, { slots: Math.max(61, x.bars.length) });
+    const all = [...x.pre, ...x.bars], snaps = [...x.pre.map(() => x.snaps[0]), ...x.snaps];
+    document.getElementById('hm-day-pbp').innerHTML = rpNotesHtml(all, snaps, x.evs, all.length - 1, focus, x.c.r, 'hm-day-list', { from: x.pre.length, newestFirst: false, noHead: true });
+  }
+}
+function hmOpenReplay(td) { showPage('backtest'); labView('replay'); setTimeout(() => { const sel = document.getElementById('rp-day'); if (sel && [...sel.options].some(o => o.value === td)) { sel.value = td; rpLoad(); } }, 900); }
 
 // ---------- TRADE PLAN: one clear call per contract from the TJR rules, graded by the conditions behind it ----------
 // Signals come from the strategy engine (same rules as the Lab/backtest). The grade counts conditions; only the track
