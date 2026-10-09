@@ -15,11 +15,15 @@ const path = require('path'), D = process.env.DATA_DIR;
     ok(tabs[0].includes('Trade') && tabs[1].includes('Market') && !tabs.some(t => t.includes('Charts')), 'tabs: ' + tabs.join(' | '));
     ok(await p.evaluate(() => document.getElementById('page-live').classList.contains('active')), 'opens on the Trade screen');
     ok(/Trades today 0 \/ 1/.test(await g('#tr-guard')), 'guardrails: ' + (await g('#tr-guard')).slice(0, 140));
+    const meter = await g('#hm-meter'); ok(/\d+[mhd]\b/.test(meter) && /(Sweep|BOS)/.test(meter), 'home starts with the trade meter: ' + meter.slice(0, 120));
+    const order = await p.evaluate(() => ['hm-meter', 'lv-chart', 'lv-plan', 'lv-ticker', 'lv-board', 'hm-bias', 'tr-guard'].map(id => document.getElementById(id).getBoundingClientRect().top));
+    ok(order.every((v, i) => !i || v > order[i - 1]), 'order: meter → chart → trade card → last play → ES/NQ status → bias → your day');
+    ok(/YOUR BIAS/.test(await g('#hm-bias')) && /(leans|mixed)/.test(await g('#hm-bias')), "today's bias card: " + (await g('#hm-bias')).slice(0, 120));
     // 1 · Prepare: mindset check-in
-    await p.evaluate(() => trSetPhase('prepare')); await p.waitForTimeout(300);
-    ok(/GAME PLAN/.test(await g('#tr-panel')) && /MINDSET/.test(await g('#tr-panel')), 'Prepare shows the game plan and the check-in');
+    await p.evaluate(() => showPage('journal')); await p.waitForTimeout(2500);
+    ok(/GAME PLAN/.test(await g('#jr-prep')) && /MINDSET/.test(await g('#jr-prep')), 'Morning Journal shows the game plan and the check-in');
     await p.selectOption('#tr-sleep', '4'); await p.selectOption('#tr-focus', '5'); await p.selectOption('#tr-mood', 'calm'); await p.check('#tr-accept');
-    await p.click('button:has-text("Save check-in")'); await p.waitForTimeout(400);
+    await p.click('button:has-text("Save check-in")'); await p.waitForTimeout(400); await p.evaluate(() => showPage('live')); await p.waitForTimeout(800);
     ok(/Mindset 5\/5/.test(await g('#tr-guard')) && (await p.evaluate(() => trDay().mind.mood)) === 'calm', 'check-in saved to today\'s journal → mindset 5/5');
     // 2 · Trade: take a plan (a fixed test plan so this runs at any hour)
     await p.evaluate(() => { trLastA = { kind: 'order', grade: 'B', head: 'Rules say BUY LIMIT 100.00', checks: [], size: { n: 2, per: 50 }, plan: { dir: 'long', entry: 100, stop: 90, risk: 10, tp1: null, target: 120, est: false } }; trTake(); });
@@ -31,11 +35,11 @@ const path = require('path'), D = process.env.DATA_DIR;
     await p.click('#tr-modal button:has-text("Log the trade")'); await p.waitForTimeout(500);
     const open = await p.evaluate(() => trOpen());
     ok(open && open.status === 'open' && open.plan.grade === 'B' && open.setup === 'TJR rules', 'trade logged as open with its plan');
-    ok(/YOUR OPEN TRADE/.test(await g('#tr-panel')) && /Trades today 1 \/ 1/.test(await g('#tr-guard')), 'open trade card + 1 / 1 trades');
+    ok(/YOUR OPEN TRADE/.test(await g('#tr-open-slot')) && /Trades today 1 \/ 1/.test(await g('#tr-guard')), 'open trade card + 1 / 1 trades');
     await p.click('.tab-btn:has-text("Trade Log")'); await p.waitForTimeout(300);
     ok(/open/.test(await g('#tl-tbody')), 'Trade Log shows it as open'); await p.click('.tab-btn:has-text("Trade")'); await p.waitForTimeout(500);
     // close it at a loss → cool-down
-    await p.evaluate(() => trSetPhase('trade')); await p.waitForTimeout(300);
+    await p.evaluate(() => showPage('live')); await p.waitForTimeout(600);
     await p.fill('#tr-exit', '95'); await p.click('button:has-text("I closed it")'); await p.waitForTimeout(500);
     const closed = await p.evaluate(() => trades[0]);
     ok(closed.status === 'closed' && closed.exit === 95 && closed.pnl < 0 && closed.rr === '-0.50', `closed: pnl ${closed.pnl}, ${closed.rr}R`);
@@ -50,10 +54,10 @@ const path = require('path'), D = process.env.DATA_DIR;
     ok((await p.evaluate(() => trOpen()?.override?.why)) === 'A+ setup at my level, size cut to 1', 'override logged with the reason');
     await p.click('button:has-text("Didn\'t fill / remove")'); await p.waitForTimeout(300);
     // 3 · Review
-    await p.evaluate(() => trSetPhase('review')); await p.waitForTimeout(300);
-    await p.click('#tr-panel .mtf-seg:has-text("Yes")'); await p.waitForTimeout(300);
+    await p.evaluate(() => showPage('journal')); await p.waitForTimeout(2500);
+    await p.click('#jr-review .mtf-seg:has-text("Yes")'); await p.waitForTimeout(300);
     await p.fill('#tr-rv-lesson', 'Waited for 9:50'); await p.dispatchEvent('#tr-rv-lesson', 'change'); await p.waitForTimeout(300);
-    const rv = await p.evaluate(() => trDay().review);
+    const rv = await p.evaluate(() => trDay().review); await p.evaluate(() => showPage('live')); await p.waitForTimeout(800);
     ok(rv.followed === 'yes' && rv.lesson === 'Waited for 9:50' && /Plan streak 1 day/.test(await g('#tr-guard')), 'review saved, plan streak 1');
     // the plan card has the buttons when the analyzer has a real plan (shown only if one exists right now)
     console.log('   plan card now:', (await g('#lv-plan')).slice(0, 120));

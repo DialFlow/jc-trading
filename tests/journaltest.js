@@ -28,8 +28,21 @@ const { pathToFileURL } = require('url'), path = require('path');
     ok(es.close === '7851.25' && es.p1 === '7821.25' && es.p2 === '7825.25', 'ES prior close / 8:25 / 9:45 are the real prices, not the current one');
     ok(/-30\.00/.test(es.d1), 'ES change close → 8:25 = −30.00');
     ok(es.asia === 'down' && es.asiaIcon === '▼', 'ES Asia: London took the Asian low (▼)');
-    const spy = await p.evaluate(() => { const tr = document.querySelector('#journal-tbody tr[data-sym="SPY"]'); return { asia: tr.querySelector('[data-field="asia"]').value, ldn: tr.querySelector('[data-field="ldn"]').value }; });
+    const spy = await p.evaluate(() => { const tr = document.querySelector('#watch-tbody tr[data-sym="SPY"]'); return { asia: tr.querySelector('[data-field="asia"]').value, ldn: tr.querySelector('[data-field="ldn"]').value }; });
     ok(spy.asia === '' && spy.ldn !== '', 'SPY: no Asian session, pre-market range filled');
+    ok(await p.evaluate(() => !document.querySelector('#journal-tbody tr[data-sym="SPY"]') && !!document.querySelector('#journal-tbody tr[data-sym="ES1!"]')), 'Morning Journal = futures; stocks are on the Watchlist');
+    // Watchlist: add your own symbol (checked against Yahoo), it's filled, removable
+    await p.click('.tab-btn:has-text("Watchlist")'); await p.waitForTimeout(500);
+    await p.fill('#watch-add', 'zzzzqq'); await p.click('button:has-text("+ Add symbol")'); await p.waitForTimeout(4000);
+    ok(/Couldn't find/.test(await p.evaluate(() => document.getElementById('watch-msg').textContent)), 'an unknown ticker is refused');
+    await p.fill('#watch-add', 'cost'); await p.click('button:has-text("+ Add symbol")'); await p.waitForTimeout(4000);
+    ok(await p.evaluate(() => !!document.querySelector('#watch-tbody tr[data-sym="COST"]') && JSON.parse(localStorage.getItem('jct_watch')).includes('COST')), 'COST added under MY SYMBOLS and saved');
+    ok(await p.evaluate(() => document.getElementById('watch-date').value) === '2026-10-08', 'Watchlist uses the journal date');
+    await p.click('#page-watch button:has-text("Fill from market data")'); await p.waitForTimeout(25000);
+    ok(/^\d/.test(await p.evaluate(() => document.querySelector('#watch-tbody tr[data-sym="COST"] [data-field="close"]').value)), 'your symbol gets its numbers too');
+    await p.click('#watch-tbody tr[data-sym="COST"] .wl-x'); await p.waitForTimeout(400);
+    ok(await p.evaluate(() => !document.querySelector('#watch-tbody tr[data-sym="COST"]')), 'removed with ✕');
+    await p.click('.tab-btn:has-text("Morning Journal")'); await p.waitForTimeout(300);
     // tap to change a symbol, autosave, survives reload
     await p.click('#journal-tbody tr[data-sym="NQ1!"] .sess-btn[data-field="ldn"]'); await p.waitForTimeout(1200);
     const nqL = await p.evaluate(() => document.querySelector('#journal-tbody tr[data-sym="NQ1!"] [data-field="ldn"]').value);

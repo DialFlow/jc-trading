@@ -35,7 +35,7 @@ const json = (body, status = 200, extra = {}) =>
 
 // Only these keys are stored; anything else in a PUT is ignored
 const SYNC_KEYS = ['jct_bias', 'jct_bt_chat', 'jct_checklist', 'jct_dash_notes', 'jct_edge_notes', 'jct_risk', 'jct_plan',
-  'jct_journal', 'jct_levels', 'jct_trades', 'tjr_bias'];
+  'jct_journal', 'jct_levels', 'jct_trades', 'tjr_bias', 'jct_watch'];
 const MAX_BODY = 5 * 1024 * 1024;
 
 export default {

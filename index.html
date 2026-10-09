@@ -392,6 +392,19 @@ body {
 .lv-fct .k { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
 .lv-fct .v { font-size: 18px; font-weight: 800; margin: 2px 0; }
 .lvp { border: 1.5px solid var(--blue); }
+.wl-x { border: 0; background: transparent; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0 2px; } .wl-x:hover { color: var(--bear); }
+.hm-meter { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
+.hm-meter.hot { border: 1.5px solid var(--bull); }
+.hm-cd { text-align: center; min-width: 96px; } .hm-big { font: 800 26px ui-monospace, SFMono-Regular, Menlo, monospace; } .hm-lbl { font-size: 11px; color: var(--text2); max-width: 130px; }
+.hm-now { font-size: 13px; margin-bottom: 6px; }
+.hm-bar { position: relative; height: 6px; background: var(--fill); border-radius: 3px; margin-top: 8px; overflow: hidden; } .hm-bar span { position: absolute; left: 0; top: 0; bottom: 0; background: var(--blue); border-radius: 3px; } .hm-bar i { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--text3); }
+.hm-ticks { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 2px; }
+.hm-other { font-size: 13px; font-weight: 700; text-align: center; background: var(--fill); border-radius: 10px; padding: 8px 10px; cursor: pointer; } .hm-other small { font-weight: 500; color: var(--text2); font-size: 11px; }
+@media (max-width: 640px) { .wl-x { border: 0; background: transparent; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0 2px; } .wl-x:hover { color: var(--bear); }
+.hm-meter { grid-template-columns: minmax(0, 1fr); } .hm-cd { text-align: left; display: flex; gap: 10px; align-items: baseline; } .hm-lbl { max-width: none; } }
+.hm-switch { background: rgba(0,122,255,0.10); color: var(--blue); border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.hm-bias-me { display: flex; justify-content: space-between; align-items: center; gap: 10px; } .hm-bias-v { font-size: 20px; font-weight: 800; } .hm-bias-v small { font-size: 12px; font-weight: 600; color: var(--text2); }
+.hm-reads { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-top: 8px; } .hm-read { background: var(--fill); border-radius: 10px; padding: 8px 10px; }
 .tr-phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
 .tr-ph { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 8px 10px; text-align: left; cursor: pointer; color: var(--text); display: flex; flex-direction: column; gap: 2px; font: inherit; }
 .tr-ph b { font-size: 13px; } .tr-ph span { font-size: 11px; color: var(--text2); }
@@ -1385,6 +1398,7 @@ select { cursor: pointer; }
   <button class="tab-btn active" onclick="showPage('live')">🎯 Trade</button>
   <button class="tab-btn" onclick="showPage('dashboard')">📊 Market</button>
   <button class="tab-btn" onclick="showPage('journal')">📓 Morning Journal</button>
+  <button class="tab-btn" onclick="showPage('watch')">📋 Watchlist</button>
   <button class="tab-btn" onclick="showPage('bias')">🎯 Daily Bias</button>
   <button class="tab-btn" onclick="showPage('strategy')">📘 Playbook</button>
   <button class="tab-btn" onclick="showPage('tradelog')">📒 Trade Log</button>
@@ -1501,12 +1515,9 @@ select { cursor: pointer; }
 <!-- ===== TAB 2: CHARTS ===== -->
 <!-- ===== TAB 2: LIVE (play-by-play of the current session) ===== -->
 <div class="tab-page active" id="page-live">
-  <div id="tr-phase"></div>
-  <div id="tr-guard"></div>
-  <div id="tr-panel"></div>
-  <div id="lv-board" class="lv-board"></div>
-  <div id="lv-ticker" class="lv-ticker"></div>
-  <div class="card mb-md lvp"><div class="card-body"><div class="lv-h">🎯 TRADE PLAN · <span id="lv-plan-sym"></span></div><div id="lv-plan"></div></div></div>
+  <div id="hm-meter"></div>
+  <div id="hm-switch"></div>
+  <div id="tr-open-slot"></div>
   <div class="lv-ctrl">
     <div class="mtf-segs" id="lv-sym"></div>
     <div class="mtf-segs" id="lv-tf"></div>
@@ -1518,6 +1529,10 @@ select { cursor: pointer; }
     <div id="lv-chart" class="rp-chart"></div>
   </div></div>
   <div id="lv-fc" class="card mb-md" hidden><div class="card-body" id="lv-fc-body"></div></div>
+  <div class="card mb-md lvp"><div class="card-body"><div class="lv-h">🎯 TRADE PLAN · <span id="lv-plan-sym"></span></div><div id="lv-plan"></div></div></div>
+  <div id="lv-ticker" class="lv-ticker"></div>
+  <div id="lv-board" class="lv-board"></div>
+  <div class="card mb-md"><div class="card-body"><div class="lv-h">🧭 TODAY'S BIAS</div><div id="hm-bias"></div></div></div>
   <div class="lv-grid">
     <section class="card mb-md"><div class="card-body">
       <div class="lv-h"><span class="lv-dot"></span> PLAY-BY-PLAY <span class="fs-12 text-2" id="lv-pbp-sub"></span></div>
@@ -1542,6 +1557,8 @@ select { cursor: pointer; }
       </div></div>
     </section>
   </div>
+  <div class="card mb-md"><div class="card-body"><div class="lv-h">🙋 YOUR DAY <span class="fs-12 text-2">· check-in and review are on the Morning Journal</span></div><div id="tr-guard"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary btn-sm" onclick="showPage('journal')">🧠 Mindset check-in</button><button class="btn btn-secondary btn-sm" onclick="showPage('journal');setTimeout(()=>document.getElementById('jr-review')?.scrollIntoView({behavior:'smooth'}),300)">📝 Review today</button></div></div></div>
   <div class="fs-12 text-2" style="margin:4px 2px 16px">Candles come from your TradingView live feed on devices with the sync key (badge: TradingView real-time, updated at every 5-minute close); otherwise Yahoo CME data about 10 minutes behind (badge: DELAYED). The strategy runs on 5-minute candles; 15m–Daily are context. Learning tool, not a trade recommendation.</div>
 </div>
 
@@ -1573,6 +1590,7 @@ select { cursor: pointer; }
 
 <!-- ===== TAB 3: MORNING JOURNAL ===== -->
 <div class="tab-page" id="page-journal">
+  <div id="jr-prep"></div>
 
   <div class="flex items-center justify-between mb-sm">
     <div class="section-label" style="padding-top:4px;">Morning Journal</div>
@@ -1629,11 +1647,40 @@ select { cursor: pointer; }
     </div>
   </div>
 
+  <div class="section-label">End of day</div>
+  <div id="jr-review"></div>
   <div class="section-label">Past Entries</div>
   <div class="card mb-md" id="past-entries-card">
     <div class="card-body text-2 fs-13">No past entries yet.</div>
   </div>
 
+</div>
+
+<!-- ===== WATCHLIST: the journal for stocks / ETFs / anything you follow ===== -->
+<div class="tab-page" id="page-watch">
+  <div class="flex items-center justify-between mb-sm" style="flex-wrap:wrap;gap:8px">
+    <div class="section-label" style="padding-top:4px;">Watchlist journal</div>
+    <div class="flex items-center gap-sm" style="flex-wrap:wrap">
+      <input type="date" id="watch-date" style="width:140px;font-size:12px;" onchange="watchDateChanged()">
+      <button class="btn btn-primary btn-sm" onclick="fillAllJournal()">↓ Fill from market data</button>
+      <span class="fs-12 text-2" id="wfetch-status"></span>
+    </div>
+  </div>
+  <div class="card mb-md"><div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input id="watch-add" placeholder="Add a symbol: TSLA, BRK-B, ^GSPC, CL=F" autocapitalize="characters" spellcheck="false" style="max-width:300px" onkeydown="if(event.key==='Enter')watchAdd()">
+    <button class="btn btn-secondary btn-sm" onclick="watchAdd()">+ Add symbol</button>
+    <span class="fs-12 text-2" id="watch-msg">Your own symbols save to your account. Same date and times as the Morning Journal (change the times there).</span>
+  </div></div>
+  <div class="journal-table-wrap mb-md">
+    <table class="journal-table">
+      <thead><tr>
+        <th style="width:90px;">Symbol</th><th style="width:90px;">Prior close</th><th style="width:96px;" id="watch-t1l">8:25 AM</th><th style="width:64px;">+ / −</th>
+        <th style="width:96px;" id="watch-t2l">9:45 AM</th><th style="width:64px;">+ / −</th><th style="width:70px;">Asia</th><th style="width:70px;">London</th><th>Dir</th><th>Notes</th>
+      </tr></thead>
+      <tbody id="watch-tbody"></tbody>
+    </table>
+  </div>
+  <div class="fs-12 text-2" style="margin:-8px 2px 14px">London for stocks = pre-market 4–8:30 am. <b class="bull">▲</b> took the high · <b class="bear">▼</b> took the low · <b>↕</b> both · <b>•</b> stayed inside. Tap ✕ to remove one of your symbols.</div>
 </div>
 
 <!-- ===== TAB 4: DAILY BIAS ===== -->
@@ -2160,7 +2207,7 @@ let nqLevels = [];
 // ============================================================
 const JC_API = 'https://jc-trading.jacobcarpenterodell.workers.dev';
 const SYNC_KEYS = ['jct_bias','jct_bt_chat','jct_checklist','jct_dash_notes','jct_edge_notes',
-  'jct_journal','jct_levels','jct_trades','tjr_bias','jct_risk','jct_plan'];
+  'jct_journal','jct_levels','jct_trades','tjr_bias','jct_risk','jct_plan','jct_watch'];
 
 // journal = { 'YYYY-MM-DD': { rows, obs, edge, u } }: keep the most recently edited copy of each day
 function mergeJournalDays(a, b) {
@@ -2914,11 +2961,12 @@ function showPage(name) {
   const page = document.getElementById('page-' + name);
   if (page) page.classList.add('active');
   const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabNames = ['live','dashboard','journal','bias','strategy','tradelog','edge','backtest'];
+  const tabNames = ['live','dashboard','journal','watch','bias','strategy','tradelog','edge','backtest'];
   const idx = tabNames.indexOf(name);
   if (idx >= 0 && tabBtns[idx]) tabBtns[idx].classList.add('active');
   currentTab = name;
-  if (name === 'journal') initJournalDate();
+  if (name === 'journal') { initJournalDate(); trJournalOpen(); }
+  if (name === 'watch') watchOpen();
   if (name === 'tradelog') renderTradeLog();
   if (name === 'charts') renderFuturesCharts();
   if (name === 'strategy') readyCycle(false);
@@ -3182,17 +3230,22 @@ async function fillJournalCol(col) {
   setTimeout(()=>{ if(statusEl) statusEl.textContent='Ready'; }, 5000);
 }
 async function fillAllJournal() {
-  const status = document.getElementById('jfetch-status'), date = document.getElementById('journal-date').value;
+  const status = { set textContent(v) { for (const id of ['jfetch-status', 'wfetch-status']) { const e = document.getElementById(id); if (e) e.textContent = v; } } }, date = document.getElementById('journal-date').value;
+  const SYMS = [...new Set([...ALL_JOURNAL_SYMS, ...watchList()])];
   const t1 = +document.getElementById('journal-t1').value, t2 = +document.getElementById('journal-t2').value;
   if (!JC_API) { if (status) status.textContent = 'Needs the Cloudflare Worker'; return; }
   if (status) status.textContent = 'Getting the numbers…';
   let j = null;
-  try { const res = await fetch(`${JC_API}/journal?date=${date}&t1=${t1}&t2=${t2}&symbols=${encodeURIComponent(ALL_JOURNAL_SYMS.map(s => YAHOO_MAP[s] || s).join(','))}`, { signal: AbortSignal.timeout(25000) });
-    if (res.ok) j = await res.json(); else if (status) status.textContent = res.status === 404 ? 'The server needs its update first' : 'Server error ' + res.status; } catch(e) { if (status) status.textContent = "Couldn't reach the server"; }
+  try { const list = SYMS.map(s => YAHOO_MAP[s] || s); j = { syms: {} };
+    for (let i = 0; i < list.length; i += 40) {
+      const res = await fetch(`${JC_API}/journal?date=${date}&t1=${t1}&t2=${t2}&symbols=${encodeURIComponent(list.slice(i, i + 40).join(','))}`, { signal: AbortSignal.timeout(25000) });
+      if (!res.ok) { status.textContent = res.status === 404 ? 'The server needs its update first' : 'Server error ' + res.status; j = null; break; }
+      Object.assign(j.syms, (await res.json()).syms);
+    } } catch(e) { j = null; status.textContent = "Couldn't reach the server"; }
   if (!j) return;
   let filled = 0, missing = 0;
-  for (const sym of ALL_JOURNAL_SYMS) {
-    const x = j.syms[YAHOO_MAP[sym] || sym], key = sym.replace(/[^a-zA-Z0-9]/g, '_'), tr = document.querySelector(`#journal-tbody tr[data-sym="${sym}"]`);
+  for (const sym of SYMS) {
+    const x = j.syms[YAHOO_MAP[sym] || sym], key = sym.replace(/[^a-zA-Z0-9]/g, '_'), tr = document.querySelector(`tr[data-sym="${CSS.escape(sym)}"]`);
     if (!x || !tr) { missing++; continue; }
     const set = (f, v) => { const el = tr.querySelector(`[data-field="${f}"]`); if (el && v != null) el.value = typeof v === 'number' ? v.toFixed(2) : v; };
     set('close', x.close); set('am7', x.p1); set('am915', x.p2);
@@ -3329,14 +3382,31 @@ function initJournalDate() {
   loadJournal();
 }
 
-function buildJournalRows() {
-  const tbody = document.getElementById('journal-tbody');
+function watchList() { try { const a = JSON.parse(localStorage.getItem('jct_watch') || '[]'); return Array.isArray(a) ? a : []; } catch(e) { return []; } }
+function watchOpen() { initJournalDate(); document.getElementById('watch-date').value = document.getElementById('journal-date').value; loadJournal(); }
+function watchDateChanged() { flushJournal(); document.getElementById('journal-date').value = document.getElementById('watch-date').value; loadJournal(); }
+async function watchAdd() {
+  const inp = document.getElementById('watch-add'), msg = document.getElementById('watch-msg');
+  const s = inp.value.trim().toUpperCase().replace(/[^A-Z0-9.=^!-]/g, '').slice(0, 15);
+  if (!s) return;
+  if ([...ALL_JOURNAL_SYMS, ...watchList()].includes(s)) { msg.textContent = s + ' is already on the list.'; return; }
+  msg.textContent = 'Checking ' + s + '…';
+  let found = false; try { const r = await fetch(`${JC_API}/prices?symbols=${encodeURIComponent(s)}`, { signal: AbortSignal.timeout(8000) }); found = r.ok && !!(await r.json()).quotes?.[s]; } catch(e) {}
+  if (!found) { msg.textContent = `Couldn't find ${s}. Use the Yahoo Finance ticker (e.g. BRK-B, ^GSPC, CL=F, BTC-USD).`; return; }
+  flushJournal(); localStorage.setItem('jct_watch', JSON.stringify([...watchList(), s])); inp.value = '';
+  msg.textContent = `Added ${s}. Tap Fill to get its numbers.`; loadJournal();
+}
+function watchRemove(s) { flushJournal(); localStorage.setItem('jct_watch', JSON.stringify(watchList().filter(x => x !== s))); loadJournal(); showToast('Removed ' + s); }
+function journalGroups(where) { return where === 'futures' ? JOURNAL_GROUPS.filter(g => g.name === 'FUTURES')
+  : [...JOURNAL_GROUPS.filter(g => g.name !== 'FUTURES'), ...(watchList().length ? [{ name: 'MY SYMBOLS', syms: watchList(), mine: true }] : [])]; }
+function buildJournalRows() { buildJournalRowsInto(document.getElementById('journal-tbody'), journalGroups('futures')); buildJournalRowsInto(document.getElementById('watch-tbody'), journalGroups('watch')); }
+function buildJournalRowsInto(tbody, groups) {
   if (!tbody) return;
   tbody.innerHTML = '';
   const dateKey = document.getElementById('journal-date').value;
   const saved = (journalData[dateKey] && journalData[dateKey].rows) || {};
 
-  for (const group of JOURNAL_GROUPS) {
+  for (const group of groups) {
     const hdr = document.createElement('tr');
     hdr.className = 'group-header';
     hdr.innerHTML = `<td colspan="10">${group.name}</td>`;
@@ -3347,7 +3417,7 @@ function buildJournalRows() {
       const tr = document.createElement('tr');
       tr.dataset.sym = sym;
       tr.innerHTML = `
-        <td class="sym-cell">${sym}</td>
+        <td class="sym-cell">${esc(sym)}${group.mine ? ` <button class="wl-x" onclick="watchRemove('${esc(sym)}')" aria-label="Remove ${esc(sym)}">✕</button>` : ''}</td>
         <td><input class="price-input" data-field="close" data-sym="${key}" value="${d.close||''}" placeholder="–" oninput="calcDeltas(this)"></td>
         <td><input class="price-input" data-field="am7" data-sym="${key}" value="${d.am7||''}" placeholder="–" oninput="calcDeltas(this)"></td>
         <td class="delta-cell" id="d1-${key}">${formatDelta(d.close, d.am7)}</td>
@@ -3376,6 +3446,7 @@ const JT_OPTS = [420, 480, 505, 540, 555, 570, 585, 600, 630, 660];
 const jtLabel = m => `${Math.floor(m / 60) % 12 || 12}:${String(m % 60).padStart(2, '0')}`;
 function journalTimes(dateKey) { const d = journalData[dateKey]; return d && d.times ? d.times : d && d.rows ? { t1: 420, t2: 555 } : { t1: 505, t2: 585 }; }   // older entries were 7:00 / 9:15
 function renderJournalTimes(tm) {
+  for (const [id, v] of [['watch-t1l', tm.t1], ['watch-t2l', tm.t2]]) { const el = document.getElementById(id); if (el) el.textContent = jtLabel(v) + ' AM'; }
   for (const [id, v] of [['journal-t1', tm.t1], ['journal-t2', tm.t2]]) { const el = document.getElementById(id); if (!el) continue;
     el.innerHTML = [...new Set([...JT_OPTS, v])].sort((a, b) => a - b).map(m => `<option value="${m}"${m === v ? ' selected' : ''}>${jtLabel(m)} AM</option>`).join(''); }
 }
@@ -3427,7 +3498,7 @@ function saveJournal(auto) {
   const dateKey = journalShown || document.getElementById('journal-date').value;
   if (!dateKey) return;
   const rows = {};
-  document.querySelectorAll('#journal-tbody tr[data-sym]').forEach(tr => {
+  document.querySelectorAll('#journal-tbody tr[data-sym], #watch-tbody tr[data-sym]').forEach(tr => {
     const inputs = tr.querySelectorAll('[data-sym]');
     if (!inputs.length) return;
     const sym = inputs[0].dataset.sym;
@@ -4572,7 +4643,7 @@ try { lvSym = localStorage.getItem('jct_lv_sym') || 'NQ=F'; lvTf = localStorage.
 const LV_TFS = [['5m', '5m'], ['15m', '15m'], ['1h', '1H'], ['4h', '4H'], ['1d', 'D']];
 const LV_STAGE = ['no sweep yet', 'sweep done', 'break of structure done', 'gap formed / order working', 'in a trade', 'done for the day'];
 const lvName = sym => sym === 'ES=F' ? 'ES1!' : 'NQ1!';
-function lvSetSym(s) { lvSym = s; try { localStorage.setItem('jct_lv_sym', s); } catch(e) {} lvRender(); }
+function lvSetSym(s) { lvSymAuto = false; lvSym = s; try { localStorage.setItem('jct_lv_sym', s); } catch(e) {} lvRender(); }
 function lvSetTf(t) { lvTf = t; try { localStorage.setItem('jct_lv_tf', t); } catch(e) {} lvRender(); }
 // same setting + exit as the Lab/Replay for that contract
 function lvCfg(sym) {
@@ -4643,6 +4714,10 @@ function lvRender() {
   if (!BT || !window.TJR || !labRaw) { board.innerHTML = '<div class="lv-top">Loading today\'s candles…</div>'; setTimeout(() => { if (currentTab === 'live') lvRender(); }, 1500); return; }
   const now = etNow(), ph = lvPhase(now.m, now.wd), runs = {};
   for (const [s] of MTF_SYMS) { runs[s] = lvRun(s); if (runs[s]) runs[s].off = lvOffSetups(runs[s]); }
+  // follow the contract with the action (until you pick one yourself)
+  let switchNote = '';
+  if (lvSymAuto) { const cur = runs[lvSym], best = MTF_SYMS.map(([s]) => runs[s]).filter(Boolean).sort((a, b) => hmScore(b) - hmScore(a))[0];
+    if (best && cur && best.sym !== lvSym && hmScore(best) > hmScore(cur)) { switchNote = `${lvName(lvSym)} ${hmStatusWord(cur)} → showing ${lvName(best.sym)}`; lvSym = best.sym; } }
   const R = runs[lvSym] || Object.values(runs).find(Boolean);
   if (!R) { board.innerHTML = '<div class="lv-top">Today\'s candles are not available yet.</div>'; return; }
   const effM = r => r.sameDay ? now.m : 1439;
@@ -4689,18 +4764,22 @@ function lvRender() {
   document.getElementById('lv-plan-sym').textContent = lvName(R.sym);
   document.getElementById('lv-plan').innerHTML = lvPlanHtml(R, A);
   trLastA = A; trLastR = R;
-  { const G = trGuard(), ph = trPhase(now, R), pn = document.getElementById('tr-panel');
-    document.getElementById('tr-phase').innerHTML = trPhaseHtml(ph);
+  { const G = trGuard(), other = MTF_SYMS.map(([s]) => runs[s]).find(r => r && r.sym !== R.sym);
+    document.getElementById('hm-meter').innerHTML = hmMeterHtml(R, now, ph, other);
+    document.getElementById('hm-switch').innerHTML = switchNote ? `<div class="hm-switch">↪ ${esc(switchNote)} · <a href="#" onclick="lvSetSym('${other ? other.sym : R.sym}');return false">show ${other ? lvName(other.sym) : ''}</a></div>` : '';
+    document.getElementById('tr-open-slot').innerHTML = trOpenHtml(R);
     document.getElementById('tr-guard').innerHTML = trGuardHtml(G);
-    if (!pn.dataset.dirty || pn.dataset.ph !== ph) { pn.innerHTML = ph === 'prepare' ? trPrepareHtml(R, G) : ph === 'review' ? trReviewHtml(R, G) : trOpenHtml(R); pn.dataset.ph = ph; delete pn.dataset.dirty; } }
+    document.getElementById('hm-bias').innerHTML = hmBiasHtml();
+    trRenderJournalPanels(R, G); }
   // levels for a plan that isn't already drawn as a position box
   const P = A.plan, lines = P && (P.est || A.kind === 'gap') ? [
     ...(A.trigger && A.kind === 'forming' && A.trigger.p !== P.entry ? [{ p: A.trigger.p, label: 'trigger', col: '#bf5af2' }] : []),
     { p: P.entry, label: (P.est ? 'est. ' : '') + (P.dir === 'long' ? 'BUY ' : 'SELL ') + P.entry.toFixed(2), col: '#0a84ff' },
     { p: P.stop, label: 'stop −' + P.risk.toFixed(0), col: '#c9302c' },
     ...(P.tp1 != null ? [{ p: P.tp1, label: '½ ' + P.tp1Name, col: '#30a14e' }] : []),
-    { p: P.target, label: 'TP ' + P.targetName, col: '#248a3d' }] : null;
-  if (lvTf === '5m') drawSetupChart(document.getElementById('lv-chart'), R.day, R.st, offShow ? [...R.evs, ...offShow.evs] : R.evs, { slots: Math.max(R.session ? 61 : 0, R.day.length + (F && F.band ? 13 : 0)), fc: F && F.band ? { band: F.band, n: F.n, label: F.label } : null, lines });
+    { p: P.target, label: 'TP ' + P.targetName, col: '#248a3d' }] : [];
+  lines.push(...hmMyLines(R));
+  if (lvTf === '5m') drawSetupChart(document.getElementById('lv-chart'), R.day, R.st, offShow ? [...R.evs, ...offShow.evs] : R.evs, { slots: Math.max(R.session ? 61 : 0, R.day.length + (F && F.band ? 13 : 0)), fc: F && F.band ? { band: F.band, n: F.n, label: F.label } : null, lines: lines.length ? lines : null });
   else drawCandles('lv-chart', R.sym, lvTf, { n: 80, h: 340 });
   // play-by-play: one note per candle, newest first
   const tfl = LV_TFS.find(x => x[0] === lvTf)[1];
@@ -4777,7 +4856,7 @@ function trGuardHtml(G) {
   return `<div class="tr-guard">
     ${item(st(G.n >= G.maxT, false), `🛡 Trades today <b>${G.n} / ${G.maxT}</b>`)}
     ${item(st(G.dayStop && G.pnl <= -G.dayStop, G.pnl < 0), `P&amp;L today <b>${G.pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(G.pnl))}</b> · stop −$${G.dayStop || '–'}`)}
-    ${item(G.mScore == null ? 'warn' : st(G.mScore <= 2, G.mScore === 3), G.mScore == null ? 'Mindset: <a href="#" onclick="trSetPhase(\'prepare\');return false">check in</a>' : `Mindset <b>${G.mScore}/5</b>`)}
+    ${item(G.mScore == null ? 'warn' : st(G.mScore <= 2, G.mScore === 3), G.mScore == null ? 'Mindset: <a href="#" onclick="showPage(\'journal\');return false">check in</a>' : `Mindset <b>${G.mScore}/5</b>`)}
     ${item(G.coolLeft ? 'bad' : 'ok', G.coolLeft ? `Cool-down <b>${G.coolLeft} min</b>` : 'No cool-down')}
     ${item('ok', `🔥 Plan streak <b>${G.streak} day${G.streak === 1 ? '' : 's'}</b>`)}
   </div>`;
@@ -4813,12 +4892,13 @@ function trPrepareHtml(R, G) {
     </div></div>
   </div>`;
 }
-document.addEventListener('input', e => { const pn = e.target.closest && e.target.closest('#tr-panel'); if (pn) pn.dataset.dirty = '1'; });
+document.addEventListener('input', e => { const pn = e.target.closest && e.target.closest('#jr-prep, #jr-review'); if (pn) pn.dataset.dirty = '1'; });
+function trSaveMindRefresh() { const R = trLastR; if (R) trRenderJournalPanels(R, trGuard()); }
 function trSaveMind() {
-  delete document.getElementById('tr-panel').dataset.dirty;
+  delete document.getElementById('jr-prep').dataset.dirty;
   const v = id => document.getElementById(id).value;
   trSaveDay({ mind: { sleep: +v('tr-sleep'), focus: +v('tr-focus'), mood: v('tr-mood'), accept: document.getElementById('tr-accept').checked, at: Date.now() } });
-  showToast('Check-in saved'); lvRender();
+  showToast('Check-in saved'); trSaveMindRefresh(); if (currentTab === 'live') lvRender();
 }
 // ---- 2 · Trade: open position ----
 function trOpenHtml(R) {
@@ -4842,7 +4922,7 @@ function trClose() {
   if (!(exit > 0)) { showToast('Enter the exit price', 'warn'); return; }
   const pts = t.dir === 'Long' ? exit - t.entry : t.entry - exit, risk = t.plan?.stop != null ? Math.abs(t.entry - t.plan.stop) : null;
   Object.assign(t, { exit, pnl: +(pts / 0.25 * (TICK_VALS[t.sym] || 12.5) * t.qty).toFixed(2), rr: risk ? (pts / risk).toFixed(2) : '0', status: 'closed', closedAt: Date.now() });
-  saveTrades(); renderTradeLog(); trPhaseSel = 'review'; showToast(t.pnl >= 0 ? 'Trade closed: logged' : 'Trade closed. A 15-minute cool-down starts now'); lvRender();
+  saveTrades(); renderTradeLog(); showToast(t.pnl >= 0 ? 'Trade closed: logged. Review it on the Morning Journal' : 'Trade closed. A 15-minute cool-down starts now'); lvRender();
 }
 function trCancelOpen() { const t = trOpen(); if (!t) return; trades = trades.filter(x => x !== t); saveTrades(); renderTradeLog(); showToast('Removed'); lvRender(); }
 // ---- pre-flight (with the soft lock) ----
@@ -4906,7 +4986,89 @@ function trReviewHtml(R, G) {
     <div class="fs-12 text-2">${rv.followed === 'yes' ? `🔥 Plan streak: ${G.streak} day${G.streak === 1 ? '' : 's'}. Discipline is the edge you control.` : 'Saved to today\'s journal as you answer. Your streak counts days you followed the plan, win or lose.'}</div>
   </div></div>`;
 }
-function trReviewSet(k, v) { delete document.getElementById('tr-panel').dataset.dirty; const d = trDay(); trSaveDay({ review: { ...(d.review || {}), [k]: v, at: Date.now() } }); if (k === 'followed') lvRender(); }
+function trReviewSet(k, v) { delete document.getElementById('jr-review').dataset.dirty; const d = trDay(); trSaveDay({ review: { ...(d.review || {}), [k]: v, at: Date.now() } }); if (k === 'followed') trSaveMindRefresh(); }
+
+// ---------- HOME: trade meter, auto focus on the contract with the action, today's bias ----------
+let lvSymAuto = true;   // the home screen follows the contract with the action until you pick one yourself
+// how much is going on for a contract right now (higher = more worth showing)
+function hmScore(r) {
+  if (!r) return -1;
+  const s = r.st, has = t => r.evs.some(e => e.type === t);
+  if (s.pos) return 5; if (s.pending) return 4;
+  const k = lvStageOf(s, r.sameDay ? etNow().m : 1439).k;
+  if (k >= 1 && k <= 3) return 3;
+  if ((r.off || []).some(o => !o.ex && !o.cn)) return 2;
+  if (has('exit')) return 1;
+  return 0;
+}
+function hmStatusWord(r) {
+  if (!r) return 'no data';
+  const ex = r.evs.find(e => e.type === 'exit');
+  if (r.st.pos) return 'in a trade'; if (r.st.pending) return 'order working';
+  if (ex) return `done for today (${ex.data && ex.data.pts >= 0 ? '+' : ''}${ex.data ? ex.data.pts.toFixed(1) : ''} pts)`;
+  if (r.evs.some(e => e.type === 'cancel')) return 'done for today (no fill)';
+  return 'no setup';
+}
+// countdown to the next moment that matters in the trading day (ET)
+function hmCountdown(now) {
+  const W = WIN(), m = now.m, wd = now.wd, f = mm => mm >= 1440 ? `${Math.floor(mm / 1440)}d ${Math.floor(mm % 1440 / 60)}h` : `${Math.floor(mm / 60) ? Math.floor(mm / 60) + 'h ' : ''}${mm % 60}m`;
+  const weekend = wd === 6 || (wd === 0) || (wd === 5 && m >= 720);
+  if (weekend) { const days = wd === 5 ? 3 : wd === 6 ? 2 : 1, left = days * 1440 - m + W.watchStart; return { big: f(left), label: 'until the next session (Mon 8:30 ET)', pct: 0 }; }
+  const T = [[W.watchStart, 'until the rules start watching (8:30)'], [570, 'until the NY open · no entries until 9:50'], [W.entryStart, 'until the entry window opens'], [W.entryEnd, 'left in the entry window'], [W.restEnd, 'until unfilled orders cancel'], [720, 'until everything is flat (12:00)']];
+  const nx = T.find(([t]) => t > m);
+  if (!nx) { const left = 1440 - m + W.watchStart; return { big: f(left), label: 'until tomorrow\'s session (8:30)', pct: 0 }; }
+  const pct = m >= W.watchStart && m < 720 ? Math.round((m - W.watchStart) / (720 - W.watchStart) * 100) : 0;
+  return { big: f(nx[0] - m), label: nx[1], pct, inWin: m >= W.entryStart && m < W.entryEnd };
+}
+function hmMeterHtml(R, now, ph, other) {
+  const C = hmCountdown(now), [cls, title] = bannerFor(R.st, R.evs, R.sameDay ? now.m : 1439, R.sameDay ? R.ageMin : null);
+  return `<div class="hm-meter ${C.inWin ? 'hot' : ''}">
+    <div class="hm-cd"><div class="hm-big">${C.big}</div><div class="hm-lbl">${esc(C.label)}</div></div>
+    <div class="hm-mid">
+      <div class="hm-now"><b>${lvName(R.sym)}</b> · ${esc(title)}</div>
+      <div class="lv-drive">${lvDrive(R, ph.inPlay && R.sameDay)}</div>
+      <div class="hm-bar" title="8:30 → 12:00"><span style="width:${C.pct}%"></span>${[570, WIN().entryStart, WIN().entryEnd].map(t => `<i style="left:${((t - WIN().watchStart) / (720 - WIN().watchStart) * 100).toFixed(1)}%"></i>`).join('')}</div>
+      <div class="hm-ticks"><span>8:30</span><span>9:30</span><span>9:50</span><span>11:00</span><span>12:00</span></div>
+    </div>
+    ${other ? `<div class="hm-other" onclick="lvSetSym('${other.sym}')" role="button">${lvName(other.sym)}<br><small>${esc(hmStatusWord(other))}</small></div>` : ''}
+  </div>`;
+}
+// your bias next to the market's read: context, not a prediction
+function hmBiasHtml() {
+  let b = {}; try { b = JSON.parse(localStorage.getItem('jct_bias') || '{}'); } catch(e) {}
+  const mine = b.state === 'bull' ? 'Bullish' : b.state === 'bear' ? 'Bearish' : b.state === 'neutral' ? 'Neutral' : null;
+  const read = sym => {
+    const tr = lvTrend4h(sym), cf = mtf?.conf?.[sym], fv = window.mtfScan?.syms?.[sym]?.label, smt = mtf?.conf?.[sym]?.['15m']?.smt?.v;
+    const votes = [tr === 'long' ? 1 : tr === 'short' ? -1 : 0, cf ? Math.sign(cf.bullTFs - cf.bearTFs) : 0, fv === 'Bullish' ? 1 : fv === 'Bearish' ? -1 : 0], s = votes.reduce((a, v) => a + v, 0);
+    const lean = s >= 2 ? ['bull', 'leans bullish'] : s <= -2 ? ['bear', 'leans bearish'] : ['neutral', 'mixed'];
+    const why = [`4H ${tr === 'long' ? 'up' : tr === 'short' ? 'down' : '–'}`, cf ? `${cf.bullTFs} bull / ${cf.bearTFs} bear timeframes` : '', fv ? `HTF gaps ${fv.toLowerCase()}` : '', smt && smt !== '' ? `SMT ${smt === 'bull' ? 'bullish' : smt === 'bear' ? 'bearish' : 'both ways'}` : ''].filter(Boolean).join(' · ');
+    return { lean, why };
+  };
+  const cards = MTF_SYMS.map(([s, nm]) => { const r = read(s), agree = mine && mine.toLowerCase().startsWith(r.lean[0] === 'bull' ? 'bull' : r.lean[0] === 'bear' ? 'bear' : 'x');
+    return `<div class="hm-read"><span class="badge ${r.lean[0] === 'bull' ? 'badge-bull' : r.lean[0] === 'bear' ? 'badge-bear' : 'badge-warn'}">${nm} ${r.lean[1]}</span>${agree ? ' <span class="fs-12 cf-b">agrees with you</span>' : ''}<div class="fs-12 text-2" style="margin-top:4px">${esc(r.why) || 'loading…'}</div></div>`; }).join('');
+  return `<div class="hm-bias-me"><div><span class="text-2 fs-12">YOUR BIAS</span><div class="hm-bias-v ${b.state === 'bull' ? 'bull' : b.state === 'bear' ? 'bear' : ''}">${mine || 'Not set'}${mine && b.conf ? ` <small>${b.conf}% sure</small>` : ''}</div></div>
+      <button class="btn btn-secondary btn-sm" onclick="showPage('bias')">${mine ? 'Edit' : 'Set your bias'}</button></div>
+    ${b.notes ? `<div class="fs-13" style="margin:6px 0"><b>Why:</b> ${esc(b.notes)}</div>` : ''}${b.inv ? `<div class="fs-13" style="margin-bottom:6px"><b>Wrong if:</b> ${esc(b.inv)}</div>` : ''}
+    <div class="hm-reads">${cards}</div>
+    <div class="fs-12 text-2" style="margin-top:6px">The market read counts the 4H trend, how many timeframes line up and the higher-timeframe gaps. It's context, not a prediction: on its own, calling direction tested no better than a coin flip (Lab → Forecast study).</div>`;
+}
+// your own trades today drawn on the chart
+function hmMyLines(R) {
+  const fam = R.sym === 'NQ=F' ? /NQ/ : /ES/;
+  return trTradesToday().filter(t => fam.test(t.sym)).flatMap(t => [
+    { p: +t.entry, label: `you ${t.dir === 'Long' ? 'BUY' : 'SELL'} ${(+t.entry).toFixed(2)}`, col: '#5e5ce6' },
+    ...(t.status !== 'open' && t.exit != null ? [{ p: +t.exit, label: `you out ${t.pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(t.pnl))}`, col: t.pnl >= 0 ? '#248a3d' : '#c9302c' }] : [])]);
+}
+// Prepare + Review now live on the Morning Journal tab
+function trRenderJournalPanels(R, G) {
+  for (const [id, html] of [['jr-prep', () => trPrepareHtml(R, G)], ['jr-review', () => trReviewHtml(R, G)]]) {
+    const el = document.getElementById(id); if (!el || el.dataset.dirty) continue; el.innerHTML = html();
+  }
+}
+async function trJournalOpen() {
+  try { await ensureBars(false); } catch(e) {}
+  whenTJR(() => { if (!BT || !labRaw) return; const R = lvRun(lvSym) || lvRun('NQ=F'); if (R) { R.off = lvOffSetups(R); trRenderJournalPanels(R, trGuard()); } });
+}
 
 // ---------- TRADE PLAN: one clear call per contract from the TJR rules, graded by the conditions behind it ----------
 // Signals come from the strategy engine (same rules as the Lab/backtest). The grade counts conditions; only the track

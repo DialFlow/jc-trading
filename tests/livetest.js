@@ -21,7 +21,7 @@ function cutBars() {
       await p.route(/\/bars(\?|$)|data\/bars\.json/, r => r.fulfill({ body, headers: { 'access-control-allow-origin': '*', 'content-type': 'application/json' } }));
       await p.clock.setFixedTime(new Date(CUT * 1000));
     }
-    await p.goto('http://localhost:8090/'); await p.waitForTimeout(5000);
+    await p.goto('http://localhost:8090/'); await p.waitForTimeout(5000); await p.evaluate(() => { lvSymAuto = false; });
     await p.click('.tab-btn:has-text("🎯 Trade")'); await p.waitForTimeout(2500);
     const g = sel => p.evaluate(s => (document.querySelector(s)?.innerText || '').replace(/\s+/g, ' ').trim(), sel);
     const tag = `${travel ? 'TRAVEL' : 'NOW'} ${name}`;
