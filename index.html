@@ -392,6 +392,16 @@ body {
 .lv-fct .k { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
 .lv-fct .v { font-size: 18px; font-weight: 800; margin: 2px 0; }
 .lvp { border: 1.5px solid var(--blue); }
+.sync-box input:not([type=checkbox]) { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--fill); color: var(--text); font: 14px Inter, system-ui, sans-serif; }
+.sync-box input:not([type=checkbox]):focus { outline: 2px solid var(--blue); outline-offset: 0; }
+.acct-terms { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.45; color: var(--text2); margin: 4px 0 8px; }
+.acct-terms input { width: auto; margin-top: 2px; flex-shrink: 0; }
+.acct-terms[hidden] { display: none; }
+.site-foot { text-align: center; font-size: 12px; color: var(--text2); padding: 18px 16px 28px; }
+.acct-sec { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+.acct-or { display: flex; align-items: center; gap: 8px; margin: 10px 0; color: var(--text3); font-size: 12px; }
+.acct-or::before, .acct-or::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+#acct-gbtn, #acct-glink { min-height: 40px; }
 .jt-time { font: 600 12px inherit; padding: 2px 4px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); width: auto; }
 .sess-cell { text-align: center; }
 .sess-btn { border: 0; background: var(--fill); border-radius: 8px; min-width: 34px; height: 28px; font-size: 15px; font-weight: 800; cursor: pointer; color: var(--text2); }
@@ -2066,6 +2076,7 @@ select { cursor: pointer; }
   </div>
 </div>
 
+  <div class="site-foot">JC Trading is for personal tracking and learning only. <b>Not financial advice.</b> · <a href="terms.html">Terms &amp; Conditions</a></div>
 </main>
 <div id="gl-pop" class="gl-pop" hidden role="tooltip"></div>
 <div id="sync-modal" class="sync-modal" hidden>
@@ -2073,6 +2084,10 @@ select { cursor: pointer; }
     <div class="fw-600" id="sync-title" style="font-size:16px;margin-bottom:6px">Your account</div>
     <div id="acct-in" hidden>
       <div class="fs-13">Signed in as <b id="acct-name"></b>. Your journal, trade log, bias, levels and notes save to your account automatically and follow you to any device you sign in on.</div>
+      <div class="acct-sec"><div class="fs-12 fw-600 text-2">EMAIL (sign in with it instead of your username)</div>
+        <div style="display:flex;gap:6px;margin-top:6px"><input id="acct-email-in" type="email" placeholder="you@example.com" autocomplete="email"><button class="btn btn-secondary btn-sm" onclick="Sync.saveEmail()">Save</button></div></div>
+      <div class="acct-sec acct-gwrap" hidden><div class="fs-12 fw-600 text-2">GOOGLE · <span id="acct-gstate">…</span></div><div id="acct-glink" style="margin-top:6px"></div></div>
+      <div id="sync-msg-in"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">
         <button class="btn btn-secondary btn-sm" onclick="Sync.signOut()">Sign out</button>
         <button class="btn btn-primary btn-sm" onclick="document.getElementById('sync-modal').hidden=true">Done</button>
@@ -2080,17 +2095,20 @@ select { cursor: pointer; }
     </div>
     <div id="acct-out">
       <div class="fs-12 text-2" style="margin-bottom:10px">Everyone gets their own private journal. Sign in on each device you use.</div>
+      <div class="acct-gwrap" hidden><div id="acct-gbtn"></div><div class="fs-12 text-2" id="acct-gnote" style="margin-top:4px"></div><div class="acct-or"><span>or</span></div></div>
       <div class="mtf-segs" id="acct-mode" style="margin-bottom:10px"><button class="mtf-seg on" data-m="in" onclick="Sync.mode('in')">Sign in</button><button class="mtf-seg" data-m="up" onclick="Sync.mode('up')">Create account</button></div>
-      <input id="acct-user" placeholder="Name (e.g. jacob)" autocomplete="username" autocapitalize="none" spellcheck="false" style="margin-bottom:8px">
+      <input id="acct-user" placeholder="Username or email" autocomplete="username" autocapitalize="none" spellcheck="false" style="margin-bottom:8px">
+      <input id="acct-email" type="email" placeholder="Email" autocomplete="email" autocapitalize="none" style="margin-bottom:8px" hidden>
       <input id="acct-pass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password" style="margin-bottom:8px" onkeydown="if(event.key==='Enter')Sync.submit()">
       <input id="acct-invite" type="password" placeholder="Invite code (ask Jacob)" autocomplete="off" style="margin-bottom:8px" hidden onkeydown="if(event.key==='Enter')Sync.submit()">
       <label class="fs-12 text-2" style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><input type="checkbox" onchange="['acct-pass','acct-invite'].forEach(i=>document.getElementById(i).type=this.checked?'text':'password')" style="width:auto"> Show</label>
       <div id="sync-msg" class="fs-12 text-2" style="min-height:16px"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px">
+      <label id="acct-terms" class="acct-terms" hidden><input type="checkbox" id="acct-agree"> <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a> and understand JC Trading is for my own personal tracking and learning only. <b>It is not financial advice.</b></span></label>
+      <div id="acct-btns" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sync-modal').hidden=true">Cancel</button>
         <button class="btn btn-primary btn-sm" id="acct-go" onclick="Sync.submit()">Sign in</button>
       </div>
-      <div class="fs-12 text-2" style="margin-top:10px">Jacob: create your account with your old sync key as the invite code. That moves your existing journal into it.</div>
+      <div class="fs-12 text-2" style="margin-top:10px">Forgot your password? Sign in with Google instead (once your email is on your account), or ask Jacob.</div>
     </div>
   </div>
 </div>
@@ -2244,7 +2262,7 @@ const Sync = (() => {
   }
 
   // In-page sign-in box (browser prompt() is blocked in many browsers and in-app views)
-  let acctMode = 'in';
+  let acctMode = 'in', gCfg = null, gReady = null;
   function setup() {
     if (!JC_API) return;
     document.getElementById('sync-modal').hidden = false;
@@ -2254,27 +2272,80 @@ const Sync = (() => {
     const msg = document.getElementById('sync-msg');
     msg.textContent = !token() && key() ? 'This device uses the old shared sync key. Create your own account (or sign in) to keep your journal private.' : status === 'error' && token() ? 'Your sign-in ran out. Sign in again; nothing on this device is lost.' : '';
     msg.className = 'fs-12 text-2';
-    if (!inAcct) { mode(acctMode); document.getElementById('acct-user').value = userName(); document.getElementById(userName() ? 'acct-pass' : 'acct-user').focus(); }
+    // one message line, shown in whichever panel is open
+    const m0 = document.getElementById('sync-msg'); if (inAcct) document.getElementById('sync-msg-in').appendChild(m0); else document.getElementById('acct-btns').before(m0);
+    if (inAcct) loadMe(); else { mode(acctMode); document.getElementById('acct-user').value = userName(); }
+    google();
   }
   function mode(m) {
     acctMode = m;
     document.querySelectorAll('#acct-mode .mtf-seg').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-    document.getElementById('acct-invite').hidden = m !== 'up';
+    for (const id of ['acct-email', 'acct-invite', 'acct-terms']) document.getElementById(id).hidden = m !== 'up';
+    document.getElementById('acct-user').placeholder = m === 'up' ? 'Username (e.g. jacob)' : 'Username or email';
+    document.getElementById('acct-pass').placeholder = m === 'up' ? 'Password (8+ characters)' : 'Password';
     document.getElementById('acct-pass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
     document.getElementById('acct-go').textContent = m === 'up' ? 'Create account' : 'Sign in';
+    document.getElementById('acct-gnote').textContent = m === 'up' ? 'New with Google? Enter the invite code and tick the Terms box below first, then tap the Google button.' : '';
+  }
+  // Google Identity Services: the button appears only when the Worker has GOOGLE_CLIENT_ID
+  async function google() {
+    try { if (!gCfg) gCfg = await (await fetch(JC_API + '/account/config', { signal: AbortSignal.timeout(6000) })).json(); } catch(e) { gCfg = {}; }
+    const on = !!(gCfg && gCfg.googleClientId);
+    document.querySelectorAll('.acct-gwrap').forEach(el => el.hidden = !on);
+    if (!on) return;
+    gReady = gReady || new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    try { await gReady; } catch(e) { document.querySelectorAll('.acct-gwrap').forEach(el => el.hidden = true); return; }
+    window.google.accounts.id.initialize({ client_id: gCfg.googleClientId, callback: onGoogle, auto_select: false, ux_mode: 'popup' });
+    for (const id of ['acct-gbtn', 'acct-glink']) { const el = document.getElementById(id); if (el && el.offsetParent !== null) window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', text: id === 'acct-glink' ? 'continue_with' : 'continue_with', width: 260 }); }
+  }
+  async function post(path, data, auth) {
+    const res = await fetch(JC_API + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(auth ? authHdr() : {}) }, body: JSON.stringify(data), signal: AbortSignal.timeout(10000) });
+    return { res, j: await res.json().catch(() => ({})) };
+  }
+  async function onGoogle(resp) {
+    const msg = document.getElementById('sync-msg');
+    msg.textContent = 'Checking with Google…'; msg.className = 'fs-12 text-2';
+    try {
+      if (token() && status !== 'error') {   // signed in: connect Google to this account
+        const { res, j } = await post('/account/me', { credential: resp.credential }, true);
+        if (!res.ok) { msg.textContent = '✗ ' + (j.error || 'HTTP ' + res.status); msg.className = 'fs-12 cf-s'; return; }
+        showMe(j); msg.textContent = '✓ Google connected: you can sign in with it on any device'; msg.className = 'fs-12 cf-b'; return;
+      }
+      const { res, j } = await post('/account/google', { credential: resp.credential, invite: document.getElementById('acct-invite').value.trim(), agree: document.getElementById('acct-agree').checked });
+      if (j.needInvite || j.needTerms) { mode('up'); document.getElementById(j.needTerms && document.getElementById('acct-invite').value ? 'acct-agree' : 'acct-invite').focus(); }
+      await finish(res, j);
+    } catch(e) { msg.textContent = "✗ Couldn't reach the server. Try again."; msg.className = 'fs-12 cf-s'; }
+  }
+  async function loadMe() {
+    try { const res = await fetch(JC_API + '/account/me', { headers: authHdr(), signal: AbortSignal.timeout(8000) }); if (res.ok) showMe(await res.json()); } catch(e) {}
+  }
+  function showMe(u) {
+    document.getElementById('acct-email-in').value = u.email || '';
+    document.getElementById('acct-gstate').innerHTML = u.google ? '<span class="cf-b">✓ Google connected</span>' : 'Not connected yet';
+    document.getElementById('acct-glink').hidden = !!u.google;
+  }
+  async function saveEmail() {
+    const msg = document.getElementById('sync-msg'), email = document.getElementById('acct-email-in').value.trim();
+    try { const { res, j } = await post('/account/me', { email }, true);
+      if (!res.ok) { msg.textContent = '✗ ' + (j.error || 'HTTP ' + res.status); msg.className = 'fs-12 cf-s'; return; }
+      showMe(j); msg.textContent = '✓ Email saved: you can sign in with it'; msg.className = 'fs-12 cf-b'; }
+    catch(e) { msg.textContent = "✗ Couldn't reach the server."; msg.className = 'fs-12 cf-s'; }
   }
   // this device's copy of the synced data (journal, trades…) is removed when another person signs in or on sign-out;
   // it is already in the cloud under the previous account
   function wipeLocal() { for (const k of SYNC_KEYS) { try { localStorage.removeItem(k); } catch(e) {} } meta = { t: {}, synced: false }; saveMeta(); }
   async function submit() {
     const msg = document.getElementById('sync-msg'), name = document.getElementById('acct-user').value.trim().toLowerCase(), pass = document.getElementById('acct-pass').value;
-    const invite = document.getElementById('acct-invite').value.trim();
-    if (!name || !pass) { msg.textContent = 'Enter your name and password.'; msg.className = 'fs-12 cf-s'; return; }
+    const invite = document.getElementById('acct-invite').value.trim(), email = document.getElementById('acct-email').value.trim();
+    if (!name || !pass || (acctMode === 'up' && !email)) { msg.textContent = acctMode === 'up' ? 'Enter a username, email and password.' : 'Enter your username (or email) and password.'; msg.className = 'fs-12 cf-s'; return; }
+    const agree = document.getElementById('acct-agree').checked;
+    if (acctMode === 'up' && !agree) { msg.textContent = 'Please read and tick the Terms & Conditions box to create your account.'; msg.className = 'fs-12 cf-s'; return; }
     msg.textContent = acctMode === 'up' ? 'Creating your account…' : 'Signing in…'; msg.className = 'fs-12 text-2';
-    let res, j = {};
-    try { res = await fetch(JC_API + '/account/' + (acctMode === 'up' ? 'signup' : 'login'), { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, pass, invite }), signal: AbortSignal.timeout(10000) }); j = await res.json().catch(() => ({})); }
-    catch(e) { msg.textContent = "✗ Couldn't reach the server. Check your connection and try again."; msg.className = 'fs-12 cf-s'; return; }
+    try { const { res, j } = await post('/account/' + (acctMode === 'up' ? 'signup' : 'login'), { name, pass, invite, email, agree }); await finish(res, j); }
+    catch(e) { msg.textContent = "✗ Couldn't reach the server. Check your connection and try again."; msg.className = 'fs-12 cf-s'; }
+  }
+  async function finish(res, j) {
+    const msg = document.getElementById('sync-msg');
     if (!res.ok || !j.token) { msg.textContent = res.status === 404 ? "✗ Accounts aren't switched on yet: the server (Cloudflare Worker) needs its update first." : '✗ ' + (j.error || 'HTTP ' + res.status); msg.className = 'fs-12 cf-s'; return; }
     const prev = userName() || (key() ? '@shared' : '');
     const switching = prev && prev !== j.name && !(prev === '@shared' && j.owner);
@@ -2308,7 +2379,7 @@ const Sync = (() => {
     if (await pull()) location.reload();
   });
 
-  return { pull, push, setup, save, mode, submit, signOut, setStatus, status: () => status, user: userName, authHdr };
+  return { pull, push, setup, save, mode, submit, signOut, saveEmail, setStatus, status: () => status, user: userName, authHdr };
 })();
 
 // ============================================================

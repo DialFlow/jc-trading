@@ -7,6 +7,7 @@
 //                (moves the old shared journal into it, and only the owner gets the TradingView real-time candles)
 //   INVITE_CODE  Secret (optional): the code friends use to create their own accounts
 //   TV_KEY    Secret: the key in the TradingView live-feed alert (jc_tv_live_feed.pine)
+//   GOOGLE_CLIENT_ID  Variable (optional): OAuth web client ID from Google Cloud; turns on "Continue with Google"
 //
 // Routes:
 //   GET /prices?symbols=ES=F,NQ=F,...  → { updated, source, quotes: { sym: {price, prev, time} } }
@@ -15,8 +16,11 @@
 //   GET /bars                          → { updated, bars: { "ES=F": { "5m": [[t,o,h,l,c]…], "15m", "1h", "1d" }, "NQ=F": … } }
 //   GET /news                          → this week's USD high/medium events (Forex Factory)
 //   GET /sectors                       → sector ETF 1d/5d performance
-//   POST /account/signup { name, pass, invite } → { token, name, owner }   (one account per person)
-//   POST /account/login  { name, pass }         → { token, name, owner }
+//   POST /account/signup { name, email, pass, invite } → { token, name, owner, email, google }   (one account per person)
+//   POST /account/login  { name (username or email), pass } → same
+//   POST /account/google { credential, invite?, name? } → same (new Google users need the invite code once)
+//   GET/POST /account/me (X-User-Token) → profile · POST { email } or { credential } adds an email / connects Google
+//   GET /account/config → { googleClientId }
 //   POST /account/logout (X-User-Token)
 //   GET /sync                         → that user's { key: { v, t } }   (header X-User-Token; old X-Sync-Key = the owner)
 //   PUT /sync   body { key: { v, t } } → merged state, newest t wins per key (the journal merges day by day)
@@ -49,6 +53,9 @@ export default {
       if (url.pathname === '/account/signup' && req.method === 'POST') return await signup(req, env);
       if (url.pathname === '/account/login' && req.method === 'POST') return await login(req, env);
       if (url.pathname === '/account/logout' && req.method === 'POST') return await logout(req, env);
+      if (url.pathname === '/account/google' && req.method === 'POST') return await google(req, env);
+      if (url.pathname === '/account/me') return await me(req, env);
+      if (url.pathname === '/account/config' && req.method === 'GET') return authConfig(env);
       return json({ error: 'not found' }, 404);
     } catch (e) {
       return json({ error: String(e && e.message || e) }, 500);
@@ -264,27 +271,93 @@ async function newToken(env, name) {
   await env.JC.put('tok:' + tok, name, { expirationTtl: TOKEN_TTL });
   return tok;
 }
+// email:<address> = username, so people can sign in with either; Google accounts are found by their verified email
+// Terms & Conditions (terms.html): every new account must accept the current version; it's stored on the user
+const TERMS_V = '2026-10-09';
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
+const inviteKind = (env, invite) => invite && invite === env.SYNC_KEY ? 'owner' : invite && env.INVITE_CODE && invite === env.INVITE_CODE ? 'friend' : null;
+async function createUser(env, name, rec) {
+  await env.JC.put('user:' + name, JSON.stringify({ ...rec, created: Date.now() }));
+  if (rec.email) await env.JC.put('email:' + rec.email, name);
+  // the owner's account takes over the journal that was synced with the shared key
+  if (rec.owner && !(await env.JC.get('state:' + name))) { const old = await env.JC.get('state'); if (old) await env.JC.put('state:' + name, old); }
+}
+const session = async (env, name, u) => json({ token: await newToken(env, name), name, owner: !!u.owner, email: u.email || '', google: !!u.google });
 async function signup(req, env) {
   if (!env.JC || !env.SYNC_KEY) return json({ error: 'Worker not configured' }, 500);
-  const { name: raw, pass, invite } = await body(req), name = String(raw || '').trim().toLowerCase();
-  if (!NAME_RE.test(name)) return json({ error: 'Name: 2–24 letters, numbers, . _ or -' }, 400);
-  if (typeof pass !== 'string' || pass.length < 6 || pass.length > 200) return json({ error: 'Password: at least 6 characters' }, 400);
-  const owner = invite === env.SYNC_KEY;
-  if (!owner && !(env.INVITE_CODE && invite === env.INVITE_CODE)) return json({ error: 'Wrong invite code' }, 403);
-  if (await env.JC.get('user:' + name)) return json({ error: 'That name is taken' }, 409);
+  const { name: raw, pass, invite, email: em, agree } = await body(req), name = String(raw || '').trim().toLowerCase(), email = String(em || '').trim().toLowerCase();
+  if (!NAME_RE.test(name)) return json({ error: 'Username: 2–24 letters, numbers, . _ or -' }, 400);
+  if (!EMAIL_RE.test(email)) return json({ error: 'Enter a valid email address' }, 400);
+  if (typeof pass !== 'string' || pass.length < 8 || pass.length > 200) return json({ error: 'Password: at least 8 characters' }, 400);
+  if (agree !== true) return json({ error: 'Please read and accept the Terms & Conditions', needTerms: true }, 400);
+  const kind = inviteKind(env, invite); if (!kind) return json({ error: 'Wrong invite code' }, 403);
+  if (await env.JC.get('user:' + name)) return json({ error: 'That username is taken' }, 409);
+  if (await env.JC.get('email:' + email)) return json({ error: 'That email already has an account: sign in instead' }, 409);
   const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-  await env.JC.put('user:' + name, JSON.stringify({ salt, hash: await hashPass(pass, salt, ITER), iter: ITER, owner, created: Date.now() }));
-  // the owner's account takes over the journal that was synced with the shared key
-  if (owner && !(await env.JC.get('state:' + name))) { const old = await env.JC.get('state'); if (old) await env.JC.put('state:' + name, old); }
-  return json({ token: await newToken(env, name), name, owner });
+  const u = { salt, hash: await hashPass(pass, salt, ITER), iter: ITER, owner: kind === 'owner', email, terms: { v: TERMS_V, at: Date.now() } };
+  await createUser(env, name, u);
+  return session(env, name, u);
 }
 async function login(req, env) {
   if (!env.JC) return json({ error: 'Worker not configured' }, 500);
-  const { name: raw, pass } = await body(req), name = String(raw || '').trim().toLowerCase();
-  const u = NAME_RE.test(name) && await env.JC.get('user:' + name, 'json');
-  if (!u || typeof pass !== 'string' || !same(await hashPass(pass, u.salt, u.iter), u.hash)) return json({ error: 'Wrong name or password' }, 401);
-  return json({ token: await newToken(env, name), name, owner: !!u.owner });
+  const { name: raw, pass } = await body(req), id = String(raw || '').trim().toLowerCase();
+  const name = id.includes('@') ? await env.JC.get('email:' + id) : id;
+  const u = name && NAME_RE.test(name) && await env.JC.get('user:' + name, 'json');
+  if (!u || !u.hash || typeof pass !== 'string' || !same(await hashPass(pass, u.salt, u.iter), u.hash))
+    return json({ error: u && !u.hash ? 'This account uses Google: tap Continue with Google' : 'Wrong username/email or password' }, 401);
+  return session(env, name, u);
 }
+// Google: the page gets an ID token from Google Identity Services; Google's tokeninfo endpoint checks the signature
+async function googleId(credential, env) {
+  if (!env.GOOGLE_CLIENT_ID) throw new Error('Google sign-in is not set up');
+  const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(String(credential || '')));
+  const g = r.ok ? await r.json() : null;
+  if (!g || g.aud !== env.GOOGLE_CLIENT_ID || !['accounts.google.com', 'https://accounts.google.com'].includes(g.iss) || String(g.email_verified) !== 'true' || +g.exp * 1000 < Date.now())
+    throw new Error('Google sign-in failed: try again');
+  return { sub: g.sub, email: String(g.email).toLowerCase() };
+}
+async function google(req, env) {
+  if (!env.JC) return json({ error: 'Worker not configured' }, 500);
+  const { credential, invite, name: raw, agree } = await body(req);
+  let g; try { g = await googleId(credential, env); } catch (e) { return json({ error: e.message }, 401); }
+  const existing = await env.JC.get('email:' + g.email);
+  if (existing) { const u = await env.JC.get('user:' + existing, 'json');
+    if (u && u.google && u.google !== g.sub) return json({ error: 'That email is linked to a different Google account' }, 401);
+    if (u && !u.google) { u.google = g.sub; await env.JC.put('user:' + existing, JSON.stringify(u)); }
+    return session(env, existing, u); }
+  // first time with Google: needs an invite code, like any new account
+  const kind = inviteKind(env, invite);
+  if (!kind) return json({ error: 'New here? Enter the invite code and accept the Terms, then tap Continue with Google again', needInvite: true }, 403);
+  if (agree !== true) return json({ error: 'Please read and accept the Terms & Conditions, then tap Continue with Google again', needTerms: true, needInvite: true }, 400);
+  let name = String(raw || g.email.split('@')[0]).toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 20);
+  if (name.length < 2) name = 'user';
+  for (let k = 0; await env.JC.get('user:' + name); k++) name = name.slice(0, 18) + (k + 2);
+  const u = { google: g.sub, email: g.email, owner: kind === 'owner', terms: { v: TERMS_V, at: Date.now() } };
+  await createUser(env, name, u);
+  return session(env, name, u);
+}
+// signed in: see / add the email, connect Google to an existing account
+async function me(req, env) {
+  const who = await whoIs(req, env); if (!who || !who.name) return json({ error: 'signed out' }, 401);
+  const u = (await env.JC.get('user:' + who.name, 'json')) || {};
+  if (req.method === 'GET') return json({ name: who.name, owner: !!u.owner, email: u.email || '', google: !!u.google, password: !!u.hash });
+  const { email: em, credential } = await body(req);
+  if (credential) {
+    let g; try { g = await googleId(credential, env); } catch (e) { return json({ error: e.message }, 401); }
+    const taken = await env.JC.get('email:' + g.email); if (taken && taken !== who.name) return json({ error: 'That Google email already has its own account' }, 409);
+    if (u.email && u.email !== g.email) await env.JC.delete('email:' + u.email);
+    Object.assign(u, { google: g.sub, email: g.email });
+  } else {
+    const email = String(em || '').trim().toLowerCase(); if (!EMAIL_RE.test(email)) return json({ error: 'Enter a valid email address' }, 400);
+    const taken = await env.JC.get('email:' + email); if (taken && taken !== who.name) return json({ error: 'That email already has an account' }, 409);
+    if (u.email && u.email !== email) await env.JC.delete('email:' + u.email);
+    u.email = email;
+  }
+  await env.JC.put('user:' + who.name, JSON.stringify(u)); await env.JC.put('email:' + u.email, who.name);
+  return json({ name: who.name, owner: !!u.owner, email: u.email, google: !!u.google, password: !!u.hash });
+}
+// public: which sign-in options exist (the Google client ID is public by design)
+const authConfig = env => json({ googleClientId: env.GOOGLE_CLIENT_ID || '' }, 200, { 'Cache-Control': 'max-age=300' });
 async function logout(req, env) {
   const tok = req.headers.get('X-User-Token');
   if (tok && /^[0-9a-f]{48}$/.test(tok) && env.JC) await env.JC.delete('tok:' + tok);

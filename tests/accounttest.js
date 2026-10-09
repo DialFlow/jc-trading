@@ -26,10 +26,10 @@ const { pathToFileURL } = require('url'), path = require('path');
     return p;
   }
   const journal = async p => { await p.click('.tab-btn:has-text("Journal")'); await p.waitForTimeout(300); };
-  const signIn = async (p, mode, name, pass, invite) => {
+  const signIn = async (p, mode, name, pass, invite, email, agree) => {
     await p.click('#sync-pill'); await p.waitForTimeout(200);
     await p.evaluate(m => Sync.mode(m), mode);
-    await p.fill('#acct-user', name); await p.fill('#acct-pass', pass); if (invite) await p.fill('#acct-invite', invite);
+    await p.fill('#acct-user', name); await p.fill('#acct-pass', pass); if (invite) await p.fill('#acct-invite', invite); if (email) await p.fill('#acct-email', email); if (mode === 'up') await (agree === false ? p.uncheck('#acct-agree') : p.check('#acct-agree'));
     await p.click('#acct-go'); await p.waitForTimeout(2500);
   };
   const msg = p => p.evaluate(() => document.getElementById('sync-msg').textContent);
@@ -46,19 +46,21 @@ const { pathToFileURL } = require('url'), path = require('path');
     await A.reload(); await A.waitForTimeout(3000); await journal(A);
     ok(await A.evaluate(() => document.getElementById('journal-obs').value) === 'alice notes ' + name, 'entry still there after a reload');
     // 2. account errors
-    await signIn(A, 'up', 'alice', 'secret1', 'bad-code'); ok(/invite/i.test(await msg(A)), 'wrong invite code is refused: ' + await msg(A));
+    await signIn(A, 'up', 'alice', 'secret11', 'bad-code', 'alice@x.com'); ok(/invite/i.test(await msg(A)), 'wrong invite code is refused: ' + await msg(A));
+    await A.click('button:has-text("Cancel")');
+    await signIn(A, 'up', 'alice', 'secret11', 'friend-code', 'alice@x.com', false); ok(/Terms/.test(await msg(A)) && !mem.has('user:alice'), 'no account without ticking the Terms box: ' + await msg(A));
     await A.click('button:has-text("Cancel")');
     // 3. create alice: this device's entry goes into her account
-    await signIn(A, 'up', 'alice', 'secret1', 'friend-code'); await A.waitForTimeout(2500);
+    await signIn(A, 'up', 'alice', 'secret11', 'friend-code', 'alice@x.com'); await A.waitForTimeout(2500);
     ok(/alice/.test(await label(A)), 'header shows the signed-in person: ' + await label(A));
     await journal(A);
     ok(await A.evaluate(() => document.getElementById('journal-obs').value) === 'alice notes ' + name, 'entry kept after creating the account');
     await A.waitForTimeout(9500); // batched upload
     ok(JSON.parse(mem.get('state:alice') || '{}').jct_journal?.v.includes('alice notes'), 'saved to alice in the cloud');
     // 4. a second device signs in as alice and sees it; edits on both devices merge day by day
-    const B = await device(vp); await signIn(B, 'in', 'alice', 'wrong-pass'); ok(/Wrong name or password/.test(await msg(B)), 'wrong password is refused');
+    const B = await device(vp); await signIn(B, 'in', 'alice', 'wrong-pass'); ok(/Wrong username\/email or password/.test(await msg(B)), 'wrong password is refused');
     await B.click('button:has-text("Cancel")');
-    await signIn(B, 'in', 'alice', 'secret1'); await B.waitForTimeout(2500); await journal(B);
+    await signIn(B, 'in', 'Alice@X.com', 'secret11'); ok(/alice/.test(await label(B)), 'signs in with the email instead of the username'); await B.waitForTimeout(2500); await journal(B);
     ok(await B.evaluate(() => document.getElementById('journal-obs').value) === 'alice notes ' + name, 'second device sees alice\'s entry');
     await B.fill('#journal-date', '2026-10-05'); await B.dispatchEvent('#journal-date', 'change'); await B.fill('#journal-obs', 'other day from B'); await B.waitForTimeout(1200);
     await A.fill('#journal-obs', 'alice notes ' + name + ' (edited on A)'); await A.waitForTimeout(1200);
@@ -68,10 +70,10 @@ const { pathToFileURL } = require('url'), path = require('path');
     // 5. sign out, then bob signs in on the same device: he never sees alice's journal
     await A.click('#sync-pill'); await A.waitForTimeout(200); await A.click('button:has-text("Sign out")'); await A.waitForTimeout(3500); await journal(A);
     ok(await A.evaluate(() => document.getElementById('journal-obs').value) === '' && /Sign in/.test(await label(A)), 'signed out: alice\'s journal removed from this device');
-    await signIn(A, 'up', 'bob', 'secret2', 'friend-code'); await A.waitForTimeout(2500); await journal(A);
+    await signIn(A, 'up', 'bob', 'secret22', 'friend-code', 'bob@x.com'); await A.waitForTimeout(2500); await journal(A);
     ok(await A.evaluate(() => document.getElementById('journal-obs').value) === '' && /bob/.test(await label(A)), 'bob starts with his own empty journal');
     // 6. Jacob: creating his account with the old sync key moves the old shared journal into it
-    const J = await device(vp); await signIn(J, 'up', 'jacob', 'secret3', 'owner-key'); await J.waitForTimeout(2500);
+    const J = await device(vp); await signIn(J, 'up', 'jacob', 'secret33', 'owner-key', 'jacob@x.com'); await J.waitForTimeout(2500);
     await J.click('.tab-btn:has-text("Journal")'); await J.fill('#journal-date', '2026-10-01'); await J.dispatchEvent('#journal-date', 'change'); await J.waitForTimeout(300);
     ok(await J.evaluate(() => document.getElementById('journal-obs').value) === 'old shared entry', 'owner account took over the old shared journal');
     const hs = await A.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
@@ -79,7 +81,34 @@ const { pathToFileURL } = require('url'), path = require('path');
     ok(!hs, 'no sideways scroll');
     for (const p of [A, B, J]) await p.context().close();
   }
-  // 7. evening date: 9:30 pm ET on Oct 8 must default to Oct 8 (it used to jump to Oct 9)
+  // 7. Google sign-in (Worker): existing email → that account; new email needs the invite; wrong client is refused; connect to an account
+  env.GOOGLE_CLIENT_ID = 'cid';
+  const realFetch = globalThis.fetch; let gTok = {};
+  globalThis.fetch = (u, o) => String(u).startsWith('https://oauth2.googleapis.com/tokeninfo') ? Promise.resolve(new Response(JSON.stringify(gTok))) : realFetch(u, o);
+  const call = (p, body, hdr = {}) => W.fetch(new Request('https://w.test' + p, { method: 'POST', headers: { 'Content-Type': 'application/json', ...hdr }, body: JSON.stringify(body) }), env, { waitUntil() {} }).then(async r => ({ s: r.status, j: await r.json() }));
+  const g = (email, sub, aud = 'cid') => ({ aud, iss: 'accounts.google.com', email_verified: 'true', exp: String(Math.floor(Date.now() / 1000) + 600), sub, email });
+  gTok = g('Alice@X.com', 'g-alice'); let r = await call('/account/google', { credential: 'x' });
+  ok(r.s === 200 && r.j.name === 'alice' && r.j.google, "Google with alice's email signs in to alice (and links Google)");
+  gTok = g('new.person@gmail.com', 'g-new'); r = await call('/account/google', { credential: 'x' });
+  ok(r.s === 403 && r.j.needInvite, 'a new Google user without the invite code is refused');
+  r = await call('/account/google', { credential: 'x', invite: 'friend-code' });
+  ok(r.s === 400 && r.j.needTerms, 'a new Google user must accept the Terms too');
+  r = await call('/account/google', { credential: 'x', invite: 'friend-code', agree: true });
+  ok(r.s === 200 && JSON.parse(mem.get('user:' + r.j.name)).terms?.v === '2026-10-09' && r.j.name === 'new.person' && r.j.email === 'new.person@gmail.com', 'with the invite code: account created from the Google email (' + r.j.name + ')');
+  gTok = g('evil@x.com', 'g-evil', 'someone-else'); r = await call('/account/google', { credential: 'x', invite: 'friend-code' });
+  ok(r.s === 401, 'a token issued for another app is refused');
+  gTok = g('Alice@X.com', 'g-other'); r = await call('/account/google', { credential: 'x' });
+  ok(r.s === 401, 'a different Google account with the same email is refused');
+  const jt = (await call('/account/login', { name: 'jacob@x.com', pass: 'secret33' })).j.token;
+  gTok = g('jacob.gmail@gmail.com', 'g-jacob'); r = await call('/account/me', { credential: 'x' }, { 'X-User-Token': jt });
+  ok(r.s === 200 && r.j.google && r.j.email === 'jacob.gmail@gmail.com' && r.j.owner, 'jacob connects Google to his existing owner account');
+  r = await call('/account/google', { credential: 'x' }); ok(r.s === 200 && r.j.name === 'jacob' && r.j.owner, 'jacob then signs in with Google as the owner');
+  ok((await call('/account/signup', { name: 'carl', pass: 'short', email: 'c@x.com', invite: 'friend-code' })).s === 400, 'passwords under 8 characters are refused');
+  ok((await call('/account/signup', { name: 'carl', pass: 'longenough', email: 'jacob.gmail@gmail.com', invite: 'friend-code', agree: true })).s === 409, 'an email can only have one account');
+  ok((await call('/account/signup', { name: 'dana', pass: 'longenough', email: 'd@x.com', invite: 'friend-code' })).s === 400, 'the server refuses a sign-up without accepting the Terms');
+  ok(JSON.parse(mem.get('user:alice')).terms?.v === '2026-10-09', 'the accepted Terms version is stored on the account');
+  globalThis.fetch = realFetch;
+  // 8. evening date: 9:30 pm ET on Oct 8 must default to Oct 8 (it used to jump to Oct 9)
   const ctx = await b.newContext(), p = await ctx.newPage(); await p.clock.setFixedTime(new Date('2026-10-09T01:30:00Z'));
   await p.goto('http://localhost:8090/'); await p.waitForTimeout(2500); await p.click('.tab-btn:has-text("Journal")');
   ok(await p.evaluate(() => document.getElementById('journal-date').value) === '2026-10-08', 'journal date at 9:30 pm ET is today in ET');
