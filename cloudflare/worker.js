@@ -140,7 +140,7 @@ async function tvIn(req, env) {
   if (msg.k !== env.TV_KEY) return json({ error: 'wrong key' }, 401);
   if (String(msg.tf) !== '5') return json({ error: 'put the feed on a 5-minute chart' }, 400);
   const store = (await env.JC.get('tv', 'json')) || { bars: {} };
-  for (const sym of ['ES=F', 'NQ=F']) {
+  for (const sym of ['ES=F', 'NQ=F', 'VIX']) {
     const rows = (msg.bars && msg.bars[sym]) || [];
     const byT = new Map((store.bars[sym] || []).map(r => [r[0], r]));
     for (const r of rows) {
@@ -185,7 +185,8 @@ async function barsFor(req, env, ctx) {
       if (rolled.length) b[tf] = mergeRows(b[tf], rolled);
     }
   }
-  body.live = { source: 'TradingView', updated: tv.updated, last: Math.max(...['ES=F', 'NQ=F'].map(s => ((tv.bars[s] || []).at(-1) || [0])[0])) };
+  body.live = { source: 'TradingView', updated: tv.updated, last: Math.max(...['ES=F', 'NQ=F'].map(s => ((tv.bars[s] || []).at(-1) || [0])[0])),
+    vix: ((tv.bars && tv.bars.VIX) || []).at(-1) || null };   // [t, o, h, l, c] of the latest 5m VIX candle (TVC:VIX)
   return json(body, 200, { 'Cache-Control': 'no-store' });
 }
 

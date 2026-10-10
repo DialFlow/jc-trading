@@ -1,7 +1,7 @@
 //@version=6
 indicator("JC Trading live feed (webhook)", overlay=true)
 
-// Sends the last 3 closed 5-minute candles of ES1! and NQ1! to the JC Trading Worker on every 5-minute close,
+// Sends the last 3 closed 5-minute candles of ES1!, NQ1! and VIX (TVC:VIX) to the JC Trading Worker on every 5-minute close,
 // so the site's Live tab, Readiness and Lab run on your TradingView data instead of Yahoo's ~10-minute-late candles.
 //
 // Setup (once):
@@ -14,16 +14,18 @@ indicator("JC Trading live feed (webhook)", overlay=true)
 key   = input.string("", "Feed key (TV_KEY secret in Cloudflare)")
 esSym = input.symbol("CME_MINI:ES1!", "ES symbol")
 nqSym = input.symbol("CME_MINI:NQ1!", "NQ symbol")
+vxSym = input.symbol("TVC:VIX", "VIX symbol")
 
 [eo, eh, el, ec] = request.security(esSym, timeframe.period, [open, high, low, close])
 [no, nh, nl, nc] = request.security(nqSym, timeframe.period, [open, high, low, close])
+[vo, vh, vl, vc] = request.security(vxSym, timeframe.period, [open, high, low, close])
 
 f_px(x) => str.tostring(x, "#.##")
 f_row(i, o, h, l, c) => "[" + str.tostring(time[i] / 1000, "#") + "," + f_px(o[i]) + "," + f_px(h[i]) + "," + f_px(l[i]) + "," + f_px(c[i]) + "]"
 f_rows(o, h, l, c) => "[" + f_row(2, o, h, l, c) + "," + f_row(1, o, h, l, c) + "," + f_row(0, o, h, l, c) + "]"
 
 // built on every bar (functions with history references should run on every bar), sent only on a real-time close
-msg = '{"k":"' + key + '","tf":"' + timeframe.period + '","bars":{"ES=F":' + f_rows(eo, eh, el, ec) + ',"NQ=F":' + f_rows(no, nh, nl, nc) + '}}'
+msg = '{"k":"' + key + '","tf":"' + timeframe.period + '","bars":{"ES=F":' + f_rows(eo, eh, el, ec) + ',"NQ=F":' + f_rows(no, nh, nl, nc) + ',"VIX":' + f_rows(vo, vh, vl, vc) + '}}'
 if barstate.isconfirmed and barstate.isrealtime
     alert(msg, alert.freq_once_per_bar_close)
 

@@ -3216,10 +3216,7 @@ setInterval(updateFreshnessPill, 1000);
 // Auto-fetch ES/NQ/VIX every 15s
 async function autoFetchHeader() {
   const cache = await fetchPriceBatch(['ES1!', 'NQ1!', 'VIX', 'GOLD']);
-  if (typeof tvLive === 'function' && tvLive()) for (const [k, sym] of [['ES1!', 'ES=F'], ['NQ1!', 'NQ=F']]) {
-    const last = labRaw?.bars?.[sym]?.['5m']?.slice(-1)[0], q = cache[k];
-    if (last && q && q.prev) { q.price = last[4]; q.change = last[4] - q.prev; q.changePct = q.change / q.prev * 100; q.time = last[0] + 300; }
-  }
+  tvQuotes(cache);
   renderMarketPanel();
   const es = cache['ES1!'], nq = cache['NQ1!'], vix = cache['VIX'];
   const fmt = (n, d=2) => n != null ? n.toFixed(d) : '–';
@@ -3291,6 +3288,12 @@ async function fillJournalCol(col) {
   const t = new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit'});
   if (statusEl) statusEl.textContent = `✓ All done · ${t} ET`;
   setTimeout(()=>{ if(statusEl) statusEl.textContent='Ready'; }, 5000);
+}
+// with the TradingView feed live, its latest 5m closes replace Yahoo's delayed quotes for ES, NQ and VIX
+function tvQuotes(cache) {
+  if (typeof tvLive !== 'function' || !tvLive()) return;
+  const put = (k, last) => { const q = cache[k]; if (last && q && q.prev) { q.price = last[4]; q.change = last[4] - q.prev; q.changePct = q.change / q.prev * 100; q.time = last[0] + 300; q.src = 'tv'; } };
+  put('ES1!', labRaw?.bars?.['ES=F']?.['5m']?.slice(-1)[0]); put('NQ1!', labRaw?.bars?.['NQ=F']?.['5m']?.slice(-1)[0]); put('VIX', labRaw?.live?.vix);
 }
 async function fillAllJournal() {
   const status = { set textContent(v) { for (const id of ['jfetch-status', 'wfetch-status']) { const e = document.getElementById(id); if (e) e.textContent = v; } } }, date = document.getElementById('journal-date').value;
@@ -5157,7 +5160,7 @@ function edgeVixHtml() {
   const qt = q.time > 1e11 ? q.time / 1000 : q.time, age = qt ? Math.max(0, Math.round((Date.now() / 1000 - qt) / 60)) : null;   // time may arrive in s or ms
   return `<div class="ev-top">
       <div><div class="ev-big ${z[3]}">${v.toFixed(2)}</div><div class="fs-13 ${q.change >= 0 ? 'bear' : 'bull'}">${q.change >= 0 ? '▲' : '▼'} ${Math.abs(q.change).toFixed(2)} (${q.changePct >= 0 ? '+' : ''}${q.changePct.toFixed(2)}%) today</div></div>
-      <div class="ev-zone"><span class="badge badge-${z[3] === 'blue' ? 'blue' : z[3] === 'warn' ? 'warn' : z[3]}">${z[2]}</span><div class="fs-12 text-2">${age != null ? `as of ${age} min ago · ` : ''}CBOE VIX via Yahoo (delayed)</div></div>
+      <div class="ev-zone"><span class="badge badge-${z[3] === 'blue' ? 'blue' : z[3] === 'warn' ? 'warn' : z[3]}">${z[2]}</span><div class="fs-12 text-2">${age != null ? `as of ${age} min ago · ` : ''}${q.src === 'tv' ? '<b>TradingView</b> (TVC:VIX) · 5-minute closes' : 'CBOE VIX via Yahoo (delayed ~15 min)'}</div></div>
     </div>
     <div class="ev-gauge"><span class="z1"></span><span class="z2"></span><span class="z3"></span><span class="z4"></span><i style="left:${pos}%"></i></div>
     <div class="ev-ticks"><span>10</span><span>15</span><span>20</span><span>30</span><span>40</span></div>
@@ -5196,7 +5199,7 @@ function renderEdgeMarket() {
 }
 async function edgeOpen() {
   renderEdgeMarket();
-  try { await Promise.all([ensureBars(false), loadMTF(false), fetchPriceBatch(['VIX', 'ES1!', 'NQ1!'])]); } catch(e) {}
+  try { await Promise.all([ensureBars(false), loadMTF(false), fetchPriceBatch(['VIX', 'ES1!', 'NQ1!'])]); tvQuotes(PriceCache); } catch(e) {}
   whenTJR(renderEdgeMarket);
   if (!edgeTimer) edgeTimer = setInterval(() => { if (currentTab === 'edge') renderEdgeMarket(); }, 30000);
 }

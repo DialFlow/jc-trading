@@ -12,7 +12,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
 // what the Pine alert sends: last 3 closed 5m candles for both contracts (ms timestamps, as Pine's time)
 const now = Math.floor(Date.now() / 1000 / 300) * 300 - 300;
 const rows = (base) => [2, 1, 0].map(k => [(now - k * 300) * 1000, base + k, base + k + 3, base + k - 2, base + k + 1]);
-const msg = { k: 'tv-test', tf: '5', bars: { 'ES=F': rows(7000), 'NQ=F': rows(30000) } };
+const msg = { k: 'tv-test', tf: '5', bars: { 'ES=F': rows(7000), 'NQ=F': rows(30000), 'VIX': rows(15) } };
 
 ok((await call('/tv', { method: 'POST', body: JSON.stringify({ ...msg, k: 'nope' }) })).status === 401, 'wrong TV key is refused');
 ok((await call('/tv', { method: 'POST', body: JSON.stringify({ ...msg, tf: '1' }) })).status === 400, 'a non-5-minute chart is refused');
@@ -36,6 +36,8 @@ ok(n5.every((r, i) => !i || r[0] > n5[i - 1][0]), '5m candles sorted, no duplica
 ok(n5.length <= 600, '5m capped at 600');
 const h1 = priv.bars['NQ=F']['1h'];
 ok(h1.every((r, i) => !i || r[0] > h1[i - 1][0]), '1h candles still sorted after the roll-up');
+ok(priv.live.vix && priv.live.vix[4] === 16, 'VIX from the feed is passed on (owner only): ' + JSON.stringify(priv.live.vix));
+ok(!pub.live, 'friends get no VIX from the feed either');
 // stale feed (> 30 min) is ignored
 stored.updated -= 3600; mem.set('tv', JSON.stringify(stored));
 ok(!(await (await call('/bars', { headers: { 'X-Sync-Key': 'sync-test' } })).json()).live, 'a feed older than 30 min falls back to Yahoo');
