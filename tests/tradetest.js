@@ -36,7 +36,7 @@ const path = require('path'), D = process.env.DATA_DIR;
     const open = await p.evaluate(() => trOpen());
     ok(open && open.status === 'open' && open.plan.grade === 'B' && open.setup === 'TJR rules', 'trade logged as open with its plan');
     ok(/YOUR OPEN TRADE/.test(await g('#tr-open-slot')) && /Trades today 1 \/ 1/.test(await g('#tr-guard')), 'open trade card + 1 / 1 trades');
-    await p.click('.tab-btn:has-text("Trade Log")'); await p.waitForTimeout(300);
+    await p.evaluate(() => showPage('tradelog')); await p.waitForTimeout(300);
     ok(/open/.test(await g('#tl-tbody')), 'Trade Log shows it as open'); await p.click('.tab-btn:has-text("Trade")'); await p.waitForTimeout(500);
     // close it at a loss → cool-down
     await p.evaluate(() => showPage('live')); await p.waitForTimeout(600);

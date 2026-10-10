@@ -459,6 +459,10 @@ body {
 @media (max-width: 520px) { .hd-row { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 .hm-meter { grid-template-columns: minmax(0, 1fr); } .hm-cd { text-align: left; display: flex; gap: 10px; align-items: baseline; } .hm-lbl { max-width: none; } }
 .hm-crow { border-radius: 10px; padding: 6px 8px; margin: 0 -8px 4px; cursor: pointer; } .hm-crow.on { background: rgba(0,122,255,0.08); } .hm-crow .hm-now { margin-bottom: 4px; }
+.subnav { display: flex; gap: 4px; background: var(--fill); border-radius: 12px; padding: 3px; margin: 0 0 14px; overflow-x: auto; scrollbar-width: none; }
+.subnav::-webkit-scrollbar { display: none; }
+.subnav-b { flex: 1; border: 0; background: transparent; color: var(--text2); font: 600 13px Inter, system-ui, sans-serif; padding: 9px 10px; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+.subnav-b.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
 .hm-switch { background: rgba(0,122,255,0.10); color: var(--blue); border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
 .hm-bias-me { display: flex; justify-content: space-between; align-items: center; gap: 10px; } .hm-bias-v { font-size: 20px; font-weight: 800; } .hm-bias-v small { font-size: 12px; font-weight: 600; color: var(--text2); }
 .hm-reads { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-top: 8px; } .hm-read { background: var(--fill); border-radius: 10px; padding: 8px 10px; }
@@ -732,6 +736,9 @@ body {
   white-space: nowrap;
   transition: color 0.15s;
 }
+/* 5 tabs share the width on phones, so nothing hides off-screen */
+@media (max-width: 600px) { .tab-btn { flex: 1 1 0; min-width: 0; padding: 0 2px; font-size: 12px; } }
+@media (max-width: 360px) { .tab-btn { font-size: 11px; } }
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active {
   color: var(--blue);
@@ -1455,12 +1462,8 @@ select { cursor: pointer; }
   <button class="tab-btn active" onclick="showPage('live')">🎯 Trade</button>
   <button class="tab-btn" onclick="showPage('dashboard')">📊 Market</button>
   <button class="tab-btn" onclick="showPage('backtest')">🧪 Lab</button>
-  <button class="tab-btn" onclick="showPage('journal')">📓 Morning Journal</button>
-  <button class="tab-btn" onclick="showPage('watch')">📋 Watchlist</button>
-  <button class="tab-btn" onclick="showPage('bias')">🎯 Daily Bias</button>
+  <button class="tab-btn" onclick="showPage(journalSub())">📓 Journal</button>
   <button class="tab-btn" onclick="showPage('strategy')">📘 Playbook</button>
-  <button class="tab-btn" onclick="showPage('tradelog')">📒 Trade Log</button>
-  <button class="tab-btn" onclick="showPage('edge')">⚡ Edge</button>
 </nav>
 
 <!-- ============================================================
@@ -3067,22 +3070,41 @@ function renderFuturesCharts() {
 // ============================================================
 // TAB NAVIGATION
 // ============================================================
+// 5 tabs. Journal holds four pages behind a switch at the top; the Edge page's parts moved into Market (VIX + read)
+// and Playbook (edge conditions + notes) at start-up (tabsSetup). Old page names still work (links, saved last tab).
+const TAB_OF = { live: 0, dashboard: 1, edge: 1, backtest: 2, journal: 3, watch: 3, bias: 3, tradelog: 3, strategy: 4, levels: 4, charts: 0 };
+const JOURNAL_SUBS = [['journal', '🧠 Prep'], ['watch', '📋 Watchlist'], ['bias', '🎯 Bias'], ['tradelog', '📒 Trades']];
+function journalSub() { try { const s = localStorage.getItem('jct_jsub'); return JOURNAL_SUBS.some(([k]) => k === s) ? s : 'journal'; } catch(e) { return 'journal'; } }
+function tabsSetup() {
+  // Journal: the same switch at the top of each of its four pages
+  for (const [k] of JOURNAL_SUBS) { const pg = document.getElementById('page-' + k); if (!pg || pg.querySelector('.subnav')) continue;
+    pg.insertAdjacentHTML('afterbegin', `<div class="subnav" role="tablist">${JOURNAL_SUBS.map(([s, l]) => `<button class="subnav-b${s === k ? ' on' : ''}" role="tab" aria-selected="${s === k}" onclick="showPage('${s}')">${l}</button>`).join('')}</div>`); }
+  // Edge → its live VIX + market read go to the top of Market; edge conditions and notes go to the end of Playbook
+  const edge = document.getElementById('page-edge'), mkt = document.getElementById('page-dashboard'), pb = document.getElementById('page-strategy');
+  if (edge && mkt && pb && edge.children.length) {
+    const grid = edge.querySelector('.ev-grid'); if (grid) mkt.prepend(grid);
+    pb.insertAdjacentHTML('beforeend', '<div class="section-label" style="margin-top:18px">Your edge</div>');
+    while (edge.firstElementChild) pb.appendChild(edge.firstElementChild);
+  }
+}
 function showPage(name) {
   if (name === 'levels') name = 'strategy'; // Key Levels merged into the Playbook tab
+  if (name === 'edge') { name = 'dashboard'; setTimeout(() => document.getElementById('edge-vix')?.scrollIntoView({ behavior: 'smooth' }), 200); }
+  if (name === 'charts') name = 'live';
   if (typeof flushJournal === 'function') flushJournal();
   document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   const page = document.getElementById('page-' + name);
   if (page) page.classList.add('active');
   const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabNames = ['live','dashboard','backtest','journal','watch','bias','strategy','tradelog','edge'];
-  const idx = tabNames.indexOf(name);
-  if (idx >= 0 && tabBtns[idx]) tabBtns[idx].classList.add('active');
+  const idx = TAB_OF[name];
+  if (idx != null && tabBtns[idx]) tabBtns[idx].classList.add('active');
+  if (JOURNAL_SUBS.some(([k]) => k === name)) try { localStorage.setItem('jct_jsub', name); } catch(e) {}
   currentTab = name;
   if (name === 'journal') { initJournalDate(); trJournalOpen(); }
   if (name === 'watch') watchOpen();
   if (name === 'tradelog') renderTradeLog();
-  if (name === 'edge') edgeOpen();
+  if (name === 'dashboard') edgeOpen();
   if (name === 'charts') renderFuturesCharts();
   if (name === 'strategy') readyCycle(false);
   if (name === 'live') lvRefresh(false);
@@ -6884,6 +6906,7 @@ function init() {
 
   // Restore last tab
   try {
+    tabsSetup();
     const lastTab = localStorage.getItem('jct_tab'), v2 = localStorage.getItem('jct_tab_v') === '2';
     showPage(v2 && lastTab && lastTab !== 'charts' ? lastTab : 'live');
     localStorage.setItem('jct_tab_v', '2');

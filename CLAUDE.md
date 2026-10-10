@@ -18,7 +18,8 @@ A single-file personal trading dashboard (`index.html`) for Jacob, who day-trade
 ## Design system (keep it)
 Apple HIG look: black/white/light gray, Inter, iOS system colors as CSS tokens on `:root` (`--bull`, `--bear`, `--warn`, `--blue`…). Light/dark via `prefers-color-scheme` plus `data-theme`. Cards, segmented controls, pill badges.
 
-## Tabs (Oct 10): Trade · Market · Lab · Morning Journal · Watchlist · Daily Bias · Playbook · Trade Log · Edge (`tabNames` must match the button order)
+## Tabs (Oct 10, 5): Trade · Market · Lab · Journal · Playbook
+- `TAB_OF` maps every page id to its tab (old names still work: edge → Market, charts → Trade, levels → Playbook). Journal = 4 pages (journal 'Prep', watch, bias, tradelog 'Trades') behind a `.subnav` switch added at start-up by `tabsSetup`; it remembers the last one (`jct_jsub`). `tabsSetup` also moves the Edge page's VIX + market read (`.ev-grid`) to the top of Market and the edge conditions/notes to the end of Playbook (page-edge ends up empty). Phones: tabs share the width. Test: `tests/navtest.js`.
 ## Tabs (8, Oct 9 evening)
 Trade (id `live`, the home screen, opens first; `jct_tab_v` 2 moved everyone there once), Market (id `dashboard`, the old Dashboard), Morning Journal, Daily Bias, Playbook, Trade Log, Edge, Lab. Charts tab button removed (page kept; Trade has the 5m–D charts). Next planned step: merge Journal + Daily Bias + Trade Log + Edge into one Journal tab with personal stats (plan followed vs not, by emotion). Old list: Dashboard, Live, Charts, Morning Journal, Daily Bias, Playbook (id `strategy`), Trade Log, Edge, Lab (id `backtest`).
 Tab switching: `showPage(name)` (flushes the journal autosave first) plus the `tabNames` array in the same order as the buttons. Add new tabs to both. `showPage('levels')` maps to `strategy` (Key Levels merged into Playbook on Oct 8).
