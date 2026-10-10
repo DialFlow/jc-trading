@@ -19,6 +19,7 @@ SITE       = "Match the site (auto per contract)"
 setMode    = input.string(SITE, "Settings", options=[SITE, "Use the inputs below"], tooltip="Match the site: NQ/MNQ = Fixed 80 pts · PDH/PDL · displacement · half at liquidity (the Lab's robust setting). ES/MES = the v4 rules (Sweep wick, max 15, Any level, rules target), which has no proven edge on ES.")
 alertOrd   = input.bool(true, "Alert: order placed", group="Alerts")
 alertMgmt  = input.bool(true, "Alert: filled / half off / closed / cancelled", group="Alerts")
+alertSteps = input.bool(true, "Alert: setup steps (sweep, break of structure, FVG)", group="Alerts")
 tz         = input.string("America/New_York", "Timezone")
 LAB        = "Lab: sweeps from 8:30, entries 9:50-11:00"
 PINE       = "v4/v5 windows: 9:30-10:10"
@@ -311,6 +312,26 @@ f_px(x) => str.tostring(x, format.mintick)
 f_alertOrder(isLong, lim, stop, t1, tg) =>
     if alertOrd
         alert("JC TJR · " + syminfo.ticker + " · " + (isLong ? "BUY" : "SELL") + " LIMIT " + f_px(lim) + " · stop " + f_px(stop) + " (−" + str.tostring(math.abs(lim - stop), "#.##") + " pts)" + (na(t1) ? "" : " · ½ at " + f_px(t1)) + " · target " + f_px(tg) + " · " + str.format_time(time_close, "HH:mm", tz) + " ET", alert.freq_once_per_bar_close)
+
+// setup-step alerts: the first sweep, break of structure and FVG of the day, at the candle close
+var bool nSweep = false
+var bool nBos = false
+var bool nFvg = false
+if startWatch
+    nSweep := false
+    nBos := false
+    nFvg := false
+if alertSteps and barstate.isrealtime and watch and counted
+    tk = "JC TJR · " + syminfo.ticker + " · "
+    if (sslSwept or bslSwept) and not nSweep
+        nSweep := true
+        alert(tk + "STEP 1 · SWEEP: " + (sslSwept ? "sell-side taken below " + f_px(lowLiq) + " → watching for LONGS" : "buy-side taken above " + f_px(highLiq) + " → watching for SHORTS") + " · " + str.format_time(time_close, "HH:mm", tz) + " ET", alert.freq_once_per_bar_close)
+    if (bosUp or bosDn) and not nBos
+        nBos := true
+        alert(tk + "STEP 2 · BREAK OF STRUCTURE " + (bosUp ? "UP" : "DOWN") + " · close " + f_px(close) + " · next: a gap (FVG)", alert.freq_once_per_bar_close)
+    if (not na(fvgMidL) or not na(fvgMidS)) and not nFvg
+        nFvg := true
+        alert(tk + "STEP 3 · FVG formed · entry at the midpoint " + f_px(not na(fvgMidL) ? fvgMidL : fvgMidS) + (macro ? " · the order goes in at this close" : " · the order goes in when the 9:50 window opens"), alert.freq_once_per_bar_close)
 
 canTrade = macro and inRange and not rollDay and not tradedToday and strategy.position_size == 0
 if canTrade and not na(fvgMidL)

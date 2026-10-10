@@ -417,6 +417,8 @@ body {
 .ev-p { font-size: 14px; line-height: 1.55; margin: 0 0 10px; }
 .hm-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: stretch; }
 .hm-top > #hm-meter > .hm-meter { margin-bottom: 10px; height: calc(100% - 10px); box-sizing: border-box; }
+.hm-side { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; } .hm-side .hm-pick { margin-bottom: 0; flex: 1; }
+.hm-bell { width: 100%; border: 1px solid var(--border); background: var(--surface); color: var(--text2); border-radius: 12px; padding: 10px 12px; font: 700 13px Inter, system-ui, sans-serif; cursor: pointer; } .hm-bell.on { background: rgba(52,199,89,0.14); color: var(--bull); border-color: rgba(52,199,89,0.4); }
 .hm-pick { margin-bottom: 10px; display: flex; } .hm-pick select { min-width: 220px; max-width: 300px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: 600 13px Inter, system-ui, sans-serif; padding: 0 12px; }
 @media (max-width: 760px) { .hm-top { grid-template-columns: minmax(0, 1fr); } .hm-pick select { max-width: none; width: 100%; height: 42px; } }
 .hm-day { border: 1.5px solid var(--blue); }
@@ -446,6 +448,8 @@ body {
 .ev-p { font-size: 14px; line-height: 1.55; margin: 0 0 10px; }
 .hm-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: stretch; }
 .hm-top > #hm-meter > .hm-meter { margin-bottom: 10px; height: calc(100% - 10px); box-sizing: border-box; }
+.hm-side { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; } .hm-side .hm-pick { margin-bottom: 0; flex: 1; }
+.hm-bell { width: 100%; border: 1px solid var(--border); background: var(--surface); color: var(--text2); border-radius: 12px; padding: 10px 12px; font: 700 13px Inter, system-ui, sans-serif; cursor: pointer; } .hm-bell.on { background: rgba(52,199,89,0.14); color: var(--bull); border-color: rgba(52,199,89,0.4); }
 .hm-pick { margin-bottom: 10px; display: flex; } .hm-pick select { min-width: 220px; max-width: 300px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: 600 13px Inter, system-ui, sans-serif; padding: 0 12px; }
 @media (max-width: 760px) { .hm-top { grid-template-columns: minmax(0, 1fr); } .hm-pick select { max-width: none; width: 100%; height: 42px; } }
 .hm-day { border: 1.5px solid var(--blue); }
@@ -1568,7 +1572,7 @@ select { cursor: pointer; }
 <!-- ===== TAB 2: CHARTS ===== -->
 <!-- ===== TAB 2: LIVE (play-by-play of the current session) ===== -->
 <div class="tab-page active" id="page-live">
-  <div class="hm-top"><div id="hm-meter"></div><div id="hm-daypick" class="hm-pick"></div></div>
+  <div class="hm-top"><div id="hm-meter"></div><div class="hm-side"><div id="hm-daypick" class="hm-pick"></div><div id="hm-bell"></div></div></div>
   <div id="hm-switch"></div>
   <div id="hm-day-card" class="card mb-md hm-day" hidden></div>
   <div id="tr-open-slot"></div>
@@ -4838,6 +4842,8 @@ function lvRender() {
   { const G = trGuard(), other = MTF_SYMS.map(([s]) => runs[s]).find(r => r && r.sym !== R.sym);
     document.getElementById('hm-meter').innerHTML = hmMeterHtml(R, now, ph, other, runs);
     if (document.activeElement?.id !== 'hm-day') hmRenderDayPicker();
+    lvNotify(runs);
+    const bell = document.getElementById('hm-bell'); if (bell) bell.innerHTML = lvBellHtml();
     document.getElementById('hm-switch').innerHTML = switchNote ? `<div class="hm-switch">↪ ${esc(switchNote)} · <a href="#" onclick="lvSetSym('${other ? other.sym : R.sym}');return false">show ${other ? lvName(other.sym) : ''}</a></div>` : '';
     document.getElementById('tr-open-slot').innerHTML = trOpenHtml(R);
     document.getElementById('tr-guard').innerHTML = trGuardHtml(G);
@@ -6058,6 +6064,23 @@ async function toggleAlerts() {
   renderReadiness();
 }
 function beep() { try { const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.15, a.currentTime); o.start(); o.stop(a.currentTime + 0.25); } catch(e) {} }
+// Trade tab: one notification per new rules event, for both contracts, while the page is open (bell = jct_alerts)
+const LV_NOTE = { sweep: 'Step 1 · Sweep', bos: 'Step 2 · Break of structure', fvg: 'Step 3 · FVG formed', order: '📌 ORDER PLACED', fill: '▶ IN: filled', scale: '½ OUT: half off', exit: '■ OUT: trade closed', cancel: 'Order cancelled' };
+let lvSeen = null;   // events already on screen when the page opened are not announced
+function lvNotify(runs) {
+  const evs = MTF_SYMS.flatMap(([s, nm]) => (runs[s]?.sameDay ? runs[s].evs : []).map(e => ({ ...e, nm, key: s + '|' + e.t + '|' + e.type })));
+  if (!lvSeen) { lvSeen = new Set(evs.map(e => e.key)); return; }
+  for (const e of evs) {
+    if (lvSeen.has(e.key)) continue; lvSeen.add(e.key);
+    if (!alertsOn() || !LV_NOTE[e.type]) continue;
+    const title = `${e.nm} · ${LV_NOTE[e.type]}`, big = ['order', 'fill', 'exit'].includes(e.type);
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body: `${e.hm} ET · ${e.text}`, tag: 'jc-ev-' + e.key, requireInteraction: big }); } catch(err) {}
+    try { navigator.vibrate && navigator.vibrate(big ? [200, 80, 200, 80, 200] : [120]); } catch(err) {}
+    beep(); if (big) setTimeout(beep, 350);
+    showToast(`${title}: ${e.text}`);
+  }
+}
+function lvBellHtml() { const on = alertsOn(); return `<button class="hm-bell${on ? ' on' : ''}" onclick="toggleAlerts().then(() => lvRender())" title="Notify me at each step (sweep, break, gap, order, entry, exit) while this page is open">${on ? '🔔 Step alerts on' : '🔕 Step alerts off'}</button>`; }
 function maybeAlert(sym, name, verdict) {
   const key = verdict[0] + '|' + verdict[1];
   if (lastVerdict[sym] && lastVerdict[sym] !== key && alertsOn()) {
