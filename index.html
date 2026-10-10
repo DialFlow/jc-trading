@@ -4901,8 +4901,9 @@ function trStreak() {
   const j = trJournal(), byDate = {}; for (const t of trades) (byDate[t.date] ||= []).push(t);
   let n = 0; const d = getCurrentETTime();
   for (let k = 0; k < 60; k++) {
-    const x = new Date(d); x.setDate(d.getDate() - k); if (x.getDay() === 0 || x.getDay() === 6) continue;
+    const x = new Date(d); x.setDate(d.getDate() - k);
     const key = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`, rv = j[key]?.review;
+    if ((x.getDay() === 0 || x.getDay() === 6) && !rv) continue;   // weekends only count if you reviewed them
     if (rv && rv.followed === 'yes') n++; else if (k === 0) continue; else break;
   }
   return n;
