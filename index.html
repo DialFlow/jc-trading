@@ -4517,7 +4517,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
     svg += `<text x="${Math.max(0, Math.min(right - 120, x(pe[0]) - 110))}" y="${Math.max(PT + 10, y(pe[3]) - 6)}" class="mtf-ax" style="fill:#5e5ce6;font-weight:700">${opts.fc.label || 'forecast'} · ${opts.fc.n} sessions</text>`;
   }
   if (!order) for (let k = 0; k <= 3; k++) { const p = lo + (hi - lo) * k / 3; svg += `<text x="${right + 4}" y="${y(p) + 3}" class="mtf-ax">${p.toFixed(0)}</text>`; }
-  svg += `<text x="${right + 4}" y="${H - 6}" class="mtf-ax" style="fill:var(--blue);font-weight:700">last ${last.hm}</text>`;
+  svg += `<text x="${right + 4}" y="${H - 6}" class="mtf-ax" style="fill:var(--blue);font-weight:700">last ${sec >= 72000 && last.date ? last.date.slice(5).replace('-', '/') : last.hm}</text>`;
   svg += `<rect x="${right - 74}" y="2" width="72" height="14" rx="3" fill="var(--fill)"/><text x="${right - 70}" y="12" class="mtf-ax" style="fill:var(--text);font-weight:700">${opts.tf || '5m candles'}</text>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="Setup chart, ${opts.tf || '5-minute candles'}, with liquidity, fair value gaps and the position">${svg}</svg>
     <div class="fs-12 text-2" style="margin-top:4px">Hover or tap a candle for its time and prices · sweeps count from ${WIN().wTxt} · 9:30–9:50 no entries · entries ${WIN().eTxt} · green box = profit zone to the target · red box = loss zone to the stop · dashed orange = Asian / London / prior-day liquidity (dot = when it was taken) · shaded boxes = FVGs, dashed = IFVGs.</div>`;
@@ -4708,10 +4708,24 @@ function simRunOld() {
 const RP_SYMS = [['ES=F', 'ES1!'], ['NQ=F', 'NQ1!']];
 let rpMode = 'both';   // always opens with ES1! and NQ1! together
 let rpTf = '5m';       // chart timeframe: 5m (the strategy's) or 15m / 1h for higher-timeframe context
-const RP_TF = { '5m': ['5m', 300, '5-minute'], '15m': ['15m', 900, '15-minute'], '1h': ['1H', 3600, '1-hour'] };
+const RP_TF = { '5m': ['5m', 300, '5-minute'], '15m': ['15m', 900, '15-minute'], '1h': ['1H', 3600, '1-hour'], '4h': ['4H', 14400, '4-hour'], '1d': ['D', 86400, 'daily'] };
 function rpSetTf(tf) { rpTf = tf; rpPanels(); rpDraw(); }
 // higher-timeframe candles up to the replay time: stored history + today's 5m candles (incl. pre-7:30) rolled up, last one may still be forming
 function rpHtf(S, upto, tf) {
+  const E = window.TJR, td = (upto[0] || S.bars[0]).td;
+  // 4H: the 1H candles (stored + rolled up from the replay's 5m) grouped from the 6 pm open, like TradingView on CME
+  if (tf === '4h') return to4h(rpHtf(S, upto, '1h').map(({ t, o, h, l, c }) => ({ t, o, h, l, c }))).map(b => ({ ...b, ...E.et(b.t) }));
+  // Daily: completed days before the replay day (bars.json 1d, dated at midnight ET) + today's candle so far:
+  // open = first 1H candle of the session (6 pm), high/low = the session's high/low before 7:30 (seed) and the candles shown, close = now
+  if (tf === '1d') {
+    const past = (mtf?.syms?.[S.sym]?.tfs?.['1d']?.bars || []).filter(b => E.et(b.t).date < td).slice(-60).map(b => ({ ...b, ...E.et(b.t) }));
+    const sess = rpHtf(S, upto, '1h').filter(b => b.td === td), shown = [...S.pre.filter(b => b.td === td), ...upto];
+    const first = sess[0] || shown[0], last = shown[shown.length - 1] || first;
+    if (!first) return past;
+    const hs = [...sess, ...shown].map(b => b.h).concat(S.seed && S.seed.dH != null ? [S.seed.dH] : []), ls = [...sess, ...shown].map(b => b.l).concat(S.seed && S.seed.dL != null ? [S.seed.dL] : []);
+    const dayT = Math.floor(Date.parse(td + 'T12:00:00Z') / 1000) - 8 * 3600;   // ~midnight ET of the trading day, matching the stored daily candles
+    return [...past, { t: dayT, o: first.o, h: Math.max(...hs), l: Math.min(...ls), c: last.c, ...E.et(dayT) }];
+  }
   const sec = RP_TF[tf][1], hist = (tf === '15m' ? S.h15 : S.h60) || [];
   const first = (upto[0] || S.bars[0]).t, b0 = Math.floor(first / sec) * sec, out = hist.filter(x => x.t < b0).map(x => ({ ...x }));
   for (const b of [...S.pre, ...upto]) { if (b.t < b0) continue; const k = Math.floor(b.t / sec) * sec, last = out[out.length - 1];
@@ -4751,7 +4765,7 @@ function rpLoad() {
   whenTJR(() => {
     if (!rpData) return rpInit();
     const td = document.getElementById('rp-day').value; rpSets = {};
-    for (const [sym] of RP_SYMS) { const d = rpData.days[sym]?.[td]; if (d) rpSets[sym] = { pre: window.TJR.toBars(d.pre), bars: window.TJR.toBars(d.bars), seed: d.seed,
+    for (const [sym] of RP_SYMS) { const d = rpData.days[sym]?.[td]; if (d) rpSets[sym] = { sym, pre: window.TJR.toBars(d.pre), bars: window.TJR.toBars(d.bars), seed: d.seed,
       h15: d.h15 ? window.TJR.toBars(d.h15) : [], h60: d.h60 ? window.TJR.toBars(d.h60) : [] }; }
     const clock = Object.values(rpSets).sort((x, y) => y.bars.length - x.bars.length)[0]; if (!clock) return;
     rpBars = clock.bars;
