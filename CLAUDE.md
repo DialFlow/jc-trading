@@ -4,6 +4,7 @@
 A single-file personal trading dashboard (`index.html`) for Jacob, who day-trades ES/NQ futures on a MyFundedFutures $50K funded (sim) account using TJR's methodology. It started in claude.ai as an artifact ("JC Trading", Version 6). This folder is now the source of truth.
 
 ## Files
+- `RESEARCH.md`: log of every strategy study (date, script → output, result, how to reproduce). Start there for "what have we tested".
 - `index.html`: the whole site. HTML + CSS + JS in one file, no build step. All user data is saved in `localStorage` (keys prefixed `jct_`).
 - `jc_tjr_backtest_v4.pine`: the TradingView Pine Script v6 strategy used for the backtest.
 - `jc_tjr_backtest_v5.pine`: v4 plus toggles for stop mode (sweep wick / fixed points / second sweep), sweep level (Any / London / Asian / PDH-PDL) and a displacement filter on the BOS. Not yet run in TradingView. v4 settings reproduce v4 (Sweep wick, max stop 15, Any, displacement off).
@@ -217,11 +218,8 @@ ES1! 5-min, Aug 16 – Oct 7, 2026 (38 NY sessions; free plan history limit). 1 
 
 ## Working rules for Claude Code
 - Keep the page in `index.html`; the only deliberate split is `scripts/tjr-engine.mjs` (shared strategy engine). Data files: backtest.json, replay.json, structure.json, confstats.json, analysis.json.
-- When editing index.html with scripts, use function replacements (`s.replace(a, () => b)`): `
-- After any edit, run the relevant tests in tests/ (desktop + phone). Zero JS errors is the bar. There are 8 tabs now.
-- Don't hardcode fake prices or present examples as real data.
-- Jacob develops on Windows.
-` in code broke a String.replace once. The repo forces LF line endings (.gitattributes).
-- After any edit, run the relevant tests in tests/ (desktop + phone). Zero JS errors is the bar. There are 8 tabs now.
+- When editing index.html with scripts, use function replacements (`s.replace(a, () => b)`): `$&` in code broke a String.replace once. The repo forces LF line endings (.gitattributes).
+- After any edit, run the relevant tests in tests/ (desktop + phone). Zero JS errors is the bar. There are 5 tabs now.
+- Log every new study in `RESEARCH.md` (one table row + reproduce command) and in Jacob's plain-English doc "JC Trading — Strategy Research in Plain English" (https://claude.ai/code/artifact/c6d7b6d1-0854-4e70-b7cf-bf69afaf0d9f).
 - Don't hardcode fake prices or present examples as real data.
 - Jacob develops on Windows.
