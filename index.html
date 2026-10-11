@@ -4481,11 +4481,14 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
     // 1R / 2R / 3R from the entry, with how often past trades of this setting reached each one
     const reach = opts.reach || [];
     const Rl = [1, 2, 3].map(k => ({ k, p: at(k), pc: (reach.find(z => z.r === k) || {}).pct })).filter(r => inR(r.p)).map(r => ({ ...r, ry: y(r.p) }));
-    const pill = (lx, ly, txt) => { const w = txt.length * 6 + 10; return `<rect x="${lx - w}" y="${ly - 10}" width="${w}" height="13" rx="3" fill="var(--bg)" fill-opacity="0.82"/><text x="${lx - 5}" y="${ly}" text-anchor="end" class="mtf-ax" style="fill:var(--text);font-weight:700">${txt}</text>`; };
-    for (const r of Rl) svg += `<line x1="${xa}" x2="${xb}" y1="${r.ry}" y2="${r.ry}" stroke="var(--text)" stroke-opacity="0.55" stroke-width="0.8" stroke-dasharray="2 3"/>`;
-    const tight = Rl.some((r, i) => i && Math.abs(r.ry - Rl[i - 1].ry) < 14), pct = r => r.pc != null ? Math.round(r.pc * 100) + '%' : '';
-    if (Rl.length && tight) { const topR = Rl.reduce((a, r) => (r.ry < a.ry ? r : a)); svg += pill(xb - 2, topR.ry - 3, `${Rl.map(r => r.k + 'R').join(' · ')} (+${Rl.map(r => (r.k * riskPts).toFixed(0)).join('/')} pts)${Rl[0].pc != null ? ' → ' + Rl.map(pct).join(' · ') + ' got there' : ''}`); }
-    else for (const r of Rl) svg += pill(xb - 2, r.ry - 3, `${r.k}R · +${(r.k * riskPts).toFixed(0)} pts${r.pc != null ? ' · ' + pct(r) + ' got here' : ''}`);
+    // thin green dotted line + a small "1R" tag at the box's right edge; points and "% got there" are in the hover text
+    let lastY = -99;
+    for (const r of Rl) {
+      const tip = `${r.k}R = +${(r.k * riskPts).toFixed(2)} pts${r.pc != null ? ' · ' + Math.round(r.pc * 100) + '% of past trades got here' : ''}`;
+      svg += `<g class="r-lvl"><title>${tip}</title><line x1="${xa}" x2="${xb}" y1="${r.ry}" y2="${r.ry}" stroke="#30d158" stroke-opacity="0.85" stroke-width="1" stroke-dasharray="2 3"/>`;
+      if (Math.abs(r.ry - lastY) >= 10) { svg += `<text x="${xb - 3}" y="${r.ry - 2}" text-anchor="end" class="mtf-ax" style="fill:#30d158;font-weight:700">${r.k}R</text>`; lastY = r.ry; }
+      svg += `</g>`;
+    }
     // liquidity ladder: TP1 = first pool past 1R (the half-out when the setting scales), TP2 = the next pool, Final TP = the target
     const LV = state && state.levels ? state.levels : {}, NAMES = [['Asia H', LV.asianH], ['Asia L', LV.asianL], ['London H', LV.londonH], ['London L', LV.londonL], ['PDH', LV.pdH], ['PDL', LV.pdL], ['Midnight', LV.mOpen], ['NY H', LV.nyH], ['NY L', LV.nyL]]
       .filter(([, p]) => p != null && !Number.isNaN(p) && (lng ? p > ent : p < ent) && (lng ? p < d.target : p > d.target)).sort((a, b) => lng ? a[1] - b[1] : b[1] - a[1]);
@@ -4502,7 +4505,8 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
     for (const g of tags) svg += `<line x1="${right}" x2="${right + 2}" y1="${y(g.p)}" y2="${g.ty}" stroke="${g.col}"/><rect x="${right + 2}" y="${g.ty - 8}" width="${PR - 4}" height="16" rx="3" fill="${g.col}"/><text x="${right + 6}" y="${g.ty + 4}" class="mtf-ax" style="fill:#fff">${g.txt}</text>`;
     // in-box labels: points at risk vs points to gain
     svg += `<text x="${xa + 4}" y="${(y(ent) + y(d.stop)) / 2 + 4}" class="mtf-ax" style="fill:#ff6961;font-weight:700">−${riskPts.toFixed(1)} pts</text>`;
-    svg += `<text x="${xa + 4}" y="${(y(ent) + y(d.target)) / 2 + 4}" class="mtf-ax" style="fill:#30d158;font-weight:700">+${rewPts.toFixed(1)} pts (${(rewPts / riskPts).toFixed(1)}R)</text>`;
+    const ys = [y(ent), y(d.target), ...Rl.map(r => r.ry)].sort((p, q) => p - q); let gy = (y(ent) + y(d.target)) / 2, gw = 0; for (let i = 1; i < ys.length; i++) if (ys[i] - ys[i - 1] > gw) { gw = ys[i] - ys[i - 1]; gy = (ys[i] + ys[i - 1]) / 2; } // reward label in the widest gap, clear of the 1R/2R/3R lines
+    svg += `<text x="${xa + 4}" y="${gy + 4}" class="mtf-ax" style="fill:#30d158;font-weight:700">+${rewPts.toFixed(1)} pts (${(rewPts / riskPts).toFixed(1)}R)</text>`;
     // event markers with times
     const mark = (e, px, col, txt, up) => { const i = idx(e.t); if (i < 0) return; const cy = y(px), ty = up ? cy - 22 : cy + 8, w = txt.length * 6.4 + 12, tx = Math.max(0, Math.min(right - w, x(i) + 6));
       svg += `<circle cx="${x(i)}" cy="${cy}" r="6" fill="${col}" stroke="#fff" stroke-width="2"/><rect x="${tx}" y="${ty}" width="${w}" height="16" rx="4" fill="${col}"/><text x="${tx + 6}" y="${ty + 12}" class="mtf-ax" style="fill:#fff;font-weight:800">${txt}</text>`; };
@@ -4537,7 +4541,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   svg += `<text x="${right + 4}" y="${H - 6}" class="mtf-ax" style="fill:var(--blue);font-weight:700">last ${sec >= 72000 && last.date ? last.date.slice(5).replace('-', '/') : last.hm}</text>`;
   svg += `<rect x="${right - 74}" y="2" width="72" height="14" rx="3" fill="var(--fill)"/><text x="${right - 70}" y="12" class="mtf-ax" style="fill:var(--text);font-weight:700">${opts.tf || '5m candles'}</text>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="Setup chart, ${opts.tf || '5-minute candles'}, with liquidity, fair value gaps and the position">${svg}</svg>
-    <div class="fs-12 text-2" style="margin-top:4px">Dotted lines = 1R / 2R / 3R from the entry (and how often past trades got there) · TP1 · TP2 · Final TP = the liquidity ladder · hover or tap a candle for its time and prices · sweeps count from ${WIN().wTxt} · 9:30–9:50 no entries · entries ${WIN().eTxt} · green box = profit zone to the target · red box = loss zone to the stop · dashed orange = Asian / London / prior-day liquidity (dot = when it was taken) · shaded boxes = FVGs, dashed = IFVGs.</div>`;
+    <div class="fs-12 text-2" style="margin-top:4px">Green dotted lines = 1R / 2R / 3R from the entry (hover a line for how often past trades got there) · TP1 · TP2 · Final TP = the liquidity ladder · hover or tap a candle for its time and prices · sweeps count from ${WIN().wTxt} · 9:30–9:50 no entries · entries ${WIN().eTxt} · green box = profit zone to the target · red box = loss zone to the stop · dashed orange = Asian / London / prior-day liquidity (dot = when it was taken) · shaded boxes = FVGs, dashed = IFVGs.</div>`;
   chartCrosshair(el.querySelector('svg'), bars, { W, H, PT, PB, cw, right, xOf: x, y, sec });
 }
 
