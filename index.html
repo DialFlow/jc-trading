@@ -4485,11 +4485,11 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
     const Rl = [1, 2, 3].map(k => ({ k, p: at(k), pc: (reach.find(z => z.r === k) || {}).pct })).filter(r => inR(r.p)).map(r => ({ ...r, ry: y(r.p) }));
     // thin dotted line + a small tag at the box's right edge; points and "% got there" are in the hover text.
     // Purple 1R / 2R = the funded-account plan (MFF pass study, Oct 10): half out at 1R + stop to break-even, rest out at 2R. 3R stays green.
-    const FUNDED = { 1: 'funded ½ out', 2: 'funded all out' };
+    const FUNDED = { 1: 'funded 2 of 3 out', 2: 'funded last 1 out' };
     let lastY = -99;
     for (const r of Rl) {
       const fd = FUNDED[r.k], col = fd ? 'var(--purple)' : '#30d158';
-      const tip = `${r.k}R = +${(r.k * riskPts).toFixed(2)} pts${r.pc != null ? ' · ' + Math.round(r.pc * 100) + '% of past trades got here' : ''}${fd ? ` · funded plan: ${r.k === 1 ? 'take half off here and move the stop to break-even' : 'take the rest off here'}` : ''}`;
+      const tip = `${r.k}R = +${(r.k * riskPts).toFixed(2)} pts${r.pc != null ? ' · ' + Math.round(r.pc * 100) + '% of past trades got here' : ''}${fd ? ` · funded plan: ${r.k === 1 ? 'take 2 of 3 micros off here and move the stop to break-even' : 'take the last micro off here'}` : ''}`;
       svg += `<g class="r-lvl${fd ? ' r-funded' : ''}"><title>${tip}</title><line x1="${xa}" x2="${xb}" y1="${r.ry}" y2="${r.ry}" stroke="${col}" stroke-opacity="0.9" stroke-width="${fd ? 1.4 : 1}" stroke-dasharray="2 3"/>`;
       if (Math.abs(r.ry - lastY) >= 10) { svg += `<text x="${xb - 3}" y="${r.ry - 2}" text-anchor="end" class="mtf-ax" style="fill:${col};font-weight:700;paint-order:stroke;stroke:var(--bg);stroke-width:3px;stroke-linejoin:round">${r.k}R${fd ? ' · ' + fd : ''}</text>`; lastY = r.ry; }
       svg += `</g>`;
@@ -4546,7 +4546,7 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
   svg += `<text x="${right + 4}" y="${H - 6}" class="mtf-ax" style="fill:var(--blue);font-weight:700">last ${sec >= 72000 && last.date ? last.date.slice(5).replace('-', '/') : last.hm}</text>`;
   svg += `<rect x="${right - 74}" y="2" width="72" height="14" rx="3" fill="var(--fill)"/><text x="${right - 70}" y="12" class="mtf-ax" style="fill:var(--text);font-weight:700">${opts.tf || '5m candles'}</text>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="mtf-svg" role="img" aria-label="Setup chart, ${opts.tf || '5-minute candles'}, with liquidity, fair value gaps and the position">${svg}</svg>
-    <div class="fs-12 text-2" style="margin-top:4px">Dotted lines = 1R / 2R / 3R from the entry (hover a line for how often past trades got there); purple 1R / 2R = funded-account plan: half off at 1R and stop to break-even, rest off at 2R · TP1 · TP2 · Final TP = the liquidity ladder · hover or tap a candle for its time and prices · sweeps count from ${WIN().wTxt} · 9:30–9:50 no entries · entries ${WIN().eTxt} · green box = profit zone to the target · red box = loss zone to the stop · dashed orange = Asian / London / prior-day liquidity (dot = when it was taken) · shaded boxes = FVGs, dashed = IFVGs.</div>`;
+    <div class="fs-12 text-2" style="margin-top:4px">Dotted lines = 1R / 2R / 3R from the entry (hover a line for how often past trades got there); purple 1R / 2R = funded-account plan with 3 micros: 2 off at 1R and stop to break-even, the last 1 off at 2R · TP1 · TP2 · Final TP = the liquidity ladder · hover or tap a candle for its time and prices · sweeps count from ${WIN().wTxt} · 9:30–9:50 no entries · entries ${WIN().eTxt} · green box = profit zone to the target · red box = loss zone to the stop · dashed orange = Asian / London / prior-day liquidity (dot = when it was taken) · shaded boxes = FVGs, dashed = IFVGs.</div>`;
   chartCrosshair(el.querySelector('svg'), bars, { W, H, PT, PB, cw, right, xOf: x, y, sec });
 }
 
@@ -4671,7 +4671,7 @@ function simRunOld() {
   const sessions = BT.instruments[r.sym].nySessions, pTrade = src.length / sessions;
   const out = document.getElementById('sim-out');
   if (!src.length) { out.innerHTML = '<div class="card"><div class="card-body fs-13">These settings produced no trades, so there is nothing to simulate.</div></div>'; return; }
-  const pnlOf = (t, k, cnt) => cnt * (k === 'micro' ? t.pts * I.pv / 10 - 2 * 0.75 : t.pts * I.pv - 2 * 2.5);
+  const pnlOf = (t, k, cnt) => cnt * (k === 'micro' ? t.pts * I.pv / 10 - MFF_RT.micro : t.pts * I.pv - MFF_RT.mini);
   function sim(k, cnt, paths, keepPaths) {
     let pass = 0, fail = 0, daysToPass = [], endPnl = [], curves = keepPaths ? [] : null;
     for (let p = 0; p < paths; p++) {
@@ -4725,7 +4725,7 @@ function simRunOld() {
       <table class="bt-table"><tr><th>Size</th><th>Pass</th><th>Fail</th><th>Still open</th><th>Median days to pass</th></tr>
       ${ladder.map(z => `<tr${z === bestFail ? ' class="bt-row on"' : ''}><td>${z.c} × ${z.k === 'micro' ? mic : nm}</td><td class="bull">${pctS(z.pass)}</td><td class="bear">${pctS(z.fail)}</td><td>${pctS(z.open)}</td><td>${z.medDays ?? '–'}</td></tr>`).join('')}</table>
       <div class="fs-12 text-2" style="margin-top:8px">${bestFail ? `Highlighted: highest pass rate with a fail rate of 20% or less (${bestFail.c} × ${bestFail.k === 'micro' ? mic : nm}).` : 'No size keeps the fail rate at or under 20% with these settings.'}</div></div></div>
-    <div class="fs-12 text-2">Assumes future trades look like this ${sessions}-session sample (${src.length} trades, ${stress ? 'stress-test fills' : 'normal fills'}): the real spread of outcomes is wider. Micro commission assumed $0.75/side. Uses ${esc(btLabel(r))} on ${esc(r.name)}. Rules-based simulation, not a recommendation.</div>`;
+    <div class="fs-12 text-2">Assumes future trades look like this ${sessions}-session sample (${src.length} trades, ${stress ? 'stress-test fills' : 'normal fills'}): the real spread of outcomes is wider. MFF costs: $1.90 round trip per micro, $4.68 per mini. Uses ${esc(btLabel(r))} on ${esc(r.name)}. Rules-based simulation, not a recommendation.</div>`;
 }
 
 // ---------- REPLAY ----------
@@ -6049,7 +6049,7 @@ function renderHighlights() {
       <div class="hl-bars">${['rules', 'liq', 'scale'].map(k => { const v = viaExit(nq, k), mx = Math.max(...['rules', 'liq', 'scale'].map(z => viaExit(nq, z).stats.net)); return `<div class="hl-bar"><span>${{ rules: 'Far target', liq: 'At liquidity', scale: 'Half + runner' }[k]}</span><div><i style="width:${Math.max(2, v.stats.net / mx * 100).toFixed(0)}%;background:${k === 'rules' ? 'var(--text3)' : 'var(--bull)'}"></i></div><b>${btMoney(v.stats.net)}</b></div>`; }).join('')}</div>
       <div class="fs-13">${Math.round((nq.stats.reach || [])[1]?.pct * 100 || 0)}% of trades went +1R in our favour, but only ${Math.round((nq.stats.reach || [])[3]?.pct * 100 || 0)}% reached +2R. Taking profit at the first pool of liquidity (a session high/low) catches the move before it fades.</div>`, caveat },
     ...(() => { const F = fundedStats(nq); if (!F) return []; const mf = mcQuick(F.f, 'micro', 3); return [{ id: 'funded', kicker: 'Funded plan (MFF)', big: `${Math.round(mf.pass * 100)}% <span class="hl-small">pass chance · 30 days</span>`, bigCls: '',
-      title: 'Half off at 1R, the rest at 2R, with 3 MNQ: steady days for a funded evaluation', body: `
+      title: '3 MNQ: 2 off at 1R, the last 1 at 2R. Steady days for a funded evaluation', body: `
       <div class="hl-bars"><div class="hl-bar"><span>Wins</span><div><i style="width:${(F.wins / F.n * 100).toFixed(0)}%;background:var(--purple)"></i></div><b>${F.wins} / ${F.n}</b></div></div>
       <div class="fs-13">${btMoney(Math.round(F.net3))} with 3 MNQ, worst drop ${btMoney(-Math.round(F.dd3))} against the $2,000 trailing limit. These stats are kept separate from the rules' results: they only count the purple 1R / 2R exits.</div>`, caveat }]; })(),
     ...(() => { const F = fundedStats(nq, 'r1'), G = fundedStats(nq); if (!F) return []; const m1 = mcQuick(F.f, 'micro', 3);
@@ -6058,7 +6058,7 @@ function renderHighlights() {
       <div class="hl-bars"><div class="hl-bar"><span>Wins</span><div><i style="width:${(F.wins / F.n * 100).toFixed(0)}%;background:var(--bull)"></i></div><b>${F.wins} / ${F.n}</b></div></div>
       <div class="hl-two"><div><div class="fs-12 text-2">3 MNQ</div><div class="fw-600 ${btCls(F.net3)}">${btMoney(Math.round(F.net3))}</div><div class="fs-12 text-2">worst drop ${btMoney(-Math.round(F.dd3))}</div></div>
       <div><div class="fs-12 text-2">Pass chance · 30 days</div><div class="fw-600">${Math.round(m1.pass * 100)}%</div><div class="fs-12 text-2">${Math.round(m1.fail * 100)}% fail</div></div></div>
-      <div class="fs-13">${G ? `Funded plan (half at 1R, rest at 2R) on the same trades: ${btMoney(Math.round(G.net3))}, worst drop ${btMoney(-Math.round(G.dd3))}. ` : ''}1:1 wins just as often but caps every winner at 1R. ${F.halves ? 'Made money in both halves' : 'Did not make money in both halves'} and ${F.stress ? 'held up' : 'did not hold up'} in the stress test.</div>`, caveat }]; })(),
+      <div class="fs-13">${G ? `Funded plan (2 of 3 off at 1R, last 1 at 2R) on the same trades: ${btMoney(Math.round(G.net3))}, worst drop ${btMoney(-Math.round(G.dd3))}. ` : ''}1:1 wins just as often but caps every winner at 1R. ${F.halves ? 'Made money in both halves' : 'Did not make money in both halves'} and ${F.stress ? 'held up' : 'did not hold up'} in the stress test.</div>`, caveat }]; })(),
     { id: 'survival', kicker: 'Account survival · 30 days', big: `${Math.round(mcMicro.fail * 100)}% <span class="hl-small">blow-up risk with 3 MNQ</span>`, title: `vs ${Math.round(mcFull.fail * 100)}% with 1 full NQ`, body: `
       <div class="hl-bars"><div class="hl-bar"><span>3 × MNQ</span><div><i style="width:${(mcMicro.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcMicro.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcMicro.pass * 100)}% pass</b></div>
       <div class="hl-bar"><span>1 × NQ</span><div><i style="width:${(mcFull.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcFull.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcFull.pass * 100)}% pass</b></div></div>
@@ -6139,14 +6139,16 @@ function defaultExitFor(r) {
   return (rob[0] || opts[0]).ex;
 }
 function labSetExit(ex) { labExit = ex; try { localStorage.setItem('jct_lab_exit', ex); } catch(e) {} labRenderPick(); labRerender(); readyCycle(false); }
-// FUNDED PLAN (MFF) — kept apart from the other stats: half off at 1R + stop to break-even, rest off at 2R (engine exitMode 'funded').
-// 3 MNQ / 3 MES = 0.3 × a full contract's result, micro costs $0.75/side. The purple 1R / 2R chart lines are this plan.
-const microOf = pnl => 0.3 * (pnl + 5) - 3 * 1.5;
+// FUNDED PLAN (MFF) — kept apart from the other stats: 2 of 3 micros off at 1R + stop to break-even, last 1 off at 2R (engine exitMode 'funded';
+// take-profits count only after price trades 1 tick through them).
+// 3 MNQ / 3 MES from each trade's points, MFF costs $1.90 round trip per micro. The purple 1R / 2R chart lines are this plan.
+const MFF_RT = { micro: 1.90, mini: 4.68 }; // MFF round-trip cost per contract (help.myfundedfutures.com · Futures Instrument List, Oct 2026)
+const microOf = (t, pv) => 3 * (t.pts * pv * 0.1 - MFF_RT.micro);
 function fundedStats(r, ex = 'funded') {
   const base = r && BT ? (BT.runs.find(x => x.sym === r.sym && x.id === r.id) || r) : r;
   if (!base || !base.exits || !base.exits[ex]) return null;
   const f = viaExit(base, ex), ts = f.trades;
-  let eq = 0, peak = 0, dd = 0; for (const t of ts) { eq += microOf(t.pnl); peak = Math.max(peak, eq); dd = Math.max(dd, peak - eq); }
+  let eq = 0, peak = 0, dd = 0; for (const t of ts) { eq += microOf(t, window.TJR.INSTR[base.sym].pointValue); peak = Math.max(peak, eq); dd = Math.max(dd, peak - eq); }
   return { base, f, st: f.stats, n: ts.length, wins: ts.filter(t => t.pnl > 0).length, losses: ts.filter(t => t.pnl <= 0).length,
     net3: eq, dd3: dd, full2: ts.filter(t => t.why === 'target').length,
     halves: f.halves.every(h => h.net > 0), stress: f.stress.stats.net > 0 };
@@ -6157,7 +6159,7 @@ function fundedHtml(r) {
   const nm = base.sym === 'NQ=F' ? 'MNQ' : 'MES';
   return `<div class="card" style="border-left:3px solid var(--purple);margin-top:10px"><div class="card-body">
     <div class="fw-600 fs-13" style="color:var(--purple)">Funded plan (MFF) · kept separate from the stats above</div>
-    <div class="fs-12 text-2 mb-sm">Half off at 1R and the stop to break-even, the rest off at 2R: the purple lines on the charts. Same entries, ${esc(base.name)} · ${esc(btLabel(base))}.</div>
+    <div class="fs-12 text-2 mb-sm">3 micros: 2 off at 1R and the stop to break-even, the last 1 off at 2R (the purple lines on the charts). Take-profits only count once price trades 1 tick past them; MFF costs $1.90 round trip per micro. Same entries, ${esc(base.name)} · ${esc(btLabel(base))}.</div>
     <div class="bt-summary">
       <div class="stat-tile"><div class="stat-eyebrow">Wins / losses</div><div class="stat-value">${F.wins} / ${F.losses}</div><div class="stat-sub">${F.n ? Math.round(F.wins / F.n * 100) : 0}% won · ${F.full2} reached 2R</div></div>
       <div class="stat-tile"><div class="stat-eyebrow">Net, 3 ${nm}</div><div class="stat-value mono ${btCls(F.net3)}">${btMoney(Math.round(F.net3))}</div><div class="stat-sub">1 full contract ${btMoney(Math.round(st.net))}</div></div>
@@ -6653,7 +6655,7 @@ function savePlan(patch) {
  * on every plan; on intraday-trailing plans the floor also rises with unrealised highs.
  */
 function simAccount(src, pv, plan, kind, cnt, days, paths, keepCurves, stage) {
-  const R = plan, dpp = pv * (kind === 'micro' ? 0.1 : 1) * cnt, cost = 2 * (kind === 'micro' ? 0.75 : 2.5) * cnt;
+  const R = plan, dpp = pv * (kind === 'micro' ? 0.1 : 1) * cnt, cost = (kind === 'micro' ? MFF_RT.micro : MFF_RT.mini) * cnt;
   let pass = 0, fail = 0, failMid = 0, payAny = 0, payTotal = 0, payCount = 0;
   const daysToPass = [], daysToPay = [], curves = keepCurves ? [] : null, endBal = [];
   for (let k = 0; k < paths; k++) {
@@ -6771,7 +6773,7 @@ function simRun() {
         ? `<td class="bull">${pctS(z.pass)}</td><td class="bear">${pctS(z.fail)}</td><td>${z.fail ? Math.round(z.failMid * 100) + '%' : '–'}</td><td>${pctS(z.open)}</td><td>${z.medDays ?? '–'}</td>`
         : `<td class="bull">${pctS(z.payAny)}</td><td class="mono">${usd(z.payAvg)}</td><td class="bear">${pctS(z.fail)}</td><td>${z.fail ? Math.round(z.failMid * 100) + '%' : '–'}</td>`}</tr>`).join('')}</table>
       <div class="fs-12 text-2" style="margin-top:8px">${best ? `Highlighted: the best ${P.stage === 'eval' ? 'pass rate' : 'average payout'} with a fail rate of 20% or less, within the plan's size limit (${best.c} × ${best.k === 'micro' ? mic : nm}).` : 'No size keeps the fail rate at or under 20% with these settings and this plan.'} "Fail mid-trade" = the open-trade dip touched the max loss even though that trade would have closed above it.</div></div></div>
-    <div class="fs-12 text-2">${esc(MFF_PLANS[P.key].name)} · ${P.stage === 'eval' ? 'evaluation' : 'sim-funded'} rules · ${esc(r.name)} · ${esc(btLabel(r))} · ${EXIT_LABEL[labExit || 'rules']} · ${src.list.length} ${stress ? 'stress-test' : 'normal'} trades from ${BT.instruments[r.sym].nySessions} sessions, replayed through each trade's worst and best point. Micro commission assumed $0.75/side. The future can look different from this sample. Rules-based simulation, not a recommendation.</div>`;
+    <div class="fs-12 text-2">${esc(MFF_PLANS[P.key].name)} · ${P.stage === 'eval' ? 'evaluation' : 'sim-funded'} rules · ${esc(r.name)} · ${esc(btLabel(r))} · ${EXIT_LABEL[labExit || 'rules']} · ${src.list.length} ${stress ? 'stress-test' : 'normal'} trades from ${BT.instruments[r.sym].nySessions} sessions, replayed through each trade's worst and best point. MFF costs: $1.90 round trip per micro, $4.68 per mini. The future can look different from this sample. Rules-based simulation, not a recommendation.</div>`;
 }
 // quick version for Highlights (current plan, evaluation)
 function mcQuick(r, kind, cnt, days = 30, paths = 2000) {

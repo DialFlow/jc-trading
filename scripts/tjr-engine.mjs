@@ -15,7 +15,8 @@ export const SLIP_TICKS = 1;   // market and stop orders only (Pine doesn't slip
 // exitMode: 'rules' = Pine target (default, TradingView parity) · 'liq' = all out at the first liquidity ≥ 1R ·
 //           'scale' = half out at that liquidity, stop to break-even, rest to the rules target ·
 //           'funded' = funded-account plan (MFF pass study): half out at 1R, stop to break-even, rest out at 2R ·
-//           'r1' = 1:1, everything out at 1R
+//           'r1' = 1:1, everything out at 1R. funded/r1 take-profits fill only after price trades 1 tick through (tpThrough);
+//           funded takes 2 of 3 contracts off at 1R (tp1Frac 2/3: 3 MNQ can't be halved)
 export const BASE = { rr: 2, dispLen: 20, dispMult: 1.5, rollGap: 0.02, fillThrough: 0, slipTicks: SLIP_TICKS, restEnd: 660, exitMode: 'rules',
   bosMode: 'bars5', watchStart: 570, watchEnd: 610, entryStart: 590, entryEnd: 610, maxTrades: 1, freshLevels: false };
 // freshLevels: a level only counts as liquidity (for sweeps and targets) until price first trades through it.
@@ -25,7 +26,7 @@ export const BASE = { rr: 2, dispLen: 20, dispMult: 1.5, rollGap: 0.02, fillThro
 //   watchStart/watchEnd = ET minutes when sweeps/BOS/FVGs count (570–610) · entryStart/entryEnd = when orders may be placed (590–610)
 //   maxTrades = setups per session (1); after a trade closes or an order expires, a fresh sweep is required
 export const STRUCT = { bosMode: 'bars5', watchStart: 570, watchEnd: 610, entryStart: 590, entryEnd: 610, maxTrades: 1 };
-export const EXITS = { rules: 'Rules target', liq: 'First liquidity ≥ 1R', scale: 'Half at liquidity, rest runs', funded: 'Funded: half at 1R, rest at 2R', r1: '1:1: all out at 1R' };
+export const EXITS = { rules: 'Rules target', liq: 'First liquidity ≥ 1R', scale: 'Half at liquidity, rest runs', funded: 'Funded: 2 of 3 off at 1R, last at 2R', r1: '1:1: all out at 1R' };
 
 // v4 + the 24 v5 combinations from CLAUDE.md's "Next backtest ideas"
 export function configs(sym) {
@@ -114,7 +115,7 @@ export function run(bars, sym, cfg, opts = {}) {
   const close = (b, price, why) => {
     track(price);
     const rest = pos.dir === 'long' ? price - pos.entry : pos.entry - price, risk = Math.abs(pos.entry - pos.stop0);
-    const pts = pos.scaled ? (pos.half + rest) / 2 : rest;
+    const fr = pos.frac ?? 0.5, pts = pos.scaled ? fr * pos.half + (1 - fr) * rest : rest;
     const mfe = Math.abs(pos.best - pos.entry), mae = Math.abs(pos.worst - pos.entry);
     trades.push({ dir: pos.dir, entryTime: pos.entryT, entry: pos.entry, exitTime: `${b.date} ${b.hm}`, exit: price,
       stop: pos.stop0, target: pos.target, tp1: pos.tp1, scaled: !!pos.scaled, risk: +risk.toFixed(2), r: risk ? +(pts / risk).toFixed(2) : 0,
@@ -135,7 +136,7 @@ export function run(bars, sym, cfg, opts = {}) {
       if (!pos && pending && pending.market && first) {
         // study-only market entry (entryAt 'market' / 'bos'): fills at this bar's open with slippage
         const p = pending, px = p.dir === 'long' ? a + cfg.slipTicks * tick : a - cfg.slipTicks * tick;
-        pos = { dir: p.dir, entry: px, stop: p.stop, target: p.target, entryT: `${b.date} ${b.hm}`, td: b.td, fillT: b.t, best: px, worst: px, targetName: p.targetName, stop0: p.stop, tp1: p.tp1, tp1Name: p.tp1Name };
+        pos = { dir: p.dir, entry: px, stop: p.stop, target: p.target, entryT: `${b.date} ${b.hm}`, td: b.td, fillT: b.t, best: px, worst: px, targetName: p.targetName, stop0: p.stop, tp1: p.tp1, tp1Name: p.tp1Name, frac: p.frac, thr: p.thr || 0 };
         pending = null;
         ev(b, 'fill', `Filled ${p.dir} at ${px.toFixed(2)} (market)`, { px, dir: p.dir });
       }
@@ -145,7 +146,7 @@ export function run(bars, sym, cfg, opts = {}) {
         const hit = p.dir === 'long' ? (first && a <= T) || (down && z <= T && a >= T) : (first && a >= T) || (!down && z >= T && a <= T);
         if (hit) {
           const px = first && (p.dir === 'long' ? a <= L : a >= L) ? (p.dir === 'long' ? Math.min(a, L) : Math.max(a, L)) : L;
-          pos = { dir: p.dir, entry: px, stop: p.stop, target: p.target, entryT: `${b.date} ${b.hm}`, td: b.td, fillT: b.t, best: px, worst: px, targetName: p.targetName, stop0: p.stop, tp1: p.tp1, tp1Name: p.tp1Name };
+          pos = { dir: p.dir, entry: px, stop: p.stop, target: p.target, entryT: `${b.date} ${b.hm}`, td: b.td, fillT: b.t, best: px, worst: px, targetName: p.targetName, stop0: p.stop, tp1: p.tp1, tp1Name: p.tp1Name, frac: p.frac, thr: p.thr || 0 };
           pending = null;
           ev(b, 'fill', `Filled ${p.dir} at ${px.toFixed(2)}`, { px, dir: p.dir });
           a = ft ? T : px; // the rest of this leg can still reach the stop/target
@@ -155,12 +156,16 @@ export function run(bars, sym, cfg, opts = {}) {
         const lng = pos.dir === 'long';
         const stopHit = lng ? (first && a <= pos.stop) || (down && z <= pos.stop && a >= pos.stop)
                             : (first && a >= pos.stop) || (!down && z >= pos.stop && a <= pos.stop);
-        const tgtHit = lng ? (first && a >= pos.target) || (!down && z >= pos.target && a <= pos.target)
-                           : (first && a <= pos.target) || (down && z <= pos.target && a >= pos.target);
+        // take-profits fill at their price, but only once price trades thr ticks past it (tpThrough; 0 = touch, as in Pine)
+        const th = (pos.thr || 0) * tick, TG = lng ? pos.target + th : pos.target - th;
+        const tgtHit = lng ? (first && a >= TG) || (!down && z >= TG && a <= TG)
+                           : (first && a <= TG) || (down && z <= TG && a >= TG);
         if (stopHit) { const gap = lng ? a < pos.stop : a > pos.stop; const raw = gap && first ? a : pos.stop; close(b, lng ? raw - cfg.slipTicks * tick : raw + cfg.slipTicks * tick, pos.scaled ? 'break-even' : 'stop'); return; }
         if (pos.tp1 != null && !pos.scaled) {
-          const t1 = lng ? (first && a >= pos.tp1) || (!down && z >= pos.tp1 && a <= pos.tp1) : (first && a <= pos.tp1) || (down && z <= pos.tp1 && a >= pos.tp1);
-          if (t1) { pos.scaled = true; pos.half = Math.abs(pos.tp1 - pos.entry); pos.stop = pos.entry; ev(b, 'scale', `Half out at ${pos.tp1.toFixed(2)} (${pos.tp1Name}); stop to break-even ${pos.entry.toFixed(2)}`, { px: pos.tp1, name: pos.tp1Name }); }
+          const T1 = lng ? pos.tp1 + th : pos.tp1 - th;
+          const t1 = lng ? (first && a >= T1) || (!down && z >= T1 && a <= T1) : (first && a <= T1) || (down && z <= T1 && a >= T1);
+          const fr = pos.frac ?? 0.5, frTxt = fr === 0.5 ? 'Half' : Math.abs(fr - 2 / 3) < 1e-9 ? '2 of 3' : `${Math.round(fr * 100)}%`;
+          if (t1) { pos.scaled = true; pos.half = Math.abs(pos.tp1 - pos.entry); pos.stop = pos.entry; ev(b, 'scale', `${frTxt} out at ${pos.tp1.toFixed(2)} (${pos.tp1Name}); stop to break-even ${pos.entry.toFixed(2)}`, { px: pos.tp1, name: pos.tp1Name }); }
         }
         if (tgtHit) { const gap = lng ? a > pos.target : a < pos.target; close(b, gap && first ? a : pos.target, 'target'); return; }
       }
@@ -280,7 +285,10 @@ export function run(bars, sym, cfg, opts = {}) {
         const rk = lng ? lim - stop : stop - lim;
         tgtP = Math.round((lng ? lim + rk : lim - rk) / tick) * tick; targetName = '1R';
       }
-      pending = { ...(mkt ? { market: true } : {}), dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, placedT: b.t, td: b.td };
+      // funded / 1:1 exits: take-profits need price to trade 1 tick through (cfg.tpThrough); funded takes 2 of 3 contracts off at 1R (cfg.tp1Frac)
+      const realTP = cfg.exitMode === 'funded' || cfg.exitMode === 'r1';
+      const frac = cfg.exitMode === 'funded' ? (cfg.tp1Frac ?? 2 / 3) : 0.5, thr = cfg.tpThrough ?? (realTP ? 1 : 0);
+      pending = { ...(mkt ? { market: true } : {}), dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, frac, thr, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, placedT: b.t, td: b.td };
       st.traded = true; st.nTrades++; st.rejected = '';
       ev(b, 'order', `${lng ? 'Buy' : 'Sell'} limit ${lim.toFixed(2)} · stop ${stop.toFixed(2)} · target ${pending.target.toFixed(2)} (${pending.targetName})`, { dir, limit: lim, stop, target: pending.target, targetName: pending.targetName, tp1, tp1Name });
       if (!c.risk) { c.risk = true; fun.orders++; }

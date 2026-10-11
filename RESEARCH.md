@@ -21,6 +21,7 @@ JC_CACHE=<dir> node scripts/entry-study.mjs   # → entry.json (~20 s; JC_CACHE 
 
 | Date | Study | Script → output | Result |
 | --- | --- | --- | --- |
+| Oct 10 | Realistic funded sim: 2 of 3 MNQ off at 1R, take-profits need 1 tick through, MFF costs ($1.90 RT micro) | engine `tp1Frac` / `tpThrough`, site `MFF_RT` | NQ auto-pick (Asian H/L, 27 trades), 3 MNQ: funded +$7,049, worst drop $653, ~75% pass in 30 days (Lab sim); 1:1 +$6,365, DD $488, ~70%. 1-tick fill-through changed no NQ trade. |
 | Oct 10 | MFF Rapid EOD pass rate by exit plan, 3 MNQ, 10,000 shuffled paths | `mff-exit-study.mjs` → `mffexits.json` | Today's exit passes 20% in 30 sessions (62% in 60), mostly blocked by the 30% consistency rule. Half at 1R + half at 2R: 51% (96%), 0% fail. Details below. |
 | Oct 10 | Entry timing and improvements (~59 variants: windows, entry price, stops, filters) | `entry-study.mjs` → `entry.json` | Earlier entries no help; ES is the leak; NQ 60-pt stop = paper-trade candidate. Details below. |
 | Oct 10 | Liquidity ladder ⅓ (TP1 first pool ≥1R, TP2 next pool, final = target; BE after TP1, stop to TP1 after TP2) | `liq-ladder-study.mjs` → `ladder.json` | +$273.7k vs +$269.6k (½ scale-out) over 25 NQ settings, better in 15/25, same DD. ½·½ ladder = tie. Exits unchanged; levels drawn on charts. |
