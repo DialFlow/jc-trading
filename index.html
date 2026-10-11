@@ -6052,6 +6052,13 @@ function renderHighlights() {
       title: 'Half off at 1R, the rest at 2R, with 3 MNQ: steady days for a funded evaluation', body: `
       <div class="hl-bars"><div class="hl-bar"><span>Wins</span><div><i style="width:${(F.wins / F.n * 100).toFixed(0)}%;background:var(--purple)"></i></div><b>${F.wins} / ${F.n}</b></div></div>
       <div class="fs-13">${btMoney(Math.round(F.net3))} with 3 MNQ, worst drop ${btMoney(-Math.round(F.dd3))} against the $2,000 trailing limit. These stats are kept separate from the rules' results: they only count the purple 1R / 2R exits.</div>`, caveat }]; })(),
+    ...(() => { const F = fundedStats(nq, 'r1'), G = fundedStats(nq); if (!F) return []; const m1 = mcQuick(F.f, 'micro', 3);
+      return [{ id: 'r1', kicker: '1:1 · all out at 1R', big: `${Math.round(F.wins / F.n * 100)}% <span class="hl-small">win rate</span>`, bigCls: '',
+      title: 'If you took 100% off at 1R (risk 1 to make 1)', body: `
+      <div class="hl-bars"><div class="hl-bar"><span>Wins</span><div><i style="width:${(F.wins / F.n * 100).toFixed(0)}%;background:var(--bull)"></i></div><b>${F.wins} / ${F.n}</b></div></div>
+      <div class="hl-two"><div><div class="fs-12 text-2">3 MNQ</div><div class="fw-600 ${btCls(F.net3)}">${btMoney(Math.round(F.net3))}</div><div class="fs-12 text-2">worst drop ${btMoney(-Math.round(F.dd3))}</div></div>
+      <div><div class="fs-12 text-2">Pass chance · 30 days</div><div class="fw-600">${Math.round(m1.pass * 100)}%</div><div class="fs-12 text-2">${Math.round(m1.fail * 100)}% fail</div></div></div>
+      <div class="fs-13">${G ? `Funded plan (half at 1R, rest at 2R) on the same trades: ${btMoney(Math.round(G.net3))}, worst drop ${btMoney(-Math.round(G.dd3))}. ` : ''}1:1 wins just as often but caps every winner at 1R. ${F.halves ? 'Made money in both halves' : 'Did not make money in both halves'} and ${F.stress ? 'held up' : 'did not hold up'} in the stress test.</div>`, caveat }]; })(),
     { id: 'survival', kicker: 'Account survival · 30 days', big: `${Math.round(mcMicro.fail * 100)}% <span class="hl-small">blow-up risk with 3 MNQ</span>`, title: `vs ${Math.round(mcFull.fail * 100)}% with 1 full NQ`, body: `
       <div class="hl-bars"><div class="hl-bar"><span>3 × MNQ</span><div><i style="width:${(mcMicro.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcMicro.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcMicro.pass * 100)}% pass</b></div>
       <div class="hl-bar"><span>1 × NQ</span><div><i style="width:${(mcFull.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcFull.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcFull.pass * 100)}% pass</b></div></div>
@@ -6135,10 +6142,10 @@ function labSetExit(ex) { labExit = ex; try { localStorage.setItem('jct_lab_exit
 // FUNDED PLAN (MFF) — kept apart from the other stats: half off at 1R + stop to break-even, rest off at 2R (engine exitMode 'funded').
 // 3 MNQ / 3 MES = 0.3 × a full contract's result, micro costs $0.75/side. The purple 1R / 2R chart lines are this plan.
 const microOf = pnl => 0.3 * (pnl + 5) - 3 * 1.5;
-function fundedStats(r) {
+function fundedStats(r, ex = 'funded') {
   const base = r && BT ? (BT.runs.find(x => x.sym === r.sym && x.id === r.id) || r) : r;
-  if (!base || !base.exits || !base.exits.funded) return null;
-  const f = viaExit(base, 'funded'), ts = f.trades;
+  if (!base || !base.exits || !base.exits[ex]) return null;
+  const f = viaExit(base, ex), ts = f.trades;
   let eq = 0, peak = 0, dd = 0; for (const t of ts) { eq += microOf(t.pnl); peak = Math.max(peak, eq); dd = Math.max(dd, peak - eq); }
   return { base, f, st: f.stats, n: ts.length, wins: ts.filter(t => t.pnl > 0).length, losses: ts.filter(t => t.pnl <= 0).length,
     net3: eq, dd3: dd, full2: ts.filter(t => t.why === 'target').length,
