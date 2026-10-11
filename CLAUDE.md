@@ -1,4 +1,7 @@
-# JC Trading — project handoff (updated Wed Oct 7, 2026, Claude Code session)
+# Liquidity Labs (formerly JC Trading) — project handoff (updated Sat Oct 10, 2026, Claude Code session)
+
+## Name (Oct 10)
+- Site name is **Liquidity Labs** (was JC Trading): title, header wordmark, footer, Highlights posts + share images, sign-up text, terms.html. Internal names stay (`jct_` storage keys, repo/URL `jc-trading`, Worker) so nobody loses data. Phones ≤440px hide the LIVE word (dot stays). Brand sheet from Jacob: `../Liquidity Labs Logo.md` (colors Navy #0D1117, Navy 2 #161B22, Cyan #2DD4F7, Bull #00E676, Bear #FF4757; tagline "Smart Money · ES · NQ · Futures"); logo images not received yet.
 
 ## What this is
 A single-file personal trading dashboard (`index.html`) for Jacob, who day-trades ES/NQ futures on a MyFundedFutures $50K funded (sim) account using TJR's methodology. It started in claude.ai as an artifact ("JC Trading", Version 6). This folder is now the source of truth.

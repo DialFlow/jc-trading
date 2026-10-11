@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>JC Trading</title>
+<title>Liquidity Labs</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -125,6 +125,8 @@ body {
 }
 .header-logo .jc { color: var(--blue); }
 .header-logo .trading { color: var(--text2); font-weight: 500; }
+/* phones: the longer Liquidity Labs name needs the room, so the LIVE word goes (the dot stays) and spacing tightens */
+@media (max-width: 440px) { .app-header { gap: 10px; padding: 0 12px; } .header-logo { font-size: 16px; } .header-live { font-size: 0; gap: 0; } }
 
 .header-live {
   display: flex;
@@ -1418,8 +1420,8 @@ select { cursor: pointer; }
      ============================================================ -->
 <header class="app-header">
   <div class="header-logo">
-    <span class="jc">JC</span>
-    <span class="trading">Trading</span>
+    <span class="jc">Liquidity</span>
+    <span class="trading">Labs</span>
   </div>
   <div class="header-live">
     <div class="live-dot"></div>
@@ -2210,7 +2212,7 @@ select { cursor: pointer; }
   </div>
 </div>
 
-  <div class="site-foot">JC Trading is for personal tracking and learning only. <b>Not financial advice.</b> · <a href="terms.html">Terms &amp; Conditions</a></div>
+  <div class="site-foot">Liquidity Labs is for personal tracking and learning only. <b>Not financial advice.</b> · <a href="terms.html">Terms &amp; Conditions</a></div>
 </main>
 <div id="gl-pop" class="gl-pop" hidden role="tooltip"></div>
 <div id="tr-modal" class="sync-modal" hidden><div class="sync-box" role="dialog" aria-label="Pre-flight check"></div></div>
@@ -2238,7 +2240,7 @@ select { cursor: pointer; }
       <input id="acct-invite" type="password" placeholder="Invite code (ask Jacob)" autocomplete="off" style="margin-bottom:8px" hidden onkeydown="if(event.key==='Enter')Sync.submit()">
       <label class="fs-12 text-2" style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><input type="checkbox" onchange="['acct-pass','acct-invite'].forEach(i=>document.getElementById(i).type=this.checked?'text':'password')" style="width:auto"> Show</label>
       <div id="sync-msg" class="fs-12 text-2" style="min-height:16px"></div>
-      <label id="acct-terms" class="acct-terms" hidden><input type="checkbox" id="acct-agree"> <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a> and understand JC Trading is for my own personal tracking and learning only. <b>It is not financial advice.</b></span></label>
+      <label id="acct-terms" class="acct-terms" hidden><input type="checkbox" id="acct-agree"> <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a> and understand Liquidity Labs is for my own personal tracking and learning only. <b>It is not financial advice.</b></span></label>
       <div id="acct-btns" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sync-modal').hidden=true">Cancel</button>
         <button class="btn btn-primary btn-sm" id="acct-go" onclick="Sync.submit()">Sign in</button>
@@ -6078,7 +6080,7 @@ function renderHighlights() {
   ];
   el.innerHTML = HL_POSTS.map(p => `
     <article class="hl-post">
-      <header><div class="hl-av">JC</div><div><div class="fw-600 fs-13">JC Trading Lab</div><div class="fs-12 text-2">${p.kicker}</div></div></header>
+      <header><div class="hl-av">LL</div><div><div class="fw-600 fs-13">Liquidity Labs</div><div class="fs-12 text-2">${p.kicker}</div></div></header>
       <div class="hl-big ${p.bigCls || ''}">${p.big}</div>
       <div class="hl-title">${esc(p.title)}</div>
       <div class="hl-body">${p.body}</div>
@@ -6095,8 +6097,8 @@ async function hlShare(id) {
   const g = c.getContext('2d'), F = 'Inter, -apple-system, Segoe UI, sans-serif';
   const grd = g.createLinearGradient(0, 0, 0, 1350); grd.addColorStop(0, '#111114'); grd.addColorStop(1, '#1c1c22'); g.fillStyle = grd; g.fillRect(0, 0, 1080, 1350);
   g.fillStyle = '#0a84ff'; g.beginPath(); g.arc(110, 120, 44, 0, 7); g.fill();
-  g.fillStyle = '#fff'; g.font = `700 34px ${F}`; g.textAlign = 'center'; g.fillText('JC', 110, 132); g.textAlign = 'left';
-  g.font = `600 36px ${F}`; g.fillText('JC Trading Lab', 178, 112); g.fillStyle = '#9a9aa2'; g.font = `400 28px ${F}`; g.fillText(strip(p.kicker), 178, 152);
+  g.fillStyle = '#fff'; g.font = `700 34px ${F}`; g.textAlign = 'center'; g.fillText('LL', 110, 132); g.textAlign = 'left';
+  g.font = `600 36px ${F}`; g.fillText('Liquidity Labs', 178, 112); g.fillStyle = '#9a9aa2'; g.font = `400 28px ${F}`; g.fillText(strip(p.kicker), 178, 152);
   const big = strip(p.big); g.fillStyle = p.bigCls === 'bull' ? '#30d158' : p.bigCls === 'bear' ? '#ff453a' : '#ffffff';
   g.font = `800 ${big.length > 14 ? 96 : 150}px ${F}`; g.fillText(big, 80, 420);
   const wrap = (txt, x, y, w, lh, font, col) => { g.font = font; g.fillStyle = col; let line = ''; for (const word of txt.split(' ')) { const t = line ? line + ' ' + word : word; if (g.measureText(t).width > w) { g.fillText(line, x, y); y += lh; line = word; } else line = t; } if (line) g.fillText(line, x, y); return y + lh; };
@@ -6112,7 +6114,7 @@ async function hlShare(id) {
   wrap(p.caveat || '', 80, 1210, 920, 38, `400 26px ${F}`, '#8e8e93');
   const caption = `${strip(p.title)}: ${big}. ${p.caveat || ''}`;
   const blob = await new Promise(r => c.toBlob(r, 'image/png'));
-  const file = new File([blob], `jc-trading-${id}.png`, { type: 'image/png' });
+  const file = new File([blob], `liquidity-labs-${id}.png`, { type: 'image/png' });
   try {
     if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: caption }); return; }
   } catch(e) { if (e && e.name === 'AbortError') return; }
