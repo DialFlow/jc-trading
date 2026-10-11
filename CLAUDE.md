@@ -1,5 +1,8 @@
 # Liquidity Labs (formerly JC Trading) — project handoff (updated Sat Oct 10, 2026, Claude Code session)
 
+## TJR trade comparison (started Oct 11)
+- Private folder `../TJR Trade Log/` (outside this repo, never commit it): `trades.csv` (one row per TJR trade: date, time ET, contract, direction, entry/stop/TPs, result, link, screenshot, swept level, BOS timeframe, his reason), `screenshots/` (`YYYY-MM-DD_HHMM_CONTRACT_N.png`), `transcripts/`. Jacob pastes screenshots/transcripts into chat; Claude files them there. Plan: replay each trade day through the engine, classify where the rules differ, test each difference with the usual robustness checks. Only the last ~60 days can be replayed (Yahoo 5m). No ML: too few trades.
+
 ## Name (Oct 10)
 - Site name is **Liquidity Labs** (was JC Trading): title, header wordmark, footer, Highlights posts + share images, sign-up text, terms.html. Internal names stay (`jct_` storage keys, repo/URL `jc-trading`, Worker) so nobody loses data. Phones ≤440px hide the LIVE word (dot stays). Brand sheet from Jacob: `../Liquidity Labs Logo.md` (colors Navy #0D1117, Navy 2 #161B22, Cyan #2DD4F7, Bull #00E676, Bear #FF4757; tagline "Smart Money · ES · NQ · Futures"); logo images not received yet.
 
