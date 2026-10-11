@@ -13,6 +13,7 @@ node scripts/exit-study.mjs              # → exits.json
 node scripts/liq-ladder-study.mjs        # → ladder.json
 node scripts/research.mjs                # → research.json (forecast, gaps, off-hours)
 node scripts/confluence-stats.mjs        # → confstats.json
+JC_CACHE=<dir> node scripts/mff-exit-study.mjs  # → mffexits.json
 JC_CACHE=<dir> node scripts/entry-study.mjs   # → entry.json (~20 s; JC_CACHE keeps the same candles across reruns)
 ```
 
@@ -20,6 +21,7 @@ JC_CACHE=<dir> node scripts/entry-study.mjs   # → entry.json (~20 s; JC_CACHE 
 
 | Date | Study | Script → output | Result |
 | --- | --- | --- | --- |
+| Oct 10 | MFF Rapid EOD pass rate by exit plan, 3 MNQ, 10,000 shuffled paths | `mff-exit-study.mjs` → `mffexits.json` | Today's exit passes 20% in 30 sessions (62% in 60), mostly blocked by the 30% consistency rule. Half at 1R + half at 2R: 51% (96%), 0% fail. Details below. |
 | Oct 10 | Entry timing and improvements (~59 variants: windows, entry price, stops, filters) | `entry-study.mjs` → `entry.json` | Earlier entries no help; ES is the leak; NQ 60-pt stop = paper-trade candidate. Details below. |
 | Oct 10 | Liquidity ladder ⅓ (TP1 first pool ≥1R, TP2 next pool, final = target; BE after TP1, stop to TP1 after TP2) | `liq-ladder-study.mjs` → `ladder.json` | +$273.7k vs +$269.6k (½ scale-out) over 25 NQ settings, better in 15/25, same DD. ½·½ ladder = tie. Exits unchanged; levels drawn on charts. |
 | Oct 10 | Exits in R | `exit-study.mjs` → `exits.json` | NQ default: targets avg 8.6R; reached +1R 63%, +2R 37%, +3R 16%. Fixed 1/2/3R ladder: win rate 53% → 79% but +$240k vs +$251k (25 settings). Half at 0.5R: 57% vs 49% wins, 2–38% less profit. ES loses with every exit. |
@@ -43,3 +45,20 @@ Jul 31 – Oct 9 (50 sessions, halves split Sep 4). ~59 variants × 25 settings 
 - **Small, not adopted:** skip entries inside an opposing 1H FVG/IFVG: NQ default 18 trades +$17,820 DD $1,618; helps 13/25 NQ.
 - **No help:** entry at FVG near edge (19/25 robust), far edge, market at FVG close (9/25), BOS close (~7 trades), IFVG retest (15/25); stops sweep wick, sweep+buffer, ATR×3/×5, beyond FVG; filters SMT, same-way 1H gap, 1H trend, sweep depth, minutes since sweep, opening gap. VIX untestable (14–18 all period); no free news history.
 - **Sizing:** 1 NQ at 80 pts risks $1,600, DD ≈ whole $2,000 MFF limit; 3 MNQ ≈ +$5,000, DD ≈ $540.
+
+## Oct 10 MFF pass study (3 MNQ)
+NQ default entries (80-pt stop, PDH/PDL, displacement), 19 trades in 50 sessions (0.38/session), each exit replayed on the 5m candles (stop first when a candle touches both). 10,000 paths per plan: each session trades with p = 0.38, drawing a random real trade; it first dips to its MAE (rules run, capped at the stop) and fails if that touches the floor. Rapid EOD eval: $2,000 trailing from the highest EOD balance, floor locks at $50,100, pass = +$3,000, ≥4 trading days, best day ≤30% of profit. "Days" = sessions, traded or not. 3 MNQ = 0.3 × NQ result, $0.75/side.
+
+| Exit (80-pt stop) | Won | Net 3 MNQ | Max DD | Best day share | Pass in 30 | Fail in 30 | Not yet, held by 30% rule | Pass in 60 | Fail in 60 | Median sessions to pass |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Today: half at first liquidity ≥1R, rest to target | 53% | $5,018 | $545 | 39% | 19.6% | 1.9% | 58.5% | 62.0% | 3.8% | 38 |
+| Half at 1R, half at 2R (BE) | 79% | $5,033 | $333 | 14% | 50.9% | 0% | 0% | 96.3% | 0% | 30 |
+| ⅓ at 1R · 2R · 3R (BE, then +1R) | 79% | $5,094 | $333 | 19% | 49.4% | 0% | 9.8% | 94.9% | 0% | 30 |
+| Half at 1R, rest to 12:00 (BE) | 79% | $5,707 | $333 | 30% | 28.3% | 0% | 44.0% | 85.3% | 0% | 36 |
+| All out at 1R | 79% | $4,716 | $333 | 10% | 44.1% | 0% | 0% | 96.6% | 0% | 32 |
+| All out at 2R | 63% | $4,898 | $485 | 20% | 47.7% | 1.4% | 15.0% | 87.8% | 2.9% | 29 |
+
+60-pt stop (same entries): today's exit 24.5% / 78.4%, half 1R + half 2R 21.8% / 80.7%, thirds 34.4% / 87.7%, all out at 2R 40.5% / 88.0% (pass in 30 / 60), fails ≤0.4%. A 60-pt stop makes 1R smaller, so the R-based exits earn less; it does not beat the 80-pt stop with half at 1R + half at 2R.
+
+- At 3 MNQ the trailing drawdown rarely ends the account (≤4% with any exit). The blocker is the 30% consistency rule: big runner days make one day too large a share of profit.
+- Caveat: bootstrapped from 19 in-sample trades. The 79% win rate of the 1R exits is a sample estimate; the paths assume future trades look like these.
