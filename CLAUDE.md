@@ -19,8 +19,8 @@ A single-file personal trading dashboard (`index.html`) for Jacob, who day-trade
 - `backtest.json` + `scripts/backtest.mjs`: the real-data backtest shown on the Backtesting tab (see below). The old `bt/` screenshots were removed Oct 8.
 - `.gitattributes`: forces LF line endings (a CRLF checkout once broke multi-line edits).
 
-## Design system (keep it)
-Apple HIG look: black/white/light gray, Inter, iOS system colors as CSS tokens on `:root` (`--bull`, `--bear`, `--warn`, `--blue`…). Light/dark via `prefers-color-scheme` plus `data-theme`. Cards, segmented controls, pill badges.
+## Design system (Liquidity Labs brand, Oct 10)
+Same layout (Inter, cards, segmented controls, pill badges), brand colors as tokens on `:root`: **dark (default)** bg #0d1117, surface #161b22, accent `--blue` = cyan #2dd4f7 with `--on-accent` navy text, bull #00e676, bear #ff4757; **light** keeps readable darker versions (accent #0e7490, bull #00a35c, bear #e8364a, white `--on-accent`). Theme = `data-theme` set in <head> before paint from `jct_theme` (per device, not synced; default dark for everyone); footer has the Liquidity Labs wordmark + Dark/Light switch (`setTheme`). Chart SVG uses the theme tokens; solid chart tags with white text use fixed deep cyan #0e7490; the share PNG uses brand hex. Use `var(--on-accent)` for text on accent backgrounds, never #fff.
 
 ## Tabs (Oct 10, 5): Trade · Market · Lab · Journal · Playbook
 - `TAB_OF` maps every page id to its tab (old names still work: edge → Market, charts → Trade, levels → Playbook). Journal = 4 pages (journal 'Prep', watch, bias, tradelog 'Trades') behind a `.subnav` switch added at start-up by `tabsSetup`; it remembers the last one (`jct_jsub`). `tabsSetup` also moves the Edge page's VIX + market read (`.ev-grid`) to the top of Market and the edge conditions/notes to the end of Playbook (page-edge ends up empty). Phones: tabs share the width. Test: `tests/navtest.js`.

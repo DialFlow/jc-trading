@@ -1,5 +1,6 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Liquidity Labs</title>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('jct_theme') === 'light' ? 'light' : 'dark'; } catch(e) { document.documentElement.dataset.theme = 'dark'; }</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -8,70 +9,75 @@
    Layout: sticky header + tab bar, single scrollable content pane
    ============================================================ */
 :root {
-  --bg:              #f2f2f7;
+  /* Liquidity Labs brand · light theme (darker cyan/green/red so text stays readable on white) */
+  --bg:              #f4f6f8;
   --bg2:             #ffffff;
   --surface:         #ffffff;
-  --surface2:        #f2f2f7;
-  --border:          rgba(60,60,67,0.12);
-  --border-strong:   rgba(60,60,67,0.29);
-  --text:            #000000;
-  --text2:           rgba(60,60,67,0.6);
-  --text3:           rgba(60,60,67,0.3);
-  --bull:            #34c759;
-  --bear:            #ff3b30;
-  --warn:            #ff9500;
-  --blue:            #007aff;
-  --purple:          #af52de;
-  --teal:            #32ade6;
-  --fill:            rgba(120,120,128,0.12);
-  --fill2:           rgba(120,120,128,0.16);
-  --fill3:           rgba(120,120,128,0.08);
+  --surface2:        #eef1f4;
+  --border:          rgba(13,17,23,0.12);
+  --border-strong:   rgba(13,17,23,0.28);
+  --text:            #0d1117;
+  --text2:           rgba(13,17,23,0.62);
+  --text3:           rgba(13,17,23,0.32);
+  --bull:            #00a35c;
+  --bear:            #e8364a;
+  --warn:            #f08c00;
+  --blue:            #0e7490;
+  --on-accent:       #ffffff;
+  --purple:          #9b4dca;
+  --teal:            #0891b2;
+  --fill:            rgba(13,17,23,0.08);
+  --fill2:           rgba(13,17,23,0.12);
+  --fill3:           rgba(13,17,23,0.05);
   color-scheme: light;
 }
 
+/* Liquidity Labs brand · dark theme (the default: navy + cyan) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:              #000000;
-    --bg2:             #1c1c1e;
-    --surface:         #1c1c1e;
-    --surface2:        #2c2c2e;
-    --border:          rgba(255,255,255,0.1);
-    --border-strong:   rgba(255,255,255,0.2);
+    --bg:              #0d1117;
+    --bg2:             #161b22;
+    --surface:         #161b22;
+    --surface2:        #1f2630;
+    --border:          rgba(240,246,252,0.1);
+    --border-strong:   rgba(240,246,252,0.2);
     --text:            #ffffff;
-    --text2:           rgba(235,235,245,0.6);
-    --text3:           rgba(235,235,245,0.3);
-    --bull:            #30d158;
-    --bear:            #ff453a;
-    --warn:            #ff9f0a;
-    --blue:            #0a84ff;
-    --purple:          #bf5af2;
-    --teal:            #64d2ff;
-    --fill:            rgba(118,118,128,0.24);
-    --fill2:           rgba(118,118,128,0.32);
-    --fill3:           rgba(118,118,128,0.16);
+    --text2:           rgba(230,237,243,0.62);
+    --text3:           rgba(230,237,243,0.32);
+    --bull:            #00e676;
+    --bear:            #ff4757;
+    --warn:            #ffa726;
+    --blue:            #2dd4f7;
+    --on-accent:       #0d1117;
+    --purple:          #c084fc;
+    --teal:            #67e8f9;
+    --fill:            rgba(240,246,252,0.1);
+    --fill2:           rgba(240,246,252,0.14);
+    --fill3:           rgba(240,246,252,0.06);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg:              #000000;
-  --bg2:             #1c1c1e;
-  --surface:         #1c1c1e;
-  --surface2:        #2c2c2e;
-  --border:          rgba(255,255,255,0.1);
-  --border-strong:   rgba(255,255,255,0.2);
+  --bg:              #0d1117;
+  --bg2:             #161b22;
+  --surface:         #161b22;
+  --surface2:        #1f2630;
+  --border:          rgba(240,246,252,0.1);
+  --border-strong:   rgba(240,246,252,0.2);
   --text:            #ffffff;
-  --text2:           rgba(235,235,245,0.6);
-  --text3:           rgba(235,235,245,0.3);
-  --bull:            #30d158;
-  --bear:            #ff453a;
-  --warn:            #ff9f0a;
-  --blue:            #0a84ff;
-  --purple:          #bf5af2;
-  --teal:            #64d2ff;
-  --fill:            rgba(118,118,128,0.24);
-  --fill2:           rgba(118,118,128,0.32);
-  --fill3:           rgba(118,118,128,0.16);
+  --text2:           rgba(230,237,243,0.62);
+  --text3:           rgba(230,237,243,0.32);
+  --bull:            #00e676;
+  --bear:            #ff4757;
+  --warn:            #ffa726;
+  --blue:            #2dd4f7;
+  --on-accent:       #0d1117;
+  --purple:          #c084fc;
+  --teal:            #67e8f9;
+  --fill:            rgba(240,246,252,0.1);
+  --fill2:           rgba(240,246,252,0.14);
+  --fill3:           rgba(240,246,252,0.06);
   color-scheme: dark;
 }
 
@@ -312,7 +318,7 @@ body {
 /* Playbook */
 .pb-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
 .pb-step { display: grid; grid-template-columns: 32px 1fr; gap: 10px; background: var(--surface); border-radius: 12px; padding: 14px; }
-.pb-num { width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.pb-num { width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: var(--on-accent); font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .pb-now { background: rgba(0,122,255,0.10); } .pb-now .level-label, .pb-now .level-price { color: var(--blue); font-weight: 700; }
 .pb-swept { opacity: 0.55; }
 .pb-risk { display: grid; gap: 10px; font-size: 13px; }
@@ -381,7 +387,7 @@ body {
 .lv-seg { font-size: 11px; font-weight: 700; text-align: center; padding: 5px 2px; border-radius: 6px; background: var(--fill); color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lv-seg.done { background: rgba(0,122,255,0.16); color: var(--blue); }
 .lv-seg.now { background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue); color: var(--blue); }
-.lv-seg.act { background: var(--blue); color: #fff; }
+.lv-seg.act { background: var(--blue); color: var(--on-accent); }
 .lv-seg.win { background: rgba(52,199,89,0.18); color: var(--bull); }
 .lv-seg.loss { background: rgba(255,59,48,0.14); color: var(--bear); }
 @media (max-width: 520px) { .lv-seg { font-size: 10px; padding: 5px 1px; } }
@@ -390,7 +396,7 @@ body {
 .lv-ticker b { color: #ffd60a; white-space: nowrap; }
 .lv-ticker span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lv-ctrl { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
-.lv-fc-btn { border: 0; border-radius: 8px; padding: 7px 12px; font: 700 12px/1 inherit; cursor: pointer; background: var(--blue); color: #fff; }
+.lv-fc-btn { border: 0; border-radius: 8px; padding: 7px 12px; font: 700 12px/1 inherit; cursor: pointer; background: var(--blue); color: var(--on-accent); }
 .lv-fc-btn.on { background: #5e5ce6; }
 .lv-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 14px; }
 @media (min-width: 1000px) { .lv-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); } }
@@ -471,7 +477,7 @@ body {
 .tr-phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
 .tr-ph { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 8px 10px; text-align: left; cursor: pointer; color: var(--text); display: flex; flex-direction: column; gap: 2px; font: inherit; }
 .tr-ph b { font-size: 13px; } .tr-ph span { font-size: 11px; color: var(--text2); }
-.tr-ph.on { background: var(--blue); border-color: var(--blue); color: #fff; } .tr-ph.on span { color: rgba(255,255,255,0.85); }
+.tr-ph.on { background: var(--blue); border-color: var(--blue); color: var(--on-accent); } .tr-ph.on span { color: rgba(255,255,255,0.85); }
 .tr-guard { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .tr-g { font-size: 12px; padding: 6px 10px; border-radius: 8px; background: var(--fill); color: var(--text2); }
 .tr-g b { color: var(--text); } .tr-g.ok { background: rgba(52,199,89,0.12); } .tr-g.warn { background: rgba(255,149,0,0.14); } .tr-g.bad { background: rgba(255,59,48,0.14); }
@@ -494,6 +500,13 @@ body {
 .acct-terms input { width: auto; margin-top: 2px; flex-shrink: 0; }
 .acct-terms[hidden] { display: none; }
 .site-foot { text-align: center; font-size: 12px; color: var(--text2); padding: 18px 16px 28px; }
+.foot-logo { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 6px 0 12px; }
+.fl-word { font-size: 22px; font-weight: 500; color: var(--text2); letter-spacing: -0.4px; }
+.fl-word b { color: var(--blue); font-weight: 700; }
+.fl-tag { font-size: 11px; color: var(--text3); letter-spacing: 0.4px; }
+.theme-seg { display: flex; width: max-content; gap: 2px; padding: 2px; border-radius: 8px; background: var(--fill); margin: 0 auto 12px; }
+.theme-seg button { border: 0; background: transparent; color: var(--text2); font: inherit; font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 6px; cursor: pointer; }
+.theme-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
 .acct-sec { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
 .acct-or { display: flex; align-items: center; gap: 8px; margin: 10px 0; color: var(--text3); font-size: 12px; }
 .acct-or::before, .acct-or::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
@@ -540,7 +553,7 @@ body {
 .hl-feed { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
 .hl-post { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; }
 .hl-post header { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
-.hl-av { width: 36px; height: 36px; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.hl-av { width: 36px; height: 36px; border-radius: 50%; background: var(--blue); color: var(--on-accent); font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px; }
 .hl-big { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 .hl-big.bull { color: var(--bull); } .hl-big.bear { color: var(--bear); }
 .hl-small { font-size: 16px; font-weight: 600; color: var(--text2); letter-spacing: 0; }
@@ -561,7 +574,7 @@ body {
 
 /* Sync button: looks like a button until set up */
 #sync-pill { border: 1px solid transparent; }
-#sync-pill.sync-cta { background: var(--blue); color: #fff; font-weight: 600; }
+#sync-pill.sync-cta { background: var(--blue); color: var(--on-accent); font-weight: 600; }
 #sync-pill.sync-cta .fresh-dot { display: none; }
 #sync-pill:hover { filter: brightness(1.1); }
 @media (max-width: 520px) { #sync-pill .sync-sub { display: none; } }
@@ -930,7 +943,7 @@ select { cursor: pointer; }
   transition: opacity 0.15s, transform 0.1s;
 }
 .btn:active { opacity: 0.7; transform: scale(0.97); }
-.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary { background: var(--blue); color: var(--on-accent); }
 .btn-secondary { background: var(--fill2); color: var(--text); }
 .btn-bull { background: var(--bull); color: #fff; }
 .btn-bear { background: var(--bear); color: #fff; }
@@ -1381,10 +1394,10 @@ select { cursor: pointer; }
 .bt-msg { display: flex; gap: 10px; align-items: flex-end; min-width: 0; }
 .bt-msg.me { flex-direction: row-reverse; }
 .bt-avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-.bt-msg.me .bt-avatar { background: var(--blue); color: #fff; }
+.bt-msg.me .bt-avatar { background: var(--blue); color: var(--on-accent); }
 .bt-msg.ai .bt-avatar { background: var(--fill2); color: var(--text); }
 .bt-bubble { min-width: 0; max-width: min(640px, 86%); padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; }
-.bt-msg.me .bt-bubble { background: var(--blue); color: #fff; border-bottom-right-radius: 6px; }
+.bt-msg.me .bt-bubble { background: var(--blue); color: var(--on-accent); border-bottom-right-radius: 6px; }
 .bt-msg.ai .bt-bubble { background: var(--surface); color: var(--text); border-bottom-left-radius: 6px; border: 1px solid var(--border); }
 .bt-bubble p + p, .bt-bubble p + ul, .bt-bubble ul + p, .bt-bubble figure + p, .bt-bubble p + figure { margin-top: 8px; }
 .bt-bubble ul { padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
@@ -1409,7 +1422,7 @@ select { cursor: pointer; }
 .bt-verdict { border-left: 3px solid var(--bear); padding-left: 10px; }
 .bt-composer { position: sticky; bottom: 0; background: var(--bg); padding-block: 10px 6px; display: flex; gap: 8px; align-items: flex-end; border-top: 1px solid var(--border); }
 .bt-composer textarea { min-height: 44px; max-height: 160px; border-radius: 22px; padding: 11px 16px; resize: none; }
-.bt-send { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--blue); color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; }
+.bt-send { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--blue); color: var(--on-accent); font-size: 18px; font-weight: 700; cursor: pointer; }
 .bt-send:disabled { opacity: 0.4; cursor: default; }
 .bt-hint { font-size: 11px; color: var(--text3); text-align: center; }
 .bt-typing { color: var(--text2); font-style: italic; }
@@ -2212,7 +2225,10 @@ select { cursor: pointer; }
   </div>
 </div>
 
-  <div class="site-foot">Liquidity Labs is for personal tracking and learning only. <b>Not financial advice.</b> · <a href="terms.html">Terms &amp; Conditions</a></div>
+  <div class="site-foot">
+    <div class="foot-logo" aria-label="Liquidity Labs"><span class="fl-word"><b>Liquidity</b> Labs</span><span class="fl-tag">Smart Money · ES · NQ · Futures</span></div>
+    <div class="theme-seg" role="group" aria-label="Theme"><button type="button" data-t="dark" onclick="setTheme('dark')">Dark</button><button type="button" data-t="light" onclick="setTheme('light')">Light</button></div>
+    Liquidity Labs is for personal tracking and learning only. <b>Not financial advice.</b> · <a href="terms.html">Terms &amp; Conditions</a></div>
 </main>
 <div id="gl-pop" class="gl-pop" hidden role="tooltip"></div>
 <div id="tr-modal" class="sync-modal" hidden><div class="sync-box" role="dialog" aria-label="Pre-flight check"></div></div>
@@ -2274,6 +2290,9 @@ let nqLevels = [];
 // Empty JC_API = sync off, prices from the GitHub Actions prices.json
 // ============================================================
 const JC_API = 'https://jc-trading.jacobcarpenterodell.workers.dev';
+// Theme: Liquidity Labs dark (default) or light, remembered per device (not synced)
+function setTheme(t) { t = t === 'light' ? 'light' : 'dark'; document.documentElement.dataset.theme = t; try { localStorage.setItem('jct_theme', t); } catch(e) {} document.querySelectorAll('.theme-seg button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); }
+document.addEventListener('DOMContentLoaded', () => setTheme(document.documentElement.dataset.theme));
 const SYNC_KEYS = ['jct_bias','jct_bt_chat','jct_checklist','jct_dash_notes','jct_edge_notes',
   'jct_journal','jct_levels','jct_trades','tjr_bias','jct_risk','jct_plan','jct_watch'];
 
@@ -3037,7 +3056,7 @@ function drawCandles(elId, sym, tf, opts = {}) {
   }
   const last = bars[bars.length - 1];
   svg += `<line x1="0" x2="${right}" y1="${y(last.c)}" y2="${y(last.c)}" stroke="var(--blue)" stroke-width="0.8" stroke-dasharray="2 2"/>
-    <rect x="${right + 1}" y="${y(last.c) - 8}" width="${PR - 2}" height="16" rx="3" fill="var(--blue)"/><text x="${right + 4}" y="${y(last.c) + 4}" class="mtf-ax" fill="#fff" style="fill:#fff">${last.c.toFixed(2)}</text>`;
+    <rect x="${right + 1}" y="${y(last.c) - 8}" width="${PR - 2}" height="16" rx="3" fill="#0e7490"/><text x="${right + 4}" y="${y(last.c) + 4}" class="mtf-ax" fill="#fff" style="fill:#fff">${last.c.toFixed(2)}</text>`;
   const daily = tf === '1d';
   const sec = candleSec(bars), xk = k => x(start + k);
   svg += timeGrid(bars, xk, cw, PT, H - PB, H - 6, sec);
@@ -4457,10 +4476,10 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
       const bull = g.dir === 'bull';
       if (g.status === 'disrespected') {
         const xe = x(g.at), xi = g.invEnd != null ? x(g.invEnd) : right;
-        svg += `<rect x="${x0}" y="${y0}" width="${Math.max(1, xe - x0)}" height="${h}" fill="${bull ? '#30d158' : '#ff453a'}" fill-opacity="0.12"/>`;
-        svg += `<rect x="${xe}" y="${y0}" width="${Math.max(1, xi - xe)}" height="${h}" fill="none" stroke="${bull ? '#ff453a' : '#30d158'}" stroke-width="1" stroke-dasharray="4 3"/><text x="${xe + 3}" y="${y0 + h / 2 + 3}" class="mtf-ax" style="fill:var(--text2)">IFVG</text>`;
+        svg += `<rect x="${x0}" y="${y0}" width="${Math.max(1, xe - x0)}" height="${h}" fill="${bull ? 'var(--bull)' : 'var(--bear)'}" fill-opacity="0.12"/>`;
+        svg += `<rect x="${xe}" y="${y0}" width="${Math.max(1, xi - xe)}" height="${h}" fill="none" stroke="${bull ? 'var(--bear)' : 'var(--bull)'}" stroke-width="1" stroke-dasharray="4 3"/><text x="${xe + 3}" y="${y0 + h / 2 + 3}" class="mtf-ax" style="fill:var(--text2)">IFVG</text>`;
       } else {
-        svg += `<rect x="${x0}" y="${y0}" width="${right - x0}" height="${h}" fill="${bull ? '#30d158' : '#ff453a'}" fill-opacity="0.10" stroke="${bull ? '#30d158' : '#ff453a'}" stroke-opacity="0.45" stroke-width="0.8"/><text x="${x0 + 3}" y="${y0 + h / 2 + 3}" class="mtf-ax" style="fill:var(--text2)">FVG</text>`;
+        svg += `<rect x="${x0}" y="${y0}" width="${right - x0}" height="${h}" fill="${bull ? 'var(--bull)' : 'var(--bear)'}" fill-opacity="0.10" stroke="${bull ? 'var(--bull)' : 'var(--bear)'}" stroke-opacity="0.45" stroke-width="0.8"/><text x="${x0 + 3}" y="${y0 + h / 2 + 3}" class="mtf-ax" style="fill:var(--text2)">FVG</text>`;
       }
     }
   }
@@ -4478,19 +4497,19 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
     const i0 = Math.max(0, idx(order.t) + 1), endEv = exit || cancel, i1 = endEv ? idx(endEv.t) : bars.length - 1;
     const xa = x(i0) - cw / 2, xb = Math.max(xa + cw, (i1 >= 0 ? x(i1) : x(bars.length - 1)) + cw / 2);
     const riskPts = Math.abs(ent - d.stop), rewPts = Math.abs(d.target - ent);
-    svg += `<rect x="${xa}" y="${Math.min(y(ent), y(d.stop))}" width="${xb - xa}" height="${Math.abs(y(d.stop) - y(ent))}" fill="#ff453a" fill-opacity="${cancel && !fill ? 0.08 : 0.18}" stroke="#ff453a" stroke-opacity="0.6"/>`;
-    svg += `<rect x="${xa}" y="${Math.min(y(ent), y(d.target))}" width="${xb - xa}" height="${Math.abs(y(d.target) - y(ent))}" fill="#30d158" fill-opacity="${cancel && !fill ? 0.08 : 0.18}" stroke="#30d158" stroke-opacity="0.6"/>`;
+    svg += `<rect x="${xa}" y="${Math.min(y(ent), y(d.stop))}" width="${xb - xa}" height="${Math.abs(y(d.stop) - y(ent))}" fill="var(--bear)" fill-opacity="${cancel && !fill ? 0.08 : 0.18}" stroke="var(--bear)" stroke-opacity="0.6"/>`;
+    svg += `<rect x="${xa}" y="${Math.min(y(ent), y(d.target))}" width="${xb - xa}" height="${Math.abs(y(d.target) - y(ent))}" fill="var(--bull)" fill-opacity="${cancel && !fill ? 0.08 : 0.18}" stroke="var(--bull)" stroke-opacity="0.6"/>`;
     svg += `<line x1="${xa}" x2="${xb}" y1="${y(ent)}" y2="${y(ent)}" stroke="var(--blue)" stroke-width="1.4"/>`;
     const rOf = p => Math.abs(p - ent) / riskPts, at = k => lng ? ent + k * riskPts : ent - k * riskPts;
     // 1R / 2R / 3R from the entry, with how often past trades of this setting reached each one
     const reach = opts.reach || [];
     const Rl = [1, 2, 3].map(k => ({ k, p: at(k), pc: (reach.find(z => z.r === k) || {}).pct })).filter(r => inR(r.p)).map(r => ({ ...r, ry: y(r.p) }));
     // thin dotted line + a small tag at the box's right edge; points and "% got there" are in the hover text.
-    // Purple 1R / 2R = the funded-account plan (MFF pass study, Oct 10): half out at 1R + stop to break-even, rest out at 2R. 3R stays green.
+    // Purple 1R / 2R = the funded-account plan (MFF pass study, Oct 10): 2 of 3 micros out at 1R + stop to break-even, last 1 out at 2R. 3R stays green.
     const FUNDED = { 1: 'funded 2 of 3 out', 2: 'funded last 1 out' };
     let lastY = -99;
     for (const r of Rl) {
-      const fd = FUNDED[r.k], col = fd ? 'var(--purple)' : '#30d158';
+      const fd = FUNDED[r.k], col = fd ? 'var(--purple)' : 'var(--bull)';
       const tip = `${r.k}R = +${(r.k * riskPts).toFixed(2)} pts${r.pc != null ? ' · ' + Math.round(r.pc * 100) + '% of past trades got here' : ''}${fd ? ` · funded plan: ${r.k === 1 ? 'take 2 of 3 micros off here and move the stop to break-even' : 'take the last micro off here'}` : ''}`;
       svg += `<g class="r-lvl${fd ? ' r-funded' : ''}"><title>${tip}</title><line x1="${xa}" x2="${xb}" y1="${r.ry}" y2="${r.ry}" stroke="${col}" stroke-opacity="0.9" stroke-width="${fd ? 1.4 : 1}" stroke-dasharray="2 3"/>`;
       if (Math.abs(r.ry - lastY) >= 10) { svg += `<text x="${xb - 3}" y="${r.ry - 2}" text-anchor="end" class="mtf-ax" style="fill:${col};font-weight:700;paint-order:stroke;stroke:var(--bg);stroke-width:3px;stroke-linejoin:round">${r.k}R${fd ? ' · ' + fd : ''}</text>`; lastY = r.ry; }
@@ -4501,11 +4520,11 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
       .filter(([, p]) => p != null && !Number.isNaN(p) && (lng ? p > ent : p < ent) && (lng ? p < d.target : p > d.target)).sort((a, b) => lng ? a[1] - b[1] : b[1] - a[1]);
     const tp1 = d.tp1 != null ? [d.tp1Name || 'TP1', d.tp1] : NAMES.find(([, p]) => rOf(p) >= 1) || null;
     const tp2 = tp1 ? NAMES.find(([, p]) => (lng ? p > tp1[1] : p < tp1[1]) && Math.abs(p - tp1[1]) > 2 * 0.25) || null : null;
-    for (const L of [tp1, tp2]) if (L && inR(L[1])) svg += `<line x1="${xa}" x2="${xb}" y1="${y(L[1])}" y2="${y(L[1])}" stroke="#30d158" stroke-width="1.2" stroke-dasharray="5 3"/>`;
+    for (const L of [tp1, tp2]) if (L && inR(L[1])) svg += `<line x1="${xa}" x2="${xb}" y1="${y(L[1])}" y2="${y(L[1])}" stroke="var(--bull)" stroke-width="1.2" stroke-dasharray="5 3"/>`;
     const SHORT = { 'Prior-day high': 'PDH', 'Prior-day low': 'PDL', 'Asian high': 'Asia H', 'Asian low': 'Asia L', 'London high': 'Ldn H', 'London low': 'Ldn L', 'NY high': 'NY H', 'NY low': 'NY L', 'Midnight open': 'Midnight' }, sh = n => SHORT[n] || n;
     // right-side tags, nudged apart so none overlap
     const tags = [[d.target, '#248a3d', `Final TP · ${sh(d.targetName)} ${rOf(d.target).toFixed(1)}R`], ...(tp2 ? [[tp2[1], '#2f9e55', `TP2 · ${sh(tp2[0])} ${rOf(tp2[1]).toFixed(1)}R`]] : []),
-      ...(tp1 ? [[tp1[1], '#30a14e', `TP1 · ${sh(tp1[0])} ${rOf(tp1[1]).toFixed(1)}R`]] : []), [ent, '#0a84ff', `${lng ? 'BUY' : 'SELL'} ${ent.toFixed(2)}`], [d.stop, '#c9302c', `STOP −${riskPts.toFixed(0)} pts (1R)`]]
+      ...(tp1 ? [[tp1[1], '#30a14e', `TP1 · ${sh(tp1[0])} ${rOf(tp1[1]).toFixed(1)}R`]] : []), [ent, '#0e7490', `${lng ? 'BUY' : 'SELL'} ${ent.toFixed(2)}`], [d.stop, '#c9302c', `STOP −${riskPts.toFixed(0)} pts (1R)`]]
       .map(([p, col, txt]) => ({ p, col, txt, ty: y(p) })).sort((a, b) => a.ty - b.ty);
     for (let k = 1; k < tags.length; k++) if (tags[k].ty - tags[k - 1].ty < 17) tags[k].ty = tags[k - 1].ty + 17;
     const over = tags.length ? Math.max(0, tags[tags.length - 1].ty - (H - PB - 8)) : 0; for (const g of tags) g.ty -= over;
@@ -4513,16 +4532,16 @@ function drawSetupChart(el, bars, state, events, opts = {}) {
     // in-box labels: points at risk vs points to gain
     svg += `<text x="${xa + 4}" y="${(y(ent) + y(d.stop)) / 2 + 4}" class="mtf-ax" style="fill:#ff6961;font-weight:700">−${riskPts.toFixed(1)} pts</text>`;
     const ys = [y(ent), y(d.target), ...Rl.map(r => r.ry)].sort((p, q) => p - q); let gy = (y(ent) + y(d.target)) / 2, gw = 0; for (let i = 1; i < ys.length; i++) if (ys[i] - ys[i - 1] > gw) { gw = ys[i] - ys[i - 1]; gy = (ys[i] + ys[i - 1]) / 2; } // reward label in the widest gap, clear of the 1R/2R/3R lines
-    svg += `<text x="${xa + 4}" y="${gy + 4}" class="mtf-ax" style="fill:#30d158;font-weight:700">+${rewPts.toFixed(1)} pts (${(rewPts / riskPts).toFixed(1)}R)</text>`;
+    svg += `<text x="${xa + 4}" y="${gy + 4}" class="mtf-ax" style="fill:var(--bull);font-weight:700">+${rewPts.toFixed(1)} pts (${(rewPts / riskPts).toFixed(1)}R)</text>`;
     // event markers with times
     const mark = (e, px, col, txt, up) => { const i = idx(e.t); if (i < 0) return; const cy = y(px), ty = up ? cy - 22 : cy + 8, w = txt.length * 6.4 + 12, tx = Math.max(0, Math.min(right - w, x(i) + 6));
       svg += `<circle cx="${x(i)}" cy="${cy}" r="6" fill="${col}" stroke="#fff" stroke-width="2"/><rect x="${tx}" y="${ty}" width="${w}" height="16" rx="4" fill="${col}"/><text x="${tx + 6}" y="${ty + 12}" class="mtf-ax" style="fill:#fff;font-weight:800">${txt}</text>`; };
     // the time you were in the trade: a light band from the entry candle to the exit candle
     if (fill) { const i0 = idx(fill.t), i1 = exit ? idx(exit.t) : bars.length - 1; if (i0 >= 0)
-      svg += `<rect x="${x(i0) - cw / 2}" y="${PT}" width="${Math.max(cw, x(Math.max(i0, i1)) - x(i0) + cw)}" height="${H - PT - PB}" fill="#0a84ff" fill-opacity="0.07"/><line x1="${x(i0) - cw / 2}" x2="${x(i0) - cw / 2}" y1="${PT}" y2="${H - PB}" stroke="#0a84ff" stroke-width="1.2" stroke-opacity="0.7"/>${exit && i1 >= 0 ? `<line x1="${x(i1) + cw / 2}" x2="${x(i1) + cw / 2}" y1="${PT}" y2="${H - PB}" stroke="${exit.data && exit.data.pts >= 0 ? '#30d158' : '#ff453a'}" stroke-width="1.2" stroke-opacity="0.8"/>` : ''}`; }
+      svg += `<rect x="${x(i0) - cw / 2}" y="${PT}" width="${Math.max(cw, x(Math.max(i0, i1)) - x(i0) + cw)}" height="${H - PT - PB}" fill="var(--blue)" fill-opacity="0.07"/><line x1="${x(i0) - cw / 2}" x2="${x(i0) - cw / 2}" y1="${PT}" y2="${H - PB}" stroke="var(--blue)" stroke-width="1.2" stroke-opacity="0.7"/>${exit && i1 >= 0 ? `<line x1="${x(i1) + cw / 2}" x2="${x(i1) + cw / 2}" y1="${PT}" y2="${H - PB}" stroke="${exit.data && exit.data.pts >= 0 ? 'var(--bull)' : 'var(--bear)'}" stroke-width="1.2" stroke-opacity="0.8"/>` : ''}`; }
     const io = idx(order.t);
     if (io >= 0) svg += `<path d="M${x(io)},${y(d.limit) + (lng ? 12 : -12)} l-5,${lng ? 7 : -7} h10 z" fill="var(--blue)"/><text x="${Math.max(0, x(io) - 70)}" y="${y(d.limit) + (lng ? 30 : -22)}" class="mtf-ax" style="fill:var(--blue);font-weight:600">order ${order.hm}</text>`;
-    if (fill) mark(fill, fill.data.px, '#0a84ff', `▶ IN ${fill.hm} @ ${fill.data.px.toFixed(2)}`, !lng);
+    if (fill) mark(fill, fill.data.px, '#0e7490', `▶ IN ${fill.hm} @ ${fill.data.px.toFixed(2)}`, !lng);
     if (scale) mark(scale, scale.data.px, '#30a14e', `½ OUT ${scale.hm}`, lng);
     if (exit) mark(exit, exit.data.px, exit.data.pts >= 0 ? '#248a3d' : '#c9302c', `■ OUT ${exit.hm} ${exit.data.pts >= 0 ? '+' : ''}${exit.data.pts.toFixed(1)} pts (${exit.data.pts >= 0 ? '+' : ''}${(exit.data.pts / Math.abs((fill ? fill.data.px : d.limit) - d.stop)).toFixed(1)}R)`, exit.data.pts >= 0 === lng);
     if (cancel && !fill) { const i = idx(cancel.t); if (i >= 0) svg += `<text x="${Math.min(right - 110, x(i) - 40)}" y="${y(d.limit) - 6}" class="mtf-ax" style="fill:var(--text2)">not filled · cancelled ${cancel.hm}</text>`; }
@@ -6095,11 +6114,11 @@ async function hlShare(id) {
   const strip = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent.replace(/\s+/g, ' ').trim(); };
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1350;
   const g = c.getContext('2d'), F = 'Inter, -apple-system, Segoe UI, sans-serif';
-  const grd = g.createLinearGradient(0, 0, 0, 1350); grd.addColorStop(0, '#111114'); grd.addColorStop(1, '#1c1c22'); g.fillStyle = grd; g.fillRect(0, 0, 1080, 1350);
-  g.fillStyle = '#0a84ff'; g.beginPath(); g.arc(110, 120, 44, 0, 7); g.fill();
-  g.fillStyle = '#fff'; g.font = `700 34px ${F}`; g.textAlign = 'center'; g.fillText('LL', 110, 132); g.textAlign = 'left';
+  const grd = g.createLinearGradient(0, 0, 0, 1350); grd.addColorStop(0, '#0d1117'); grd.addColorStop(1, '#161b22'); g.fillStyle = grd; g.fillRect(0, 0, 1080, 1350);
+  g.fillStyle = '#2dd4f7'; g.beginPath(); g.arc(110, 120, 44, 0, 7); g.fill();
+  g.fillStyle = '#0d1117'; g.font = `700 34px ${F}`; g.textAlign = 'center'; g.fillText('LL', 110, 132); g.fillStyle = '#fff'; g.textAlign = 'left';
   g.font = `600 36px ${F}`; g.fillText('Liquidity Labs', 178, 112); g.fillStyle = '#9a9aa2'; g.font = `400 28px ${F}`; g.fillText(strip(p.kicker), 178, 152);
-  const big = strip(p.big); g.fillStyle = p.bigCls === 'bull' ? '#30d158' : p.bigCls === 'bear' ? '#ff453a' : '#ffffff';
+  const big = strip(p.big); g.fillStyle = p.bigCls === 'bull' ? '#00e676' : p.bigCls === 'bear' ? '#ff453a' : '#ffffff';
   g.font = `800 ${big.length > 14 ? 96 : 150}px ${F}`; g.fillText(big, 80, 420);
   const wrap = (txt, x, y, w, lh, font, col) => { g.font = font; g.fillStyle = col; let line = ''; for (const word of txt.split(' ')) { const t = line ? line + ' ' + word : word; if (g.measureText(t).width > w) { g.fillText(line, x, y); y += lh; line = word; } else line = t; } if (line) g.fillText(line, x, y); return y + lh; };
   let y = wrap(strip(p.title), 80, 520, 920, 62, `600 48px ${F}`, '#ffffff');
@@ -6108,7 +6127,7 @@ async function hlShare(id) {
     const e = [0, ...p.equity], lo = Math.min(0, ...e), hi = Math.max(0, ...e), sp = (hi - lo) || 1, X0 = 80, W0 = 920, Y0 = Math.max(y + 40, 760), H0 = 1120 - Math.max(y + 40, 760);
     const Y = v => Y0 + H0 - (v - lo) / sp * H0;
     g.strokeStyle = '#3a3a40'; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(X0, Y(0)); g.lineTo(X0 + W0, Y(0)); g.stroke(); g.setLineDash([]);
-    g.strokeStyle = e[e.length - 1] >= 0 ? '#30d158' : '#ff453a'; g.lineWidth = 6; g.lineJoin = 'round'; g.beginPath();
+    g.strokeStyle = e[e.length - 1] >= 0 ? '#00e676' : '#ff4757'; g.lineWidth = 6; g.lineJoin = 'round'; g.beginPath();
     e.forEach((v, i) => { const x = X0 + i / (e.length - 1) * W0; i ? g.lineTo(x, Y(v)) : g.moveTo(x, Y(v)); }); g.stroke();
   }
   wrap(p.caveat || '', 80, 1210, 920, 38, `400 26px ${F}`, '#8e8e93');
