@@ -66,9 +66,10 @@ export function run(bars, sym, cfg, opts = {}) {
   const st = { aH: NaN, aL: NaN, lH: NaN, lL: NaN, pdH: NaN, pdL: NaN, dH: NaN, dL: NaN,
     sslSwept: false, bslSwept: false, sweepLow: NaN, sweepHigh: NaN, traded: false,
     sslCount: 0, bslCount: 0, wasBelow: false, wasAbove: false, ssl2Low: NaN, bsl2High: NaN,
-    bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rejected: '', mOpen: NaN, nyH: NaN, nyL: NaN,
+    bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, ifvgMidL: NaN, ifvgMidS: NaN, sslName: '', bslName: '', rejected: '', mOpen: NaN, nyH: NaN, nyL: NaN,
     swH: NaN, swL: NaN, refH: NaN, refL: NaN, nTrades: 0, rearm: false,
-    taken: { aH: false, aL: false, lH: false, lL: false, pdH: false, pdL: false } };
+    taken: { aH: false, aL: false, lH: false, lL: false, pdH: false, pdL: false },
+    atr: NaN, fvgLoL: NaN, fvgHiL: NaN, fvgLoS: NaN, fvgHiS: NaN, fvgBarL: -1, fvgBarS: -1, bosBarL: -1, bosBarS: -1, ifvgMidL: NaN, ifvgMidS: NaN, gapUp: null, gapDn: null };
   const fresh = !!cfg.freshLevels;
   // anyTime: watch and enter around the clock (one session = 18:00 → 17:00), unfilled orders cancel after restBars candles,
   // trades close at market after holdBars candles. Used to show off-hours setups; the TJR model and Pine parity don't use it.
@@ -98,6 +99,10 @@ export function run(bars, sym, cfg, opts = {}) {
   };
   const stopFor = (isLong, entry) => {
     if (cfg.stopMode === 'Fixed points') return isLong ? entry - cfg.fixedStop : entry + cfg.fixedStop;
+    // study-only stop modes (scripts/entry-study.mjs); the Pine script has none of these
+    if (cfg.stopMode === 'ATR') { const d = Math.max(tick, Math.round(cfg.atrMult * st.atr / tick) * tick); return isLong ? entry - d : entry + d; }
+    if (cfg.stopMode === 'Sweep+buffer') { const d = (cfg.stopBuf || 0); return isLong ? st.sweepLow - tick - d : st.sweepHigh + tick + d; }
+    if (cfg.stopMode === 'FVG far') { const d = (cfg.stopBuf || 0); return isLong ? st.fvgLoL - d : st.fvgHiS + d; }
     if (cfg.stopMode === 'Second sweep' && (isLong ? st.sslCount >= 2 : st.bslCount >= 2))
       return isLong ? st.ssl2Low - tick : st.bsl2High + tick;
     return isLong ? st.sweepLow - tick : st.sweepHigh + tick;
@@ -125,6 +130,13 @@ export function run(bars, sym, cfg, opts = {}) {
     for (const leg of legs) {
       let [a, z] = leg;
       const down = z < a;
+      if (!pos && pending && pending.market && first) {
+        // study-only market entry (entryAt 'market' / 'bos'): fills at this bar's open with slippage
+        const p = pending, px = p.dir === 'long' ? a + cfg.slipTicks * tick : a - cfg.slipTicks * tick;
+        pos = { dir: p.dir, entry: px, stop: p.stop, target: p.target, entryT: `${b.date} ${b.hm}`, td: b.td, fillT: b.t, best: px, worst: px, targetName: p.targetName, stop0: p.stop, tp1: p.tp1, tp1Name: p.tp1Name };
+        pending = null;
+        ev(b, 'fill', `Filled ${p.dir} at ${px.toFixed(2)} (market)`, { px, dir: p.dir });
+      }
       if (!pos && pending) {
         const p = pending, L = p.limit, ft = cfg.fillThrough * tick; // fillThrough: price must trade this many ticks past the limit
         const T = p.dir === 'long' ? L - ft : L + ft;
@@ -180,13 +192,13 @@ export function run(bars, sym, cfg, opts = {}) {
     const startWatch = watch && !(pb && inWin(pm, W0, W1) && pb.td === b.td);
     if (startWatch) {
       Object.assign(st, { sslSwept: false, bslSwept: false, traded: false, sweepLow: b.l, sweepHigh: b.h, sslCount: 0, bslCount: 0,
-        wasBelow: false, wasAbove: false, ssl2Low: NaN, bsl2High: NaN, bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rejected: '', nTrades: 0, rearm: false });
+        wasBelow: false, wasAbove: false, ssl2Low: NaN, bsl2High: NaN, bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, ifvgMidL: NaN, ifvgMidS: NaN, sslName: '', bslName: '', rejected: '', nTrades: 0, rearm: false });
       c = { sweep: false, bos: false, fvg: false, risk: false };
       if (!skipped.has(b.td)) fun.days++;
     } else if (st.rearm && watch && !pos && !pending) {
       // a new setup needs a new sweep, break and gap
       Object.assign(st, { sslSwept: false, bslSwept: false, sweepLow: b.l, sweepHigh: b.h, sslCount: 0, bslCount: 0, wasBelow: false, wasAbove: false,
-        ssl2Low: NaN, bsl2High: NaN, bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, sslName: '', bslName: '', rearm: false });
+        ssl2Low: NaN, bsl2High: NaN, bosUp: false, bosDn: false, fvgMidL: NaN, fvgMidS: NaN, ifvgMidL: NaN, ifvgMidS: NaN, sslName: '', bslName: '', rearm: false });
     }
     const lowArr = levels(false), highArr = levels(true), lowLiq = nearest(lowArr, false), highLiq = nearest(highArr, true);
     if (watch) {
@@ -210,6 +222,14 @@ export function run(bars, sym, cfg, opts = {}) {
     const dispUp = b.c > b.o && bodies[i] > cfg.dispMult * avgBody, dispDn = b.c < b.o && bodies[i] > cfg.dispMult * avgBody;
     const b2 = bars[i - 2];
     const bullFVG = b2 && b.l > b2.h, bearFVG = b2 && b.h < b2.l;
+    // study-only: ATR(14) on 5m and inversion FVGs (IFVG) for stopMode 'ATR' / entryAt 'ifvg'
+    { const tr = Math.max(b.h - b.l, pb ? Math.abs(b.h - pb.c) : 0, pb ? Math.abs(b.l - pb.c) : 0); st.atr = Number.isNaN(st.atr) ? tr : st.atr + (tr - st.atr) / 14; }
+    if (cfg.entryAt === 'ifvg') {
+      if (watch && st.sslSwept && st.gapDn && b.c > st.gapDn.hi && Number.isNaN(st.ifvgMidL) && (!cfg.useDisp || dispUp)) { st.ifvgMidL = (st.gapDn.lo + st.gapDn.hi) / 2; st.fvgLoL = st.gapDn.lo; st.fvgHiL = st.gapDn.hi; ev(b, 'fvg', `Bullish IFVG ${st.gapDn.lo.toFixed(2)}–${st.gapDn.hi.toFixed(2)}`, { dir: 'bull', lo: st.gapDn.lo, hi: st.gapDn.hi, mid: st.ifvgMidL }); }
+      if (watch && st.bslSwept && st.gapUp && b.c < st.gapUp.lo && Number.isNaN(st.ifvgMidS) && (!cfg.useDisp || dispDn)) { st.ifvgMidS = (st.gapUp.lo + st.gapUp.hi) / 2; st.fvgLoS = st.gapUp.lo; st.fvgHiS = st.gapUp.hi; ev(b, 'fvg', `Bearish IFVG ${st.gapUp.lo.toFixed(2)}–${st.gapUp.hi.toFixed(2)}`, { dir: 'bear', lo: st.gapUp.lo, hi: st.gapUp.hi, mid: st.ifvgMidS }); }
+      if (bearFVG) st.gapDn = { lo: b.h, hi: b2.l, i }; if (bullFVG) st.gapUp = { lo: b2.h, hi: b.l, i };
+      if (st.gapDn && i - st.gapDn.i > 12) st.gapDn = null; if (st.gapUp && i - st.gapUp.i > 12) st.gapUp = null;
+    }
     let hh = -Infinity, ll = Infinity; for (let k = Math.max(0, i - 5); k < i; k++) { hh = Math.max(hh, bars[k].h); ll = Math.min(ll, bars[k].l); }
     if (i >= 4) { const j = i - 2, p = bars[j];
       if (p.h > bars[j - 1].h && p.h > bars[j - 2].h && p.h >= bars[j + 1].h && p.h >= bars[j + 2].h) st.swH = p.h;
@@ -219,18 +239,22 @@ export function run(bars, sym, cfg, opts = {}) {
     const bullBOS = swing ? (!Number.isNaN(st.swH) && b.c > st.swH && pc <= st.swH && (!cfg.useDisp || dispUp)) : b.c > hh && (!cfg.useDisp || dispUp);
     const bearBOS = swing ? (!Number.isNaN(st.swL) && b.c < st.swL && pc >= st.swL && (!cfg.useDisp || dispDn)) : b.c < ll && (!cfg.useDisp || dispDn);
     if (watch) {
-      if (st.sslSwept && bullBOS && !st.bosUp) { st.bosUp = true; ev(b, 'bos', `Bullish break of structure: close ${b.c.toFixed(2)} above ${st.refH.toFixed(2)} (${swing ? 'last swing high' : '5-candle high'})`, { dir: 'bull', level: st.refH, close: b.c }); }
-      if (st.bslSwept && bearBOS && !st.bosDn) { st.bosDn = true; ev(b, 'bos', `Bearish break of structure: close ${b.c.toFixed(2)} below ${st.refL.toFixed(2)} (${swing ? 'last swing low' : '5-candle low'})`, { dir: 'bear', level: st.refL, close: b.c }); }
-      if (st.bosUp && bullFVG) { st.fvgMidL = (b.l + b2.h) / 2; ev(b, 'fvg', `Bullish FVG ${b2.h.toFixed(2)}–${b.l.toFixed(2)}, midpoint ${st.fvgMidL.toFixed(2)}`, { dir: 'bull', lo: b2.h, hi: b.l, mid: st.fvgMidL }); }
-      if (st.bosDn && bearFVG) { st.fvgMidS = (b.h + b2.l) / 2; ev(b, 'fvg', `Bearish FVG ${b.h.toFixed(2)}–${b2.l.toFixed(2)}, midpoint ${st.fvgMidS.toFixed(2)}`, { dir: 'bear', lo: b.h, hi: b2.l, mid: st.fvgMidS }); }
+      if (st.sslSwept && bullBOS && !st.bosUp) { st.bosUp = true; st.bosBarL = i; ev(b, 'bos', `Bullish break of structure: close ${b.c.toFixed(2)} above ${st.refH.toFixed(2)} (${swing ? 'last swing high' : '5-candle high'})`, { dir: 'bull', level: st.refH, close: b.c }); }
+      if (st.bslSwept && bearBOS && !st.bosDn) { st.bosDn = true; st.bosBarS = i; ev(b, 'bos', `Bearish break of structure: close ${b.c.toFixed(2)} below ${st.refL.toFixed(2)} (${swing ? 'last swing low' : '5-candle low'})`, { dir: 'bear', level: st.refL, close: b.c }); }
+      if (st.bosUp && bullFVG) { st.fvgMidL = (b.l + b2.h) / 2; st.fvgLoL = b2.h; st.fvgHiL = b.l; st.fvgBarL = i; ev(b, 'fvg', `Bullish FVG ${b2.h.toFixed(2)}–${b.l.toFixed(2)}, midpoint ${st.fvgMidL.toFixed(2)}`, { dir: 'bull', lo: b2.h, hi: b.l, mid: st.fvgMidL }); }
+      if (st.bosDn && bearFVG) { st.fvgMidS = (b.h + b2.l) / 2; st.fvgLoS = b.h; st.fvgHiS = b2.l; st.fvgBarS = i; ev(b, 'fvg', `Bearish FVG ${b.h.toFixed(2)}–${b2.l.toFixed(2)}, midpoint ${st.fvgMidS.toFixed(2)}`, { dir: 'bear', lo: b.h, hi: b2.l, mid: st.fvgMidS }); }
       if (!skipped.has(b.td)) {
         if ((st.sslSwept || st.bslSwept) && !c.sweep) { c.sweep = true; fun.sweep++; }
         if ((st.bosUp || st.bosDn) && !c.bos) { c.bos = true; fun.bos++; }
         if ((!Number.isNaN(st.fvgMidL) || !Number.isNaN(st.fvgMidS)) && !c.fvg) { c.fvg = true; fun.fvg++; }
       }
     }
-    const canTrade = () => macro && st.nTrades < maxT && !pos && !pending && !skipped.has(b.td);
-    const place = (dir, entry) => {
+    // pause (study option): [start, end) ET minutes with no new orders; a resting order still unfilled at the pause is pulled
+    //   and may be placed again after it (it doesn't use up the day's setup)
+    const paused = cfg.pause && inWin(m, cfg.pause[0], cfg.pause[1]);
+    if (paused && pending && !pos) { ev(b, 'cancel', 'Unfilled order pulled for the pause'); pending = null; st.nTrades--; }
+    const canTrade = () => macro && !paused && st.nTrades < maxT && !pos && !pending && !skipped.has(b.td);
+    const place = (dir, entry, mkt) => {
       const lng = dir === 'long', stop = stopFor(lng, entry), risk = lng ? entry - stop : stop - entry;
       if (!(risk > 0 && risk <= cfg.maxRisk)) {
         st.rejected = `${dir} at ${entry.toFixed(2)} skipped: stop ${risk.toFixed(2)} pts ${risk > 0 ? '> max ' + cfg.maxRisk : 'invalid'}`;
@@ -247,15 +271,33 @@ export function run(bars, sym, cfg, opts = {}) {
         if (cfg.exitMode === 'liq') { tgtP = Math.round(p1 / tick) * tick; targetName = n1; }
         else if (lng ? p1 < tgtP : p1 > tgtP) { tp1 = Math.round(p1 / tick) * tick; tp1Name = n1; }
       }
-      pending = { dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, placedT: b.t, td: b.td };
+      pending = { ...(mkt ? { market: true } : {}), dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, placedT: b.t, td: b.td };
       st.traded = true; st.nTrades++; st.rejected = '';
       ev(b, 'order', `${lng ? 'Buy' : 'Sell'} limit ${lim.toFixed(2)} · stop ${stop.toFixed(2)} · target ${pending.target.toFixed(2)} (${pending.targetName})`, { dir, limit: lim, stop, target: pending.target, targetName: pending.targetName, tp1, tp1Name });
       if (!c.risk) { c.risk = true; fun.orders++; }
     };
-    if (canTrade() && !Number.isNaN(st.fvgMidL)) place('long', st.fvgMidL);
-    if (canTrade() && !Number.isNaN(st.fvgMidS)) place('short', st.fvgMidS);
+    // entryAt (study option, default 'mid' = Pine): 'edge' = near edge of the FVG (first touch) · 'far' = far edge ·
+    //   'market' = market order at the FVG candle's close (fills next open) · 'bos' = market at the BOS candle's close (no FVG needed) ·
+    //   'ifvg' = after the sweep, a close through an opposite-way FVG (inversion) → limit at that IFVG's midpoint (no BOS/FVG needed)
+    const EA = cfg.entryAt || 'mid';
+    if (EA === 'mid') {
+      if (canTrade() && !Number.isNaN(st.fvgMidL)) place('long', st.fvgMidL);
+      if (canTrade() && !Number.isNaN(st.fvgMidS)) place('short', st.fvgMidS);
+    } else if (EA === 'edge' || EA === 'far') {
+      if (canTrade() && !Number.isNaN(st.fvgMidL)) place('long', EA === 'edge' ? st.fvgHiL : st.fvgLoL);
+      if (canTrade() && !Number.isNaN(st.fvgMidS)) place('short', EA === 'edge' ? st.fvgLoS : st.fvgHiS);
+    } else if (EA === 'market') {
+      if (canTrade() && !Number.isNaN(st.fvgMidL) && st.fvgBarL === i) place('long', b.c, true);
+      if (canTrade() && !Number.isNaN(st.fvgMidS) && st.fvgBarS === i) place('short', b.c, true);
+    } else if (EA === 'bos') {
+      if (canTrade() && st.bosUp && st.bosBarL === i) place('long', b.c, true);
+      if (canTrade() && st.bosDn && st.bosBarS === i) place('short', b.c, true);
+    } else if (EA === 'ifvg') {
+      if (canTrade() && !Number.isNaN(st.ifvgMidL)) place('long', st.ifvgMidL);
+      if (canTrade() && !Number.isNaN(st.ifvgMidS)) place('short', st.ifvgMidS);
+    }
     if (any && !pos && pending && b.t - pending.placedT >= restBars * 300) { ev(b, 'cancel', `Unfilled order cancelled (${restBars} candles)`); pending = null; st.rearm = true; }
-    if (!any && !inWin(m, SESS.rest[0], cfg.restEnd || SESS.rest[1]) && !pos && pending) { ev(b, 'cancel', `Unfilled order cancelled (${Math.floor((cfg.restEnd || 660) / 60)}:${String((cfg.restEnd || 660) % 60).padStart(2, '0')})`); pending = null; if (maxT > 1) st.rearm = true; }
+    if (!any && !inWin(m, cfg.restStart ?? SESS.rest[0], cfg.restEnd || SESS.rest[1]) && !pos && pending) { ev(b, 'cancel', `Unfilled order cancelled (${Math.floor((cfg.restEnd || 660) / 60)}:${String((cfg.restEnd || 660) % 60).padStart(2, '0')})`); pending = null; if (maxT > 1) st.rearm = true; }
     if (pos && (any ? b.t - pos.fillT >= holdBars * 300 : inWin(m, ...SESS.flat))) flatNext = true;
     if (opts.snapshots) snaps.push(snapshot(b));
   }
