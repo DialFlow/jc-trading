@@ -13,7 +13,8 @@ export const SLIP_TICKS = 1;   // market and stop orders only (Pine doesn't slip
 // rollGap: a session-open jump this large is treated as a contract roll (no PDH/PDL that day).
 // restEnd: ET minute when an unfilled order is cancelled (rules: 11:00). Scenarios use 12:00 for "what if it had stayed open".
 // exitMode: 'rules' = Pine target (default, TradingView parity) · 'liq' = all out at the first liquidity ≥ 1R ·
-//           'scale' = half out at that liquidity, stop to break-even, rest to the rules target
+//           'scale' = half out at that liquidity, stop to break-even, rest to the rules target ·
+//           'funded' = funded-account plan (MFF pass study): half out at 1R, stop to break-even, rest out at 2R
 export const BASE = { rr: 2, dispLen: 20, dispMult: 1.5, rollGap: 0.02, fillThrough: 0, slipTicks: SLIP_TICKS, restEnd: 660, exitMode: 'rules',
   bosMode: 'bars5', watchStart: 570, watchEnd: 610, entryStart: 590, entryEnd: 610, maxTrades: 1, freshLevels: false };
 // freshLevels: a level only counts as liquidity (for sweeps and targets) until price first trades through it.
@@ -23,7 +24,7 @@ export const BASE = { rr: 2, dispLen: 20, dispMult: 1.5, rollGap: 0.02, fillThro
 //   watchStart/watchEnd = ET minutes when sweeps/BOS/FVGs count (570–610) · entryStart/entryEnd = when orders may be placed (590–610)
 //   maxTrades = setups per session (1); after a trade closes or an order expires, a fresh sweep is required
 export const STRUCT = { bosMode: 'bars5', watchStart: 570, watchEnd: 610, entryStart: 590, entryEnd: 610, maxTrades: 1 };
-export const EXITS = { rules: 'Rules target', liq: 'First liquidity ≥ 1R', scale: 'Half at liquidity, rest runs' };
+export const EXITS = { rules: 'Rules target', liq: 'First liquidity ≥ 1R', scale: 'Half at liquidity, rest runs', funded: 'Funded: half at 1R, rest at 2R' };
 
 // v4 + the 24 v5 combinations from CLAUDE.md's "Next backtest ideas"
 export function configs(sym) {
@@ -270,6 +271,10 @@ export function run(bars, sym, cfg, opts = {}) {
         const p1 = L ? L.p : lim + (lng ? risk : -risk), n1 = L ? L.n : '1R';
         if (cfg.exitMode === 'liq') { tgtP = Math.round(p1 / tick) * tick; targetName = n1; }
         else if (lng ? p1 < tgtP : p1 > tgtP) { tp1 = Math.round(p1 / tick) * tick; tp1Name = n1; }
+      } else if (cfg.exitMode === 'funded') {
+        const rk = lng ? lim - stop : stop - lim;
+        tp1 = Math.round((lng ? lim + rk : lim - rk) / tick) * tick; tp1Name = '1R';
+        tgtP = Math.round((lng ? lim + 2 * rk : lim - 2 * rk) / tick) * tick; targetName = '2R';
       }
       pending = { ...(mkt ? { market: true } : {}), dir, limit: lim, stop, target: tgtP, targetName, tp1, tp1Name, risk: lng ? lim - stop : stop - lim, placedAt: b.hm, placedT: b.t, td: b.td };
       st.traded = true; st.nTrades++; st.rejected = '';

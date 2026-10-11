@@ -2189,6 +2189,7 @@ select { cursor: pointer; }
     </div>
 
     <div class="bt-summary" id="bt-tiles"></div>
+    <div id="bt-funded"></div>
     <div class="card"><div class="card-body"><div class="fs-12 fw-600 mb-sm" id="bt-eq-title">Equity curve</div><div id="bt-equity"></div><div class="fs-12 text-2" id="bt-funnel" style="margin-top:8px;"></div></div></div>
 
     <div class="section-label" style="padding-bottom:2px;">Every trade</div>
@@ -4286,6 +4287,7 @@ function btShow(r) {
     <div class="stat-tile"><div class="stat-eyebrow">Win rate</div><div class="stat-value">${st.wins} / ${st.trades}</div><div class="stat-sub">${st.trades ? Math.round(st.winRate * 100) : 0}% · PF ${st.pf == null ? '∞' : st.pf}</div></div>
     <div class="stat-tile"><div class="stat-eyebrow">Avg win / loss</div><div class="stat-value mono" style="font-size:16px;"><span class="bull">${btMoney(st.avgWin)}</span> / <span class="bear">${btMoney(st.avgLoss)}</span></div><div class="stat-sub">per trade, after costs</div></div>
     <div class="stat-tile"><div class="stat-eyebrow">Max drawdown</div><div class="stat-value mono bear">−$${st.maxDD.toLocaleString('en-US')}</div><div class="stat-sub">peak to trough, closed trades</div></div>`;
+  const fEl = document.getElementById('bt-funded'); if (fEl) fEl.innerHTML = fundedHtml(r);
   document.getElementById('bt-eq-title').textContent = `${r.name} · ${btLabel(r)}`;
   const fu = r.funnel;
   document.getElementById('bt-funnel').textContent = `Setup funnel: ${fu.days} sessions → sweep ${fu.sweep} → BOS ${fu.bos} → FVG ${fu.fvg} → orders ${fu.orders} → filled ${st.trades}`;
@@ -6046,6 +6048,10 @@ function renderHighlights() {
       title: 'Same entries, better exits: take profit where the liquidity is', body: `
       <div class="hl-bars">${['rules', 'liq', 'scale'].map(k => { const v = viaExit(nq, k), mx = Math.max(...['rules', 'liq', 'scale'].map(z => viaExit(nq, z).stats.net)); return `<div class="hl-bar"><span>${{ rules: 'Far target', liq: 'At liquidity', scale: 'Half + runner' }[k]}</span><div><i style="width:${Math.max(2, v.stats.net / mx * 100).toFixed(0)}%;background:${k === 'rules' ? 'var(--text3)' : 'var(--bull)'}"></i></div><b>${btMoney(v.stats.net)}</b></div>`; }).join('')}</div>
       <div class="fs-13">${Math.round((nq.stats.reach || [])[1]?.pct * 100 || 0)}% of trades went +1R in our favour, but only ${Math.round((nq.stats.reach || [])[3]?.pct * 100 || 0)}% reached +2R. Taking profit at the first pool of liquidity (a session high/low) catches the move before it fades.</div>`, caveat },
+    ...(() => { const F = fundedStats(nq); if (!F) return []; const mf = mcQuick(F.f, 'micro', 3); return [{ id: 'funded', kicker: 'Funded plan (MFF)', big: `${Math.round(mf.pass * 100)}% <span class="hl-small">pass chance · 30 days</span>`, bigCls: '',
+      title: 'Half off at 1R, the rest at 2R, with 3 MNQ: steady days for a funded evaluation', body: `
+      <div class="hl-bars"><div class="hl-bar"><span>Wins</span><div><i style="width:${(F.wins / F.n * 100).toFixed(0)}%;background:var(--purple)"></i></div><b>${F.wins} / ${F.n}</b></div></div>
+      <div class="fs-13">${btMoney(Math.round(F.net3))} with 3 MNQ, worst drop ${btMoney(-Math.round(F.dd3))} against the $2,000 trailing limit. These stats are kept separate from the rules' results: they only count the purple 1R / 2R exits.</div>`, caveat }]; })(),
     { id: 'survival', kicker: 'Account survival · 30 days', big: `${Math.round(mcMicro.fail * 100)}% <span class="hl-small">blow-up risk with 3 MNQ</span>`, title: `vs ${Math.round(mcFull.fail * 100)}% with 1 full NQ`, body: `
       <div class="hl-bars"><div class="hl-bar"><span>3 × MNQ</span><div><i style="width:${(mcMicro.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcMicro.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcMicro.pass * 100)}% pass</b></div>
       <div class="hl-bar"><span>1 × NQ</span><div><i style="width:${(mcFull.pass * 100).toFixed(0)}%;background:var(--bull)"></i><i style="width:${(mcFull.fail * 100).toFixed(0)}%;background:var(--bear)"></i></div><b>${Math.round(mcFull.pass * 100)}% pass</b></div></div>
@@ -6126,6 +6132,34 @@ function defaultExitFor(r) {
   return (rob[0] || opts[0]).ex;
 }
 function labSetExit(ex) { labExit = ex; try { localStorage.setItem('jct_lab_exit', ex); } catch(e) {} labRenderPick(); labRerender(); readyCycle(false); }
+// FUNDED PLAN (MFF) — kept apart from the other stats: half off at 1R + stop to break-even, rest off at 2R (engine exitMode 'funded').
+// 3 MNQ / 3 MES = 0.3 × a full contract's result, micro costs $0.75/side. The purple 1R / 2R chart lines are this plan.
+const microOf = pnl => 0.3 * (pnl + 5) - 3 * 1.5;
+function fundedStats(r) {
+  const base = r && BT ? (BT.runs.find(x => x.sym === r.sym && x.id === r.id) || r) : r;
+  if (!base || !base.exits || !base.exits.funded) return null;
+  const f = viaExit(base, 'funded'), ts = f.trades;
+  let eq = 0, peak = 0, dd = 0; for (const t of ts) { eq += microOf(t.pnl); peak = Math.max(peak, eq); dd = Math.max(dd, peak - eq); }
+  return { base, f, st: f.stats, n: ts.length, wins: ts.filter(t => t.pnl > 0).length, losses: ts.filter(t => t.pnl <= 0).length,
+    net3: eq, dd3: dd, full2: ts.filter(t => t.why === 'target').length,
+    halves: f.halves.every(h => h.net > 0), stress: f.stress.stats.net > 0 };
+}
+function fundedHtml(r) {
+  const F = fundedStats(r); if (!F) return '';
+  const { base, st } = F, cur = labExit || 'rules', mf = mcQuick(F.f, 'micro', 3), mc = mcQuick(viaExit(base, cur), 'micro', 3);
+  const nm = base.sym === 'NQ=F' ? 'MNQ' : 'MES';
+  return `<div class="card" style="border-left:3px solid var(--purple);margin-top:10px"><div class="card-body">
+    <div class="fw-600 fs-13" style="color:var(--purple)">Funded plan (MFF) · kept separate from the stats above</div>
+    <div class="fs-12 text-2 mb-sm">Half off at 1R and the stop to break-even, the rest off at 2R: the purple lines on the charts. Same entries, ${esc(base.name)} · ${esc(btLabel(base))}.</div>
+    <div class="bt-summary">
+      <div class="stat-tile"><div class="stat-eyebrow">Wins / losses</div><div class="stat-value">${F.wins} / ${F.losses}</div><div class="stat-sub">${F.n ? Math.round(F.wins / F.n * 100) : 0}% won · ${F.full2} reached 2R</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Net, 3 ${nm}</div><div class="stat-value mono ${btCls(F.net3)}">${btMoney(Math.round(F.net3))}</div><div class="stat-sub">1 full contract ${btMoney(Math.round(st.net))}</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Max drawdown, 3 ${nm}</div><div class="stat-value mono bear">−$${Math.round(F.dd3).toLocaleString('en-US')}</div><div class="stat-sub">of the $2,000 trailing limit</div></div>
+      <div class="stat-tile"><div class="stat-eyebrow">Pass chance, 30 days</div><div class="stat-value">${Math.round(mf.pass * 100)}%</div><div class="stat-sub">${Math.round(mf.fail * 100)}% fail · today's exit ${Math.round(mc.pass * 100)}% / ${Math.round(mc.fail * 100)}%</div></div>
+    </div>
+    <div class="fs-12 text-2" style="margin-top:6px">${F.halves ? '✓' : '✗'} made money in both halves (${btMoney(Math.round(F.f.halves[0].net))} / ${btMoney(Math.round(F.f.halves[1].net))}) · ${F.stress ? '✓' : '✗'} stress test ${btMoney(Math.round(F.f.stress.stats.net))} · pass chance = 2,000 runs of ${esc(mf.plan)} evaluation rules with 3 ${nm} (Lab → Account sim settings, incl. consistency). ${F.n} trades over ${BT.instruments[base.sym].nySessions} sessions: a small sample, in-sample. Not financial advice.</div>
+  </div></div>`;
+}
 const EXIT_LABEL = { rules: 'Exit: rules target', liq: 'Exit: first liquidity ≥ 1R', scale: 'Exit: half at liquidity, rest runs' };
 const engCfg = r => { const m = (BT && BT.struct) || {}; return { ...window.TJR.BASE, ...r, ...(m.watchStart ? { bosMode: m.bosMode, watchStart: m.watchStart, watchEnd: m.watchEnd, entryStart: m.entryStart, entryEnd: m.entryEnd, restEnd: m.restEnd, maxTrades: m.maxTrades } : {}), exitMode: labExit || 'rules' }; };
 
