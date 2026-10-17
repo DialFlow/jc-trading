@@ -59,6 +59,9 @@ A discretionary futures educator ("TJR") describes his intraday setup as:
 6. **Random baseline stops:** the baseline draws stop distances from the model's own trades. A baseline using volatility-scaled stops (ATR) would be a useful extra check.
 7. **MFF simulation:** it resamples single trades independently, so streaks and day-of-week effects are lost.
 
+## TradingView check
+`jc_tjr1m_v1_1.pine` (Pine v6 strategy, same rules and order of operations as v1.1; written by hand, not yet compiled). The v1.1 pre-registration lists it as `jc_tjr1m_v1.pine`; that was renamed to `jc_tjr1m_v1_1.pine`. Run it on a 1-minute NQ1!/ES1! chart, time zone New York, back-adjust off. Compare the `MODEL,` lines in Pine Logs with `forward/tjr1m-v1.1.csv`. Its header lists 12 known reasons the two can differ: TradingView vs Yahoo bars, roll days, the price path inside a bar.
+
 ## Reproduce
 ```bash
 git clone https://github.com/DialFlow/jc-trading && cd jc-trading

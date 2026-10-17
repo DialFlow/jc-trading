@@ -1,0 +1,581 @@
+//@version=6
+// =====================================================================================================================
+// JC TJR 1-minute model v1.1: Pine port of scripts/tjr1m-model-v1.1.mjs (signal / manage / runDay), FROZEN tjr1m-v1.1
+// (docs/PREREG-tjr1m-v1.1.md). Independent check of the JS: use it on a 1-minute chart of NQ1!/ES1! (or MNQ1!/MES1!).
+// All times are computed in America/New_York inside the script, so the chart time zone does not change the logic.
+// The 5m candles are built inside the script from the 1m bars (07:00–16:00 ET, clock :00/:05), as the JS does.
+// request.security is not used.
+//
+// ORDER PER 5m CANDLE (v1.1, no look-ahead): every 1m bar of a candle is checked for an entry with the setup as it stood
+// BEFORE that candle closed; after its last 1m bar, the candle's close updates morning levels, sweeps and breaks.
+// Pine runs exactly this order live: on each 1m bar it (1) closes the previous 5m candle if its :x4 bar was missing,
+// (2) checks this bar for an entry, (3) closes this bar's 5m candle if this is its :x4 bar.
+//
+// HOW TO READ IT
+//  * Signal label: signal time, direction, swept level, entry (next 1m open +/- 1 tick), stop, risk.
+//  * "Model R" label = exact JS manage() recomputed bar by bar (stop checked first, targets fill only when price trades
+//    1 tick through, stop fills 1 tick worse, flat at the 12:00 open), NET of costs like v1.1:
+//    usd = 3 x (pts x pv x 0.1 - 1.90), r_net = usd / (3 x risk x pv x 0.1); gross = pts / risk.
+//  * "TV R" label = the same, from TradingView's own fills (net with the same 3-micro cost formula; gross in brackets).
+//  * Table (bottom right): trades / wins (net R > 0) / total and average net R / total gross R, Model and TV.
+//  * Pine Logs (script menu, "Pine Logs"): one "MODEL," line per trading day with the columns of forward/tjr1m-v1.1.csv
+//    (date,contract,signal_et,direction,fill_et,fill,stop,risk_pts,exit,exit_et,r_net,usd_3_micros,sweep), and one
+//    "TV," line per strategy trade.
+//
+// WHERE PINE CAN STILL DIFFER FROM THE JS
+//  1. Take-profits: limits at exactly 1R / 2R with backtest_fill_limits_assumption = 1, so TradingView fills them only
+//     when price goes 1 tick beyond the level, at the level price (the JS rule). A bar that opens beyond the level
+//     fills at the open in TradingView; the JS books the level. Model R is unaffected (it is computed by the script).
+//  2. The real fill is only known after the entry bar. During the entry bar the TV targets come from an estimated fill
+//     (signal close +/- 1 tick); from that bar's close on they come from strategy.position_avg_price.
+//  3. Intrabar order: the JS checks the stop before the targets ("stop first"); TradingView's broker emulator assumes
+//     a price path (O-H-L-C if the open is nearer the high, else O-L-H-C). A bar touching the stop and a target can
+//     end differently in TV R. Bar magnifier is off (turning it on changes TV fills in another way). Break-even takes
+//     effect from the bar after 1R in both.
+//  4. 12:00 exit: the JS uses the 12:00 open with no slippage; TV sends a market order at the 11:59 close, filled at
+//     the 12:00 open + 1 tick. If the 11:59 bar is missing, TV exits one bar later.
+//  5. The JS needs the bar after the signal to exist and be before 12:00, else it keeps searching; here a missing next
+//     bar (an hour-long gap) means no trade that day. A fill already beyond the stop (risk <= 0) ends the day with no
+//     trade in both; TV shows it as a trade closed at the next open ("fill beyond stop"), not counted in the table.
+//  6. Data: TradingView CME 1m bars are not Yahoo's (different prints, missing quiet minutes, bad ticks). Continuous
+//     contracts can roll on different dates; keep "back-adjust" OFF. On a roll day prior-day / Asian levels can come
+//     from the other contract. tjr1m-eval.mjs skips > 0.5% open-gap days (input below, off by default because
+//     tjr1m-forward.mjs does not) and days with < 280 bars 07:00–12:00 (not done here).
+//  7. The first trading day on the chart has no prior-day levels and is usually partial: ignore it.
+//  8. If the data ends inside a 5m candle (e.g. the live bar), that candle's close is processed only when a later bar
+//     arrives; the JS processes the partial candle at once. Only matters at the right edge of the chart.
+//  9. Costs: R and usd always use 3 micros and $1.90 per micro, as the JS, whatever "Contracts" is set to. The Strategy
+//     Tester's own $ P&L uses 0.95 per contract per side on the chart symbol. Initial capital is large only so
+//     full-size NQ/ES orders are never rejected for margin; read R.
+// =====================================================================================================================
+strategy("JC TJR 1m tjr1m-v1.1", shorttitle = "TJR1m v1.1", overlay = true, pyramiding = 0,
+  default_qty_type = strategy.fixed, default_qty_value = 3, initial_capital = 1000000, currency = currency.USD,
+  commission_type = strategy.commission.cash_per_contract, commission_value = 0.95, slippage = 1,
+  margin_long = 5, margin_short = 5, process_orders_on_close = false, calc_on_every_tick = false,
+  backtest_fill_limits_assumption = 1, use_bar_magnifier = false, max_labels_count = 500)
+
+// ---------- inputs ----------
+qtyIn   = input.int(3, "Contracts per trade", minval = 2, tooltip = "2/3 (rounded) off at 1R, the rest at 2R")
+skipGap = input.bool(false, "Skip roll-gap days (> 0.5% open gap), as tjr1m-eval.mjs does")
+showEv  = input.bool(false, "Label sweeps, 5m breaks and skipped signals")
+
+// ---------- instrument (INSTR, MICROS, MICRO_RT in the JS) ----------
+TZ     = "America/New_York"
+isNQ   = syminfo.root == "NQ" or syminfo.root == "MNQ"
+isES   = syminfo.root == "ES" or syminfo.root == "MES"
+SYM    = isNQ ? "NQ" : "ES"
+TICK   = 0.25
+BUF    = isNQ ? 4.0 : 1.0
+MINR   = isNQ ? 8.0 : 2.0
+MAXR   = isNQ ? 100.0 : 25.0
+PVM    = isNQ ? 2.0 : 5.0     // micro point value = pv x 0.1
+MICROS = 3.0
+RT     = 1.90
+THIRD  = 1.0 / 3.0
+q1     = math.round(qtyIn * 2.0 / 3.0)
+q2     = qtyIn - q1
+
+if barstate.isfirst
+    if not (isNQ or isES)
+        runtime.error("Use on ES1!, MES1!, NQ1! or MNQ1! (syminfo.root ES/MES/NQ/MNQ).")
+    if timeframe.period != "1"
+        runtime.error("Use a 1-minute chart.")
+
+// ---------- helpers ----------
+f2(int x) => x < 10 ? "0" + str.tostring(x) : str.tostring(x)
+hmOf(int mm) => f2(int(mm / 60)) + ":" + f2(mm % 60)
+px(float p) => str.tostring(p, format.mintick)
+usdOf(float pts) => MICROS * (pts * PVM - RT)                  // 3 micros, after costs
+rNetOf(float pts, float risk) => usdOf(pts) / (MICROS * risk * PVM)
+
+// Most recent 5m swing before candle j (2 candles each side), searching back from j-3, as swing5() in the JS.
+// side 1 = swing high (for a long break), -1 = swing low (for a short break). na if none.
+swing5(array<float> hs, array<float> ls, int j, int side) =>
+    float res = na
+    if j - 3 >= 2
+        for k = j - 3 to 2
+            if side == 1
+                x = hs.get(k)
+                if x > hs.get(k - 1) and x > hs.get(k - 2) and x >= hs.get(k + 1) and x >= hs.get(k + 2)
+                    res := x
+                    break
+            else
+                y = ls.get(k)
+                if y < ls.get(k - 1) and y < ls.get(k - 2) and y <= ls.get(k + 1) and y <= ls.get(k + 2)
+                    res := y
+                    break
+    res
+
+// One setup per side (S.long / S.short in the JS). A re-arm replaces the object, like S[side] = {...}.
+type Setup
+    bool   armed  = false
+    string lvName = ""
+    int    i0     = 0      // first 1m index (in the day's session bars) of the 5m candle that closed back inside
+    int    bosI   = -1     // 1m index of the last bar of the 5m break candle (bos.at); -1 = no break yet
+    bool   pbInit = false  // pullback state (st.pb) created?
+    float  imp    = na
+    float  ext    = na
+    int    extI   = -1
+
+// ---------- time / trading day (starts 18:00 ET) ----------
+m      = hour(time, TZ) * 60 + minute(time, TZ)
+tdT    = m >= 1080 ? time + 86400000 : time
+tdNum  = year(tdT, TZ) * 10000 + month(tdT, TZ) * 100 + dayofmonth(tdT, TZ)
+newDay = bar_index == 0 or tdNum != nz(tdNum[1])
+prevC  = nz(close[1], open)
+inSess = m >= 420 and m < 960   // sessionBars(): 07:00–16:00
+
+// ---------- state ----------
+// the day's session 1m bars (b1)
+var array<float> bH = array.new<float>()
+var array<float> bL = array.new<float>()
+// the day's 5m candles (b5)
+var array<int>   c5M  = array.new<int>()
+var array<float> c5H  = array.new<float>()
+var array<float> c5L  = array.new<float>()
+var array<float> c5C  = array.new<float>()
+var array<int>   c5I0 = array.new<int>()
+var array<int>   c5I1 = array.new<int>()
+// liquidity levels L (slots 0-5: Asian H/L, London H/L, Prior-day H/L; then morning swings) and the taken set
+var array<float>  lvP     = array.new<float>()
+var array<int>    lvSide  = array.new<int>()    // 1 = BSL (high), -1 = SSL (low)
+var array<bool>   lvHtf   = array.new<bool>()
+var array<string> lvN     = array.new<string>()
+var array<bool>   lvTaken = array.new<bool>()
+// sweep candidates waiting for a close back inside (level index, 5m index of the sweep)
+var array<int> cdLv = array.new<int>()
+var array<int> cdJ  = array.new<int>()
+
+var Setup sL = Setup.new()
+var Setup sS = Setup.new()
+var int  active    = 0      // 1 long, -1 short, 0 none
+var int  lastDone  = -1     // last 5m index whose close was processed
+var bool dayDone   = false  // trade found (or day skipped): no more signal search
+var bool hadSess   = false
+var bool dayLogged = false
+var string dayStr  = ""
+
+var float dayHi = na
+var float dayLo = na
+var float prevHi = na
+var float prevLo = na
+var float asiaHi = na
+var float asiaLo = na
+var float lonHi = na
+var float lonLo = na
+
+// the day's signal
+var bool   sig      = false
+var int    sigDir   = 0
+var int    sigBar   = -1
+var float  sigStop  = na
+var string sigHm    = ""
+var string sigSweep = ""
+var label  sigLbl   = na
+
+// exact JS manage() recomputation
+var bool   mgStarted = false
+var bool   mgNull = false
+var bool   mgDone = false
+var bool   mgRec = false
+var bool   mgF1 = false
+var float  mgEntry = na
+var float  mgRisk = na
+var float  mgStop = na
+var float  mgPts = 0.0
+var string mgWhy = ""
+var string mgFillHm = ""
+var string mgExitHm = ""
+
+// TradingView order tracking
+var bool   tvOn = false
+var bool   tvNull = false
+var bool   tvBE = false
+var int    tvCt0 = 0
+var int    tvDir = 0
+var int    tvSigBar = -1
+var float  tvStop0 = na
+var float  tvEntry = na
+var float  tvRisk = na
+var string tvId = "L"
+
+// stats
+var int   nM = 0
+var int   wM = 0
+var float sumM = 0.0
+var float sumMg = 0.0
+var int   nT = 0
+var int   wT = 0
+var float sumT = 0.0
+var float sumTg = 0.0
+
+// ---------- 1. new trading day ----------
+if newDay
+    if bar_index > 0 and hadSess and not dayLogged
+        log.info("MODEL," + dayStr + "," + SYM + ",,no trade,,,,,,,0,0,\"\"")
+    prevHi := dayHi
+    prevLo := dayLo
+    dayHi := na
+    dayLo := na
+    asiaHi := na
+    asiaLo := na
+    lonHi := na
+    lonLo := na
+    bH.clear()
+    bL.clear()
+    c5M.clear()
+    c5H.clear()
+    c5L.clear()
+    c5C.clear()
+    c5I0.clear()
+    c5I1.clear()
+    lvP.clear()
+    lvSide.clear()
+    lvHtf.clear()
+    lvN.clear()
+    lvTaken.clear()
+    cdLv.clear()
+    cdJ.clear()
+    // fixed slots in the JS order of L: Asian, London, Prior-day (prices filled in at each 5m close)
+    for nm in array.from("Asian high", "Asian low", "London high", "London low", "Prior-day high", "Prior-day low")
+        lvP.push(na)
+        lvSide.push(str.endswith(nm, "high") ? 1 : -1)
+        lvHtf.push(true)
+        lvN.push(nm)
+        lvTaken.push(false)
+    sL := Setup.new()
+    sS := Setup.new()
+    active := 0
+    lastDone := -1
+    sig := false
+    mgStarted := false
+    mgNull := false
+    mgDone := false
+    mgRec := false
+    hadSess := false
+    dayLogged := false
+    dayStr := str.format_time(tdT, "yyyy-MM-dd", TZ)
+    gapPct = bar_index > 0 ? math.abs(open - prevC) / prevC : 0.0
+    dayDone := skipGap and gapPct > 0.005
+
+// ---------- 2. session ranges (Asian 18:00–03:00, London 03:00–08:30, whole trading day for tomorrow's prior-day) ----------
+dayHi := na(dayHi) ? high : math.max(dayHi, high)
+dayLo := na(dayLo) ? low : math.min(dayLo, low)
+if m >= 1080 or m < 180
+    asiaHi := na(asiaHi) ? high : math.max(asiaHi, high)
+    asiaLo := na(asiaLo) ? low : math.min(asiaLo, low)
+if m >= 180 and m < 510
+    lonHi := na(lonHi) ? high : math.max(lonHi, high)
+    lonLo := na(lonLo) ? low : math.min(lonLo, low)
+
+// ---------- 3. add the bar to b1 and to its 5m candle (to5m) ----------
+int iCur = -1
+int jA = -1    // previous 5m candle, if it ended without its :x4 bar: closed before this bar is checked
+int jB = -1    // this bar's 5m candle, if this is its :x4 bar: closed after this bar is checked
+if inSess
+    hadSess := true
+    bH.push(high)
+    bL.push(low)
+    iCur := bH.size() - 1
+    k5 = int(m / 5) * 5
+    n5 = c5M.size()
+    if n5 == 0 or c5M.get(n5 - 1) != k5
+        if n5 > 0 and lastDone < n5 - 1
+            jA := n5 - 1
+        c5M.push(k5)
+        c5H.push(high)
+        c5L.push(low)
+        c5C.push(close)
+        c5I0.push(iCur)
+        c5I1.push(iCur)
+    else
+        c5H.set(n5 - 1, math.max(c5H.get(n5 - 1), high))
+        c5L.set(n5 - 1, math.min(c5L.get(n5 - 1), low))
+        c5C.set(n5 - 1, close)
+        c5I1.set(n5 - 1, iCur)
+    if m % 5 == 4
+        jB := c5M.size() - 1
+
+// ---------- 4. per bar, in the JS order: [close previous candle] -> entry check on this bar -> [close this candle] ----------
+bool  newSig = false
+float nsStop = na
+float nsRisk = na
+for pass = 0 to 2
+    if pass == 1
+        // ----- entry check (JS step 1): pullback and trigger, entries 09:50–11:00, setup as before this candle closed -----
+        if inSess and not dayDone and active != 0 and m < 660
+            s1 = active == 1 ? sL : sS
+            d1 = active
+            if s1.bosI >= 0 and iCur > s1.bosI
+                // impulse extreme from the close-back candle through the break bar
+                if not s1.pbInit
+                    float imp0 = d1 == 1 ? bH.get(s1.i0) : bL.get(s1.i0)
+                    for q = s1.i0 to s1.bosI
+                        imp0 := d1 == 1 ? math.max(imp0, bH.get(q)) : math.min(imp0, bL.get(q))
+                    s1.imp := imp0
+                    s1.ext := na
+                    s1.extI := -1
+                    s1.pbInit := true
+                if (d1 == 1 ? high > s1.imp : low < s1.imp)
+                    s1.imp := d1 == 1 ? high : low      // impulse extends: pullback restarts
+                    s1.ext := na
+                else if na(s1.ext) or (d1 == 1 ? low < s1.ext : high > s1.ext)
+                    s1.ext := d1 == 1 ? low : high       // pullback deepens
+                    s1.extI := iCur
+                else if m >= 590 and s1.extI + 1 <= iCur - 1
+                    // trigger: close beyond the 1m bars after the pullback extreme (excluding this bar)
+                    float rf1 = d1 == 1 ? bH.get(s1.extI + 1) : bL.get(s1.extI + 1)
+                    for q = s1.extI + 1 to iCur - 1
+                        rf1 := d1 == 1 ? math.max(rf1, bH.get(q)) : math.min(rf1, bL.get(q))
+                    if (d1 == 1 ? close > rf1 : close < rf1)
+                        stopPx = d1 == 1 ? s1.ext - BUF : s1.ext + BUF
+                        risk0 = math.abs(close - stopPx)
+                        if risk0 >= MINR and risk0 <= MAXR
+                            newSig := true
+                            nsStop := stopPx
+                            nsRisk := risk0
+                            dayDone := true    // one trade per day: the JS stops here (if (trade) break)
+                            sig := true
+                            sigDir := d1
+                            sigBar := bar_index
+                            sigStop := stopPx
+                            sigHm := hmOf(m)
+                            sigSweep := s1.lvName
+                        else if showEv
+                            label.new(bar_index, d1 == 1 ? low : high, "skip: risk " + str.tostring(risk0, "0.00") + " pts outside " + str.tostring(MINR) + "–" + str.tostring(MAXR), style = d1 == 1 ? label.style_label_up : label.style_label_down, color = color.new(color.gray, 40), textcolor = color.white, size = size.tiny)
+    else
+        // ----- 5m close (JS step 2): morning levels, sweeps, breaks -----
+        jj = pass == 0 ? jA : jB
+        if jj >= 0 and jj > lastDone
+            lastDone := jj
+            if not dayDone and c5M.get(jj) < 665
+                cM = c5M.get(jj)
+                cH = c5H.get(jj)
+                cL = c5L.get(jj)
+                cC = c5C.get(jj)
+                // session levels (London cannot be traded through before 08:30: the candles are inside its own range)
+                lvP.set(0, asiaHi)
+                lvP.set(1, asiaLo)
+                lvP.set(2, lonHi)
+                lvP.set(3, lonLo)
+                lvP.set(4, prevHi)
+                lvP.set(5, prevLo)
+                // morning 5m swing levels: candle j-1, 2 left, 1 right
+                if jj >= 3
+                    kk = jj - 1
+                    xh = c5H.get(kk)
+                    xl = c5L.get(kk)
+                    if xh > c5H.get(kk - 1) and xh > c5H.get(kk - 2) and xh >= cH
+                        lvP.push(xh)
+                        lvSide.push(1)
+                        lvHtf.push(false)
+                        lvN.push(hmOf(c5M.get(kk)) + " high")
+                        lvTaken.push(false)
+                    if xl < c5L.get(kk - 1) and xl < c5L.get(kk - 2) and xl <= cL
+                        lvP.push(xl)
+                        lvSide.push(-1)
+                        lvHtf.push(false)
+                        lvN.push(hmOf(c5M.get(kk)) + " low")
+                        lvTaken.push(false)
+                // trade-through: the level is taken; it becomes a candidate only inside its window
+                for li = 0 to lvP.size() - 1
+                    p = lvP.get(li)
+                    if na(p) or lvTaken.get(li)
+                        continue
+                    thru = lvSide.get(li) == -1 ? cL < p : cH > p
+                    if not thru
+                        continue
+                    lvTaken.set(li, true)
+                    if cM < (lvHtf.get(li) ? 510 : 570)
+                        continue
+                    cdLv.push(li)
+                    cdJ.push(jj)
+                // close back inside within 2 (morning) / 12 (session) candles arms the opposite-direction setup
+                nC = cdLv.size()
+                if nC > 0
+                    keepLv = array.new<int>()
+                    keepJ  = array.new<int>()
+                    for q = 0 to nC - 1
+                        li2 = cdLv.get(q)
+                        p2 = lvP.get(li2)
+                        sd2 = lvSide.get(li2)
+                        back = sd2 == -1 ? cC > p2 : cC < p2
+                        if back
+                            if sd2 == -1
+                                sL := Setup.new(armed = true, lvName = lvN.get(li2), i0 = c5I0.get(jj))
+                            else
+                                sS := Setup.new(armed = true, lvName = lvN.get(li2), i0 = c5I0.get(jj))
+                            if showEv
+                                label.new(bar_index, sd2 == -1 ? low : high, "sweep " + lvN.get(li2) + " " + px(p2) + (sd2 == -1 ? " → long armed" : " → short armed"), style = sd2 == -1 ? label.style_label_up : label.style_label_down, color = color.new(color.orange, 30), textcolor = color.white, size = size.tiny)
+                        else if jj - cdJ.get(q) < (lvHtf.get(li2) ? 12 : 2)
+                            keepLv.push(li2)
+                            keepJ.push(cdJ.get(q))
+                    cdLv := keepLv
+                    cdJ := keepJ
+                // 5m break of the latest swing; the side that breaks last is active (short wins a same-candle tie, as in JS)
+                for sd = 0 to 1
+                    side = sd == 0 ? 1 : -1
+                    st = side == 1 ? sL : sS
+                    if st.armed and st.bosI < 0
+                        rf = swing5(c5H, c5L, jj, side)
+                        if not na(rf) and (side == 1 ? cC > rf : cC < rf)
+                            st.bosI := c5I1.get(jj)
+                            active := side
+                            if showEv
+                                label.new(bar_index, side == 1 ? low : high, "5m break " + (side == 1 ? "up" : "down") + " " + px(cC) + " vs " + px(rf), style = side == 1 ? label.style_label_up : label.style_label_down, color = color.new(color.purple, 30), textcolor = color.white, size = size.tiny)
+
+// ---------- 5. exact JS manage(): from the bar after the signal ----------
+if sig and not mgDone and bar_index > sigBar
+    if not mgStarted
+        mgStarted := true
+        mgFillHm := hmOf(m)
+        if not inSess or m >= 720
+            mgNull := true
+        else
+            mgEntry := open + sigDir * TICK
+            mgRisk := sigDir * (mgEntry - sigStop)
+            mgNull := not (mgRisk > 0)
+            mgStop := sigStop
+            mgF1 := false
+            mgPts := 0.0
+        if mgNull
+            mgDone := true
+            strategy.close_all(comment = "fill beyond stop")
+        else if not na(sigLbl)
+            label.set_text(sigLbl, sigHm + " " + (sigDir == 1 ? "LONG" : "SHORT") + "  (" + sigSweep + ")\nentry " + px(mgEntry) + " at " + mgFillHm + "\nstop " + px(sigStop) + "  risk " + str.tostring(mgRisk, "0.00") + " pts")
+    if not mgNull and not mgDone
+        frac = mgF1 ? THIRD : 1.0
+        at1 = mgEntry + sigDir * mgRisk
+        at2 = mgEntry + sigDir * 2 * mgRisk
+        if m >= 720 or not inSess
+            mgPts += frac * sigDir * (open - mgEntry)
+            mgWhy := "12:00 flat"
+            mgExitHm := hmOf(m)
+            mgDone := true
+        else if (sigDir == 1 ? low <= mgStop : high >= mgStop)
+            fillS = mgStop - sigDir * TICK
+            mgPts += frac * sigDir * (fillS - mgEntry)
+            mgWhy := mgF1 ? "break-even" : "stop"
+            mgExitHm := hmOf(m)
+            mgDone := true
+        else
+            if not mgF1 and (sigDir == 1 ? high >= at1 + TICK : low <= at1 - TICK)
+                mgF1 := true
+                mgPts += 2.0 * THIRD * mgRisk
+                mgStop := mgEntry
+            if mgF1 and (sigDir == 1 ? high >= at2 + TICK : low <= at2 - TICK)
+                mgPts += THIRD * 2.0 * mgRisk
+                mgWhy := "2R"
+                mgExitHm := hmOf(m)
+                mgDone := true
+
+// ---------- 6. TradingView orders: real fill, finished trade, break-even, 12:00 ----------
+if tvOn and bar_index == tvSigBar + 1
+    float fill = strategy.position_size != 0 ? strategy.position_avg_price : strategy.closedtrades > tvCt0 ? strategy.closedtrades.entry_price(tvCt0) : na
+    if not na(fill)
+        tvEntry := fill
+        tvRisk := tvDir * (fill - tvStop0)
+        if not (tvRisk > 0)
+            tvNull := true
+            strategy.close_all(comment = "fill beyond stop")
+        else if strategy.position_size != 0
+            a1 = fill + tvDir * tvRisk
+            a2 = fill + tvDir * 2 * tvRisk
+            if math.abs(strategy.position_size) >= qtyIn
+                strategy.exit("TP1", from_entry = tvId, qty = q1, limit = a1, stop = tvStop0, comment_profit = "1R", comment_loss = "stop")
+                strategy.exit("TP2", from_entry = tvId, qty = q2, limit = a2, stop = tvStop0, comment_profit = "2R", comment_loss = "stop")
+            else
+                strategy.exit("TP2", from_entry = tvId, qty = q2, limit = a2, stop = fill, comment_profit = "2R", comment_loss = "break-even")
+                tvBE := true
+
+if tvOn and bar_index > tvSigBar and strategy.position_size == 0 and strategy.closedtrades > tvCt0
+    float ptsQ = 0.0
+    float qSum = 0.0
+    for t = tvCt0 to strategy.closedtrades - 1
+        qq = math.abs(strategy.closedtrades.size(t))
+        ptsQ += tvDir * (strategy.closedtrades.exit_price(t) - strategy.closedtrades.entry_price(t)) * qq
+        qSum += qq
+    tvOn := false
+    if not tvNull and tvRisk > 0 and qSum > 0
+        ptsT = ptsQ / qSum                  // points per contract, weighted like the JS pts
+        rTg = ptsT / tvRisk
+        rT = rNetOf(ptsT, tvRisk)
+        nT += 1
+        wT += rT > 0 ? 1 : 0
+        sumT += rT
+        sumTg += rTg
+        label.new(bar_index, tvDir == 1 ? low : high, "TV R " + str.tostring(rT, "0.00") + " (gross " + str.tostring(rTg, "0.00") + ")", style = tvDir == 1 ? label.style_label_up : label.style_label_down, color = color.new(color.blue, 40), textcolor = color.white, size = size.small)
+        log.info("TV," + dayStr + "," + SYM + "," + (tvDir == 1 ? "long" : "short") + "," + str.tostring(tvEntry) + "," + str.tostring(tvStop0) + "," + str.tostring(rT, "0.000") + "," + str.tostring(usdOf(ptsT), "0.00"))
+
+if tvOn and not tvBE and bar_index > tvSigBar + 1 and strategy.position_size != 0 and math.abs(strategy.position_size) < qtyIn
+    strategy.exit("TP2", from_entry = tvId, qty = q2, limit = tvEntry + tvDir * 2 * tvRisk, stop = tvEntry, comment_profit = "2R", comment_loss = "break-even")
+    tvBE := true
+
+if tvOn and strategy.position_size != 0 and m >= 719
+    strategy.close_all(comment = "12:00 flat")
+
+// ---------- 7. record the model trade once it is finished ----------
+if sig and mgDone and not mgRec
+    mgRec := true
+    dayLogged := true
+    if mgNull
+        log.info("MODEL," + dayStr + "," + SYM + ",,no trade,,,,,,,0,0,\"\"")
+    else
+        usdM = usdOf(mgPts)
+        rM = rNetOf(mgPts, mgRisk)
+        rMg = mgPts / mgRisk
+        nM += 1
+        wM += rM > 0 ? 1 : 0
+        sumM += rM
+        sumMg += rMg
+        label.new(bar_index, sigDir == 1 ? high : low, "Model R " + str.tostring(rM, "0.00") + " net (gross " + str.tostring(rMg, "0.00") + ")\n" + mgWhy + " " + mgExitHm + "  $" + str.tostring(usdM, "0.00"), style = sigDir == 1 ? label.style_label_down : label.style_label_up, color = rM > 0 ? color.new(color.green, 20) : color.new(color.red, 20), textcolor = color.white, size = size.small)
+        log.info("MODEL," + dayStr + "," + SYM + "," + sigHm + "," + (sigDir == 1 ? "long" : "short") + "," + mgFillHm + "," + str.tostring(mgEntry) + "," + str.tostring(sigStop) + "," + str.tostring(mgRisk, "0.00") + "," + mgWhy + "," + mgExitHm + "," + str.tostring(rM, "0.000") + "," + str.tostring(usdM, "0.00") + ",\"" + sigSweep + "\"")
+
+// ---------- 8. new signal: orders and label (market entry at the next open + 1 tick slippage) ----------
+if newSig
+    mgStarted := false
+    mgNull := false
+    mgDone := false
+    mgRec := false
+    estE = close + sigDir * TICK         // estimated fill, used for the targets during the entry bar only
+    estR = sigDir * (estE - nsStop)
+    tvId := sigDir == 1 ? "L" : "S"
+    strategy.entry(tvId, sigDir == 1 ? strategy.long : strategy.short, qty = qtyIn, comment = sigHm + (sigDir == 1 ? " long" : " short"))
+    strategy.exit("TP1", from_entry = tvId, qty = q1, limit = estE + sigDir * estR, stop = nsStop, comment_profit = "1R", comment_loss = "stop")
+    strategy.exit("TP2", from_entry = tvId, qty = q2, limit = estE + sigDir * 2 * estR, stop = nsStop, comment_profit = "2R", comment_loss = "stop")
+    tvOn := true
+    tvNull := false
+    tvBE := false
+    tvCt0 := strategy.closedtrades
+    tvDir := sigDir
+    tvSigBar := bar_index
+    tvStop0 := nsStop
+    tvEntry := estE
+    tvRisk := estR
+    sigLbl := label.new(bar_index, sigDir == 1 ? low : high, sigHm + " " + (sigDir == 1 ? "LONG" : "SHORT") + "  (" + sigSweep + ")\nentry next open +/- 1 tick\nstop " + px(nsStop) + "  risk " + str.tostring(nsRisk, "0.00") + " pts (from close)", style = sigDir == 1 ? label.style_label_up : label.style_label_down, color = sigDir == 1 ? color.new(color.teal, 10) : color.new(color.maroon, 10), textcolor = color.white, size = size.small)
+
+// ---------- plots and table ----------
+plot(sig and mgStarted and not mgDone and not mgNull ? mgStop : na, "Model stop", color = color.red, style = plot.style_linebr, linewidth = 1)
+
+var table tb = table.new(position.bottom_right, 6, 4, bgcolor = color.new(color.black, 15), border_width = 1)
+if barstate.islast
+    tc = color.white
+    table.cell(tb, 0, 0, "tjr1m-v1.1 " + SYM, text_color = tc, text_size = size.small)
+    table.cell(tb, 1, 0, "trades", text_color = tc, text_size = size.small)
+    table.cell(tb, 2, 0, "wins", text_color = tc, text_size = size.small)
+    table.cell(tb, 3, 0, "total R net", text_color = tc, text_size = size.small)
+    table.cell(tb, 4, 0, "avg R net", text_color = tc, text_size = size.small)
+    table.cell(tb, 5, 0, "total R gross", text_color = tc, text_size = size.small)
+    table.cell(tb, 0, 1, "Model (JS rules)", text_color = tc, text_size = size.small)
+    table.cell(tb, 1, 1, str.tostring(nM), text_color = tc, text_size = size.small)
+    table.cell(tb, 2, 1, str.tostring(wM), text_color = tc, text_size = size.small)
+    table.cell(tb, 3, 1, str.tostring(sumM, "0.00"), text_color = tc, text_size = size.small)
+    table.cell(tb, 4, 1, nM > 0 ? str.tostring(sumM / nM, "0.000") : "-", text_color = tc, text_size = size.small)
+    table.cell(tb, 5, 1, str.tostring(sumMg, "0.00"), text_color = tc, text_size = size.small)
+    table.cell(tb, 0, 2, "TV fills", text_color = tc, text_size = size.small)
+    table.cell(tb, 1, 2, str.tostring(nT), text_color = tc, text_size = size.small)
+    table.cell(tb, 2, 2, str.tostring(wT), text_color = tc, text_size = size.small)
+    table.cell(tb, 3, 2, str.tostring(sumT, "0.00"), text_color = tc, text_size = size.small)
+    table.cell(tb, 4, 2, nT > 0 ? str.tostring(sumT / nT, "0.000") : "-", text_color = tc, text_size = size.small)
+    table.cell(tb, 5, 2, str.tostring(sumTg, "0.00"), text_color = tc, text_size = size.small)
+    table.cell(tb, 0, 3, "stop buf " + str.tostring(BUF) + "  risk " + str.tostring(MINR) + "–" + str.tostring(MAXR), text_color = tc, text_size = size.small)
