@@ -21,6 +21,7 @@ JC_CACHE=<dir> node scripts/entry-study.mjs   # → entry.json (~20 s; JC_CACHE 
 
 | Date | Study | Script → output | Result |
 | --- | --- | --- | --- |
+| Oct 17 | TJR 1m model v1 PRE-REGISTERED (frozen rules, success bar, kill rule) + evaluation harness + automatic forward log | `tjr1m-model.mjs` (sha256 5a24c04c…, commit 66ad28a), `tjr1m-eval.mjs`, `tjr1m-forward.mjs`, `docs/PREREG-tjr1m-v1.md`, `docs/REVIEW-tjr1m-v1.md` | Out of sample so far: 5 days, NQ 3 trades −0.68R, ES 4 trades +2.31R. Needs 100 NQ trades; all tests 'not enough data'. |
 | Oct 11 | TJR 1-minute model (his own checklist), 156 rule readings, checked against his 3 logged trades | `tjr1m-study.mjs` → `../TJR Trade Log/tjr1m-study-results.json` (private) | Best reading finds all 3 in the right direction, 2 at his exact time (Sep 17 exact entry + stop). Over Sep 15–Oct 9 it is flat: 26 trades, 13 won, −1.0R (ES −1.0R, NQ 0.0R). Not on the site. |
 | Oct 10 | Realistic funded sim: 2 of 3 MNQ off at 1R, take-profits need 1 tick through, MFF costs ($1.90 RT micro) | engine `tp1Frac` / `tpThrough`, site `MFF_RT` | NQ auto-pick (Asian H/L, 27 trades), 3 MNQ: funded +$7,049, worst drop $653, ~75% pass in 30 days (Lab sim); 1:1 +$6,365, DD $488, ~70%. 1-tick fill-through changed no NQ trade. |
 | Oct 10 | MFF Rapid EOD pass rate by exit plan, 3 MNQ, 10,000 shuffled paths | `mff-exit-study.mjs` → `mffexits.json` | Today's exit passes 20% in 30 sessions (62% in 60), mostly blocked by the 30% consistency rule. Half at 1R + half at 2R: 51% (96%), 0% fail. Details below. |
