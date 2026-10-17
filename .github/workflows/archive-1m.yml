@@ -3,6 +3,7 @@ name: Archive 1-minute candles
 # Yahoo keeps 1-minute futures data for only ~30 days. Every weekday after the 5 pm ET close this saves the last
 # 7 days of ES/NQ 1m candles to the `archive` branch (1m/<ES|NQ>/<date>.json), merging with what's there,
 # so a missed run is filled in by the next one. The branch only grows; nothing is force-pushed.
+# It also runs the frozen TJR 1m model v1 on the new days and rewrites forward/tjr1m-v1.csv (the forward paper log).
 on:
   schedule:
     - cron: '30 22 * * 1-5'
@@ -29,10 +30,12 @@ jobs:
           path: archive
       - name: Save the last 7 days of 1m candles
         run: node main/scripts/archive-1m.mjs archive 7
+      - name: Forward paper log (frozen TJR 1m model v1)
+        run: node main/scripts/tjr1m-forward.mjs archive archive/forward/tjr1m-v1.csv
       - name: Commit
         run: |
           cd archive
-          git add 1m
+          git add 1m forward
           git diff --cached --quiet && { echo "nothing new"; exit 0; }
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "1m archive $(date -u +%F)"
           git push -q
