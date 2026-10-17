@@ -1,4 +1,4 @@
-// Evaluation of the frozen TJR 1-minute model v1 against its pre-registration (docs/PREREG-tjr1m-v1.md).
+// Evaluation of the frozen TJR 1-minute model v1.1 against its pre-registration (docs/PREREG-tjr1m-v1.1.md, amending v1).
 // Runs the model on every day, keeps the design days apart from out-of-sample days, and grades each pre-registered test:
 // enough trades, mean R > 0 (day-block bootstrap), beats a random-entry and an opposite-direction baseline (same exits,
 // slippage and costs), MFF Rapid EOD pass/fail with 3 micros, and both halves positive.
@@ -6,12 +6,14 @@
 //   a data dir is either <dir>/ES-1m.json + NQ-1m.json, or an archive layout <dir>/1m/ES/*.json; all dirs are merged.
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { VERSION, INSTR, toBars, byDay, runDay, signal, manage, sessionBars } from './tjr1m-model.mjs';
+import { VERSION, INSTR, toBars, byDay, runDay, signal, manage, sessionBars } from './tjr1m-model-v1.1.mjs';
 
 const args = process.argv.slice(2), opt = k => { const i = args.indexOf(k); return i >= 0 ? args.splice(i, 2)[1] : null; };
 const OUT = opt('--out'), CSV = opt('--csv'), DIRS = args;
-const DESIGN = ['2026-09-15', '2026-10-09'], FIRST_FORWARD = '2026-10-12', HIST_END = '2026-09-11';
-const isDesign = td => td >= DESIGN[0] && td <= DESIGN[1];
+// design = Sep 15–Oct 9 (chose the rules) + Oct 12–16 (looked at under v1 before the v1.1 fix): reported, never counted.
+// out of sample = days after the v1.1 freeze (from Oct 19) and historical days before Sep 12.
+const DESIGN = ['2026-09-15', '2026-10-09'], SEEN = ['2026-10-12', '2026-10-16'], FIRST_FORWARD = '2026-10-19', HIST_END = '2026-09-11';
+const isDesign = td => (td >= DESIGN[0] && td <= DESIGN[1]) || (td >= SEEN[0] && td <= SEEN[1]);
 const isOOS = td => td >= FIRST_FORWARD || td <= HIST_END;
 
 // ---------- seeded random ----------
@@ -111,7 +113,7 @@ const f2 = x => (x >= 0 ? '+' : '') + x.toFixed(2), P = x => (x * 100).toFixed(1
 console.log(`TJR 1m model ${VERSION} · evaluation vs pre-registration`);
 for (const s of SYMS) console.log(`  ${s}: ${rep.data[s].days} usable days (${rep.data[s].first} → ${rep.data[s].last}), design ${rep.data[s].designDays}, out-of-sample ${rep.data[s].oosDays}`);
 for (const period of ['design', 'oos']) {
-  console.log(`\n=== ${period === 'design' ? 'DESIGN period (chose the rules; not evidence)' : 'OUT-OF-SAMPLE (the test)'} ===`);
+  console.log(`\n=== ${period === 'design' ? 'DESIGN + SEEN days (Sep 15–Oct 9 chose the rules, Oct 12–16 seen under v1; not evidence)' : 'OUT-OF-SAMPLE (the test)'} ===`);
   rep.periods[period] = {};
   for (const s of SYMS) {
     const B = baselines(s, period), own = B.own, n = own.length, R = own.map(t => t.r);
@@ -148,5 +150,5 @@ const d = rep.periods.design.NQ; if (d && d.trades) G.push(['design period (not 
 rep.grades = G;
 console.log('\n=== PRE-REGISTERED TESTS (NQ, out of sample) ==='); for (const [k, v] of G) console.log(`  ${k}: ${v}`);
 if (OUT) writeFileSync(OUT, JSON.stringify({ ...rep, trades }, null, 1));
-if (CSV) writeFileSync(CSV, 'date,contract,signal_et,direction,fill_et,fill,stop,risk_pts,exit,exit_et,r,usd_3_micros,sweep\n' + trades.filter(t => t.td >= FIRST_FORWARD)
+if (CSV) writeFileSync(CSV, 'date,contract,signal_et,direction,fill_et,fill,stop,risk_pts,exit,exit_et,r_net,usd_3_micros,sweep\n' + trades.filter(t => t.td >= SEEN[0])
   .sort((a, b) => a.td.localeCompare(b.td) || a.sym.localeCompare(b.sym)).map(t => [t.td, t.sym, t.signalHm, t.dir, t.entryHm, t.entry, t.stop, t.risk.toFixed(2), t.why, t.exitHm, t.r.toFixed(3), t.usd.toFixed(2), `"${t.sweep}"`].join(',')).join('\n') + '\n');
