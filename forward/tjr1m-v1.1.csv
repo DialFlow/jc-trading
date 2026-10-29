@@ -24,3 +24,5 @@ date,contract,signal_et,direction,fill_et,fill,stop,risk_pts,exit,exit_et,r_net,
 2026-10-26,NQ,,no trade,,,,,,,0,0,""
 2026-10-27,ES,,no trade,,,,,,,0,0,""
 2026-10-27,NQ,,no trade,,,,,,,0,0,""
+2026-10-28,ES,10:00,short,10:01,7761.5,7767.5,6.00,stop,10:04,-1.105,-99.45,"London high"
+2026-10-28,NQ,10:00,short,10:01,29829.75,29869.5,39.75,stop,10:04,-1.030,-245.70,"09:10 high"
