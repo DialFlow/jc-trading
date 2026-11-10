@@ -40,3 +40,5 @@ date,contract,signal_et,direction,fill_et,fill,stop,risk_pts,exit,exit_et,r_net,
 2026-11-05,NQ,,no trade,,,,,,,0,0,""
 2026-11-06,ES,,no trade,,,,,,,0,0,""
 2026-11-06,NQ,09:59,long,10:00,27355.75,27269.25,86.50,stop,10:03,-1.014,-526.20,"08:30 low"
+2026-11-09,ES,,no trade,,,,,,,0,0,""
+2026-11-09,NQ,,no trade,,,,,,,0,0,""
