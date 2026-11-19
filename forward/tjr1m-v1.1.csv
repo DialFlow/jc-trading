@@ -54,3 +54,5 @@ date,contract,signal_et,direction,fill_et,fill,stop,risk_pts,exit,exit_et,r_net,
 2026-11-16,NQ,09:57,long,09:58,27633,27549.5,83.50,stop,09:59,-1.014,-508.20,"08:55 low"
 2026-11-17,ES,10:16,short,10:17,7406,7419.5,13.50,2R,10:36,1.305,264.30,"09:40 high"
 2026-11-17,NQ,,no trade,,,,,,,0,0,""
+2026-11-18,ES,,no trade,,,,,,,0,0,""
+2026-11-18,NQ,,no trade,,,,,,,0,0,""
